@@ -14,10 +14,31 @@ interface FsFloodPayload {
   eventsPerSec: number
 }
 
+const invalidateRelationships = () =>
+  queryClient.invalidateQueries({ queryKey: ['relationships'] })
+
 const RULES: Array<{ test: (path: string) => boolean; invalidate: () => void }> = [
-  { test: (p) => p.includes('/.claude/agents/'),       invalidate: () => queryClient.invalidateQueries({ queryKey: qk.agents.all }) },
-  { test: (p) => p.includes('/.claude/commands/'),     invalidate: () => queryClient.invalidateQueries({ queryKey: qk.commands.all }) },
-  { test: (p) => p.includes('/.claude/skills/'),       invalidate: () => queryClient.invalidateQueries({ queryKey: qk.skills.all }) },
+  {
+    test: (p) => p.includes('/.claude/agents/'),
+    invalidate: () => {
+      queryClient.invalidateQueries({ queryKey: qk.agents.all })
+      invalidateRelationships()
+    },
+  },
+  {
+    test: (p) => p.includes('/.claude/commands/'),
+    invalidate: () => {
+      queryClient.invalidateQueries({ queryKey: qk.commands.all })
+      invalidateRelationships()
+    },
+  },
+  {
+    test: (p) => p.includes('/.claude/skills/'),
+    invalidate: () => {
+      queryClient.invalidateQueries({ queryKey: qk.skills.all })
+      invalidateRelationships()
+    },
+  },
   { test: (p) => p.includes('/.claude/plans/'),        invalidate: () => queryClient.invalidateQueries({ queryKey: qk.plans.all }) },
   { test: (p) => p.includes('/.claude/output-styles/'),invalidate: () => queryClient.invalidateQueries({ queryKey: qk.outputStyles.all }) },
   { test: (p) => p.includes('/.claude/plugins/'),      invalidate: () => queryClient.invalidateQueries({ queryKey: qk.plugins.all }) },

@@ -2,7 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, type MaybeRefOrGetter, toValue } from 'vue'
 import { qk } from '@/lib/queryKeys'
 import type { McpImportPayload, McpScope, McpServerInput } from '@/types/ipc'
-import { mcpCreate, mcpDelete, mcpGet, mcpImport, mcpList } from '@/utils/ipc'
+import {
+  mcpCapabilities,
+  mcpCreate,
+  mcpDelete,
+  mcpGet,
+  mcpImport,
+  mcpList,
+} from '@/utils/ipc'
 
 export const useMcpList = (
   scope: MaybeRefOrGetter<McpScope>,
@@ -55,6 +62,24 @@ export const useMcpDelete = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.mcp.all }),
   })
 }
+
+export const useMcpCapabilities = (
+  name: MaybeRefOrGetter<string>,
+  scope: MaybeRefOrGetter<McpScope>,
+  workingDir?: MaybeRefOrGetter<string | undefined>,
+  enabled?: MaybeRefOrGetter<boolean>,
+) =>
+  useQuery({
+    queryKey: computed(() =>
+      qk.mcp.capabilities(toValue(name), toValue(scope), toValue(workingDir)),
+    ),
+    queryFn: () => mcpCapabilities(toValue(name), toValue(scope), toValue(workingDir)),
+    // The probe is a 5s spawn; only fire when the caller flips enabled true.
+    enabled: computed(() => !!toValue(name) && !!toValue(enabled)),
+    // Capability lists are stable enough that we can avoid refetching
+    // every focus.
+    staleTime: 60_000,
+  })
 
 export const useMcpImport = () => {
   const qc = useQueryClient()

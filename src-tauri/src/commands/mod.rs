@@ -8,6 +8,7 @@ pub mod output_styles;
 pub mod plans;
 pub mod plugins;
 pub mod projects;
+pub mod relationships;
 pub mod sessions;
 pub mod settings;
 pub mod skills;

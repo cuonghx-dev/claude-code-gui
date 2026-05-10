@@ -141,6 +141,8 @@ fn run() -> anyhow::Result<()> {
             commands::mcp::mcp_create,
             commands::mcp::mcp_delete,
             commands::mcp::mcp_import,
+            commands::mcp::mcp_capabilities,
+            commands::relationships::relationships_graph,
             commands::plugins::plugins_list,
             commands::plugins::plugins_get,
             commands::plugins::plugins_delete,

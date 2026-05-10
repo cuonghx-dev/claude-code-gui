@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use app_core::types::{McpImportPayload, McpScope, McpServer, McpServerInput};
+use app_core::types::{McpCapabilities, McpImportPayload, McpScope, McpServer, McpServerInput};
 use app_core::AppError;
 use tauri::State;
 
@@ -60,4 +60,16 @@ pub async fn mcp_import(
 ) -> Result<Vec<McpServer>, AppError> {
     let claude_dir = state.claude_dir.read().await.clone();
     app_core::mcp::import(&claude_dir, payload)
+}
+
+#[tauri::command]
+pub async fn mcp_capabilities(
+    state: State<'_, AppState>,
+    name: String,
+    scope: McpScope,
+    working_dir: Option<String>,
+) -> Result<McpCapabilities, AppError> {
+    let claude_dir = state.claude_dir.read().await.clone();
+    let wd = working_dir.map(PathBuf::from);
+    app_core::mcp_probe::probe(&claude_dir, &name, scope, wd.as_deref()).await
 }

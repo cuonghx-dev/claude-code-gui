@@ -7,12 +7,14 @@ import AgentForm from '@/components/forms/AgentForm.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ChatTerminal from '@/components/ChatTerminal.vue'
 import ContextPanel from '@/components/ContextPanel.vue'
+import RelationshipGraph from '@/components/RelationshipGraph.vue'
 import {
   useAgent,
   useAgentDelete,
   useAgentExport,
   useAgentUpdate,
 } from '@/composables/useAgents'
+import { useRelationshipsGraph } from '@/composables/useRelationships'
 import { useSettings } from '@/composables/useSettings'
 import type { AgentInput, TerminalOpts } from '@/types/ipc'
 
@@ -28,8 +30,17 @@ const exportMut = useAgentExport()
 const errorMessage = ref('')
 const confirmingDelete = ref(false)
 const showTerminal = ref(false)
+const showRelationships = ref(false)
 const terminalSessionId = ref<string>('')
 const settings = useSettings()
+const relationships = useRelationshipsGraph()
+
+const skillCount = computed(
+  () => relationships.data.value?.agentSkills[slug.value]?.length ?? 0,
+)
+const commandCount = computed(
+  () => relationships.data.value?.agentCommands[slug.value]?.length ?? 0,
+)
 
 const terminalOpts = computed<TerminalOpts | null>(() => {
   if (!showTerminal.value || !data.value) return null
@@ -86,8 +97,18 @@ async function onExport() {
 </script>
 
 <template>
-  <PageHeader :title="data?.frontmatter?.name ?? slug" :subtitle="data?.filePath">
+  <PageHeader
+    :title="data?.frontmatter?.name ?? slug"
+    :subtitle="`${data?.filePath ?? ''} · used by ${commandCount} command${commandCount === 1 ? '' : 's'} · has ${skillCount} skill${skillCount === 1 ? '' : 's'}`"
+  >
     <template #actions>
+      <button
+        type="button"
+        class="ccg-btn-ghost"
+        @click="showRelationships = !showRelationships"
+      >
+        {{ showRelationships ? 'Hide graph' : 'Show graph' }}
+      </button>
       <button
         type="button"
         class="ccg-btn-ghost"
@@ -109,6 +130,13 @@ async function onExport() {
           >
             {{ errorMessage }}
           </p>
+          <section
+            v-if="showRelationships"
+            class="mb-6 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
+          >
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Relationships</h3>
+            <RelationshipGraph :agent-slug="agent.slug" />
+          </section>
           <AgentForm
             :draft-key="`agent:${agent.slug}`"
             :initial="{

@@ -14,6 +14,7 @@ import type {
   ImproveRequest,
   MarketplaceSource,
   MarketplaceSourceInput,
+  McpCapabilities,
   McpImportPayload,
   McpScope,
   McpServer,
@@ -29,6 +30,7 @@ import type {
   PluginDetail,
   Project,
   ProjectInfo,
+  RelationshipsGraph,
   RequestId,
   SessionId,
   SessionSummary,
@@ -106,6 +108,15 @@ export const mcpDelete = (name: string, scope: McpScope, workingDir?: string) =>
   invoke<void>('mcp_delete', { name, scope, workingDir })
 export const mcpImport = (payload: McpImportPayload) =>
   invoke<McpServer[]>('mcp_import', { payload })
+export const mcpCapabilities = (
+  name: string,
+  scope: McpScope,
+  workingDir?: string,
+) => invoke<McpCapabilities>('mcp_capabilities', { name, scope, workingDir })
+
+// Relationships
+export const relationshipsGraph = () =>
+  invoke<RelationshipsGraph>('relationships_graph')
 
 // Plugins
 export const pluginsList = () => invoke<Plugin[]>('plugins_list')
