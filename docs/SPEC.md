@@ -185,7 +185,11 @@ claude-code-gui/
 
 #### Frontend
 
-- **Vue 3 + Vite + vue-router**. SPA, no SSR. State via Pinia (or composables alone — choose one and stick with it).
+- **Vue 3 + Vite + vue-router**. SPA, no SSR.
+- **State management.** Strict separation:
+  - **TanStack Query (Vue Query)** for async server state — every `invoke()` that fetches or mutates is wrapped in a `useQuery` / `useMutation`. Buys cache, dedupe, loading/error, and most importantly: a `queryClient` instance that the `fs:change` listener can call `invalidateQueries({ queryKey: [...] })` against. No bespoke refetch wiring.
+  - **Pinia** for synchronous UI-only state — active tab, open modal id, sidebar collapse, command palette state, theme. No async, no fetches, no caching.
+  - Composables (`useAgents`, `useCommands`, …) are thin wrappers that call `useQuery` with a stable query key derived from the IPC command name. They do not own data; the `queryClient` does.
 - **TypeScript everywhere.** Generated `types/ipc/` is the source of truth for backend payloads.
 - **UI library**: pick one — `@nuxt/ui` is a Nuxt-only option; Tauri build defaults to `radix-vue` + Tailwind. (Decision deferred to first PR.)
 - **Routing**: file-based router via `unplugin-vue-router` or hand-rolled `vue-router` config. File-based keeps page mapping obvious.
@@ -254,11 +258,13 @@ tokio         = { version = "1",   features = ["fs", "process", "sync", "macros"
 rmcp          = "0.1"
 
 # crates/pty
-portable-pty  = "0.8"
+portable-pty        = "0.8"
+strip-ansi-escapes  = "0.2"   # ANSI scrub before regex parse in context monitor
 
 # crates/watcher
 notify                  = "6"
 notify-debouncer-mini   = "0.4"
+ignore                  = "0.4"   # gitignore-aware traversal + path exclusion (node_modules/, target/, .git/, …)
 
 # crates/app
 tauri                   = { version = "2", features = ["macos-private-api"] }
@@ -672,6 +678,7 @@ pub enum PermissionMode {
 | `pty:output:{session_id}` | `{ data: string }` | PTY reader task | `Terminal.vue` |
 | `pty:exit:{session_id}` | `{ exitCode: number }` | PTY reader task | `Terminal.vue` |
 | `fs:change` | `{ path, kind: 'create' \| 'modify' \| 'delete' }` | global watcher | list pages, file tree |
+| `fs:flood` | `{ subscriptionId, root, eventsPerSec }` | global watcher rate-limiter | UI banner ("watcher paused on `<root>` due to event flood") |
 | `claude:improve:{request_id}` | `{ kind: 'delta' \| 'done' \| 'error', text?, error? }` | `claude_cli::improve_instructions` | improve modal |
 | `context:tokens:{session_id}` | `{ input, output, cached, cost, model }` | context monitor | `MetricsCard.vue` |
 | `context:tool:{session_id}` | `ToolCall` | context monitor | `ToolTimeline.vue` |
@@ -813,14 +820,16 @@ Sections:
 
 ### State conventions
 
-- Server data lives in composables — `useAgents`, `useCommands`, etc. — each wrapping `invoke()` calls and exposing `items`, `loading`, `error`.
-- No optimistic updates by default. After write, refetch.
+- **Server state**: TanStack Query owns it. Composables (`useAgents`, `useCommands`, …) wrap `useQuery` with a stable key per IPC command (e.g. `['agents', 'list']`, `['agents', 'get', slug]`). Mutations use `useMutation` and call `queryClient.invalidateQueries` on success.
+- **UI state**: Pinia stores hold ephemeral, synchronous values only — active modal, sidebar open/closed, command palette state, theme.
+- **fs:change wiring**: a single global listener at app root maps `path` → invalidated query keys (e.g. `~/.claude/agents/**` → `['agents']`). No component-level `fs:change` handlers.
+- **No optimistic updates by default.** Mutations invalidate, then refetch.
 - Forms use `useUnsavedChanges` to block route navigation when dirty.
 - Drafts persist to `localStorage` via `useDraftRecovery` for crash recovery.
 
 ### Sidebar counts
 
-Each nav item shows a badge with the entity count. Counts populated at app boot from list endpoints; refreshed on `fs:change` events that match the relevant root.
+Each nav item shows a badge with the entity count. Counts read from the same `useQuery(['agents', 'list'])` etc. caches the list pages use — no extra fetch. The `fs:change` → `invalidateQueries` plumbing keeps them live without bespoke wiring.
 
 ---
 
@@ -837,6 +846,7 @@ The terminal IS the chat. There is no separate streaming chat layer.
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { useDebounceFn } from '@vueuse/core'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import type { TerminalOpts } from '@/types/ipc'
@@ -860,7 +870,15 @@ onMounted(async () => {
   })
 
   term.onData((data) => invoke('terminal_session_input', { sessionId: id, data }))
-  term.onResize(({ cols, rows }) => invoke('terminal_session_resize', { sessionId: id, cols, rows }))
+
+  // Debounce resize: xterm fires onResize on every grid recompute. Dragging the
+  // window edge can fan out to dozens of IPC + ioctl(TIOCSWINSZ) calls/sec,
+  // which spikes CPU and races inside the PTY backend. Coalesce to ~10 Hz.
+  const debouncedResize = useDebounceFn(
+    (cols: number, rows: number) => invoke('terminal_session_resize', { sessionId: id, cols, rows }),
+    100,
+  )
+  term.onResize(({ cols, rows }) => debouncedResize(cols, rows))
 
   onBeforeUnmount(async () => {
     unlisten()
@@ -920,38 +938,50 @@ impl PtyManager {
 
 ```rust
 async fn compose_command(opts: &TerminalOpts) -> Result<CommandBuilder> {
+    // Resolve target: agent-bound, command-template, or bare claude with
+    // --resume. All three end up invoking the `claude` binary; the terminal
+    // subsystem is strictly a Claude wrapper and never spawns an arbitrary
+    // shell. See §8 Security model.
+    let claude = core::claude_cli::path()?;
+    let mut cmd = CommandBuilder::new(&claude);
+
     if let Some(slug) = &opts.agent_slug {
         let agent = core::agents::get(slug)?;
-        let claude = core::claude_cli::path()?;
-
-        let mut cmd = CommandBuilder::new(claude);
         cmd.arg("--append-system-prompt").arg(agent.body);
 
         if let Some(model) = agent.frontmatter.model.or(opts.model.clone()) {
             cmd.arg("--model").arg(model);
         }
-        if let Some(mode) = &opts.permission_mode {
-            cmd.arg("--permission-mode").arg(mode.as_cli_flag());
-        }
-        if let Some(style) = &opts.output_style_id {
-            cmd.arg("--output-style").arg(style);
-        }
-        if let Some(resume) = &opts.resume_session_id {
-            cmd.arg("--resume").arg(resume);
-        }
-        if let Some(wd) = &opts.working_dir {
-            cmd.cwd(wd);
-        }
-        Ok(cmd)
-    } else {
-        // Default shell
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
-        let mut cmd = CommandBuilder::new(shell);
-        if let Some(wd) = &opts.working_dir { cmd.cwd(wd); }
-        Ok(cmd)
+    } else if opts.resume_session_id.is_none() && opts.command_template.is_none() {
+        // No agent, no resume, no command → nothing to launch. Fail loudly
+        // rather than silently dropping the user into $SHELL with this app's
+        // OS-level entitlements (fs scope on ~/.claude/**, deep-link handler,
+        // etc.). The fs and shell capabilities here are sized for Claude;
+        // exposing them to a generic interactive shell breaks the threat model.
+        return Err(AppError {
+            code: ErrorCode::InvalidInput,
+            message: "Terminal requires an agent slug, resume session id, or command template.".into(),
+            cause: None,
+        });
     }
+
+    if let Some(mode) = &opts.permission_mode {
+        cmd.arg("--permission-mode").arg(mode.as_cli_flag());
+    }
+    if let Some(style) = &opts.output_style_id {
+        cmd.arg("--output-style").arg(style);
+    }
+    if let Some(resume) = &opts.resume_session_id {
+        cmd.arg("--resume").arg(resume);
+    }
+    if let Some(wd) = &opts.working_dir {
+        cmd.cwd(wd);
+    }
+    Ok(cmd)
 }
 ```
+
+If a user wants a generic terminal (git, build commands, etc.) they should use their actual terminal emulator. `claude-code-gui` is not a terminal app.
 
 ### Session lifecycle
 
@@ -1011,24 +1041,44 @@ pub async fn improve_instructions(
 ```rust
 pub struct WatcherHandle {
     debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
-    subscriptions: Arc<RwLock<HashMap<Uuid, PathBuf>>>,
+    subscriptions: Arc<RwLock<HashMap<Uuid, Subscription>>>,
+    /// Compiled gitignore matcher per subscription root, plus hard-coded
+    /// always-ignore globs (node_modules, target, .git, dist, build, .venv,
+    /// __pycache__, .next, .nuxt, .turbo, .cache, *.lock-only churn, …).
+    /// Built via `ignore::gitignore::GitignoreBuilder` rooted at the watched
+    /// path, then layered with the global denylist. Path filtering happens
+    /// **before** events leave the notify thread, so debouncer + IPC bridge
+    /// never see the noise.
+    matchers: Arc<RwLock<HashMap<Uuid, Gitignore>>>,
+}
+
+struct Subscription {
+    root: PathBuf,
+    /// `true` for `~/.claude/**` (no ignore — every file matters).
+    /// `false` for project working dirs (gitignore + denylist applied).
+    is_claude_dir: bool,
 }
 
 pub fn start_global(app: AppHandle) -> Result<WatcherHandle>;
-pub fn watch(handle: &WatcherHandle, path: &Path) -> Result<Uuid>;
+pub fn watch_claude_dir(handle: &WatcherHandle, path: &Path) -> Result<Uuid>;
+pub fn watch_project(handle: &WatcherHandle, path: &Path) -> Result<Uuid>;
 pub fn unwatch(handle: &WatcherHandle, id: Uuid);
 ```
 
-Powered by `notify-debouncer-mini` with a 200 ms debounce. Each filesystem event becomes:
+Powered by `notify-debouncer-mini` with a 200 ms debounce, gated by an `ignore`-crate matcher so a single `npm install` or `cargo build` cannot flood the bridge with thousands of `node_modules/` / `target/` events. Each filesystem event that survives the matcher becomes:
 
 ```jsonc
 // emit "fs:change"
 { "path": "/Users/foo/.claude/agents/reviewer.md", "kind": "modify" }
 ```
 
-The watcher always covers `~/.claude/`. Project working directories are added dynamically when the user opens a project page.
+The watcher always covers `~/.claude/` (no ignore — every file matters there). Project working directories are added dynamically when the user opens a project page, and are filtered through:
 
-Frontend filters by path prefix client-side. Debounce + filter keeps event volume well under the chatter threshold.
+1. Project-local `.gitignore` (and parent `.gitignore` chain), via `ignore::gitignore::GitignoreBuilder`.
+2. A hard-coded global denylist that runs even when no `.gitignore` exists: `node_modules/`, `target/`, `.git/`, `dist/`, `build/`, `.next/`, `.nuxt/`, `.turbo/`, `.cache/`, `.venv/`, `venv/`, `__pycache__/`, `.DS_Store`.
+3. A max event-rate circuit breaker per subscription: if a single root emits > 500 post-filter events in a 1 s window, the subscription is paused for 5 s and a `fs:flood` event is emitted to the UI for surfacing as a non-blocking banner.
+
+Frontend filters by path prefix client-side as a second layer (cheap, defensive). Debounce + ignore + rate-limit keeps event volume well under the chatter threshold even on noisy monorepos.
 
 ### Context monitor (inside `pty` crate)
 
@@ -1038,7 +1088,16 @@ Per-session. The PTY reader pipes each chunk through `parse_chunk`:
 fn parse_chunk(chunk: &str, state: &mut MonitorState, app: &AppHandle, id: Uuid) {
     state.line_buf.push_str(chunk);
 
-    while let Some(line) = state.line_buf.next_line() {
+    while let Some(raw_line) = state.line_buf.next_line() {
+        // The PTY stream is full of ANSI control sequences (SGR colors, bold,
+        // cursor moves, OSC titles). A regex like `\[tool\] Grep started`
+        // never matches `\x1b[32m[tool]\x1b[0m \x1b[1mGrep\x1b[0m started`.
+        // Scrub once, then match. The original `raw_line` is forwarded
+        // untouched to xterm.js — only the parser sees the cleaned form.
+        let line = String::from_utf8(
+            strip_ansi_escapes::strip(raw_line.as_bytes())
+        ).unwrap_or_default();
+
         // 1. tokens: <n> in, <n> out, <n> cache_read, <n> cache_write
         if let Some(tokens) = TOKEN_RE.captures(&line) {
             let usage = TokenUsage::from(tokens);
