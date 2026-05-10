@@ -1,3 +1,11 @@
-//! Tauri command bindings. Phase 1+ populates submodules per domain
-//! (`agents`, `commands`, `skills`, …). Phase 0 ships an empty module so
-//! `generate_handler!` compiles.
+pub mod agents;
+pub mod cmds;
+pub mod debug;
+pub mod mcp;
+pub mod output_styles;
+pub mod plans;
+pub mod plugins;
+pub mod projects;
+pub mod sessions;
+pub mod settings;
+pub mod skills;

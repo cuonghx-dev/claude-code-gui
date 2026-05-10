@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
   Bot,
@@ -11,25 +12,42 @@ import {
   History,
   Settings,
 } from 'lucide-vue-next'
+import { useAgentsList } from '@/composables/useAgents'
+import { useCommandsList } from '@/composables/useCommands'
+import { useSkillsList } from '@/composables/useSkills'
+import { usePlansList } from '@/composables/usePlans'
+import { useMcpList } from '@/composables/useMcp'
+import { useOutputStylesList } from '@/composables/useOutputStyles'
+import { usePluginsList } from '@/composables/usePlugins'
+import { useProjectsList } from '@/composables/useProjects'
+
+const agents = useAgentsList()
+const commands = useCommandsList()
+const skills = useSkillsList()
+const plans = usePlansList()
+const mcp = useMcpList('global')
+const outputStyles = useOutputStylesList()
+const plugins = usePluginsList()
+const projects = useProjectsList()
 
 interface NavItem {
   to: string
   label: string
   icon: typeof Bot
+  count: () => number | undefined
 }
 
-// Phase 1 wires count badges from `useAgentsList().data.value?.length` etc.
-const items: NavItem[] = [
-  { to: '/agents',        label: 'Agents',        icon: Bot },
-  { to: '/commands',      label: 'Commands',      icon: Slash },
-  { to: '/skills',        label: 'Skills',        icon: Sparkles },
-  { to: '/plans',         label: 'Plans',         icon: Map },
-  { to: '/mcp',           label: 'MCP',           icon: Server },
-  { to: '/output-styles', label: 'Output styles', icon: Palette },
-  { to: '/plugins',       label: 'Plugins',       icon: Package },
-  { to: '/sessions',      label: 'Sessions',      icon: History },
-  { to: '/settings',      label: 'Settings',      icon: Settings },
-]
+const items = computed<NavItem[]>(() => [
+  { to: '/agents',        label: 'Agents',        icon: Bot,      count: () => agents.data.value?.length },
+  { to: '/commands',      label: 'Commands',      icon: Slash,    count: () => commands.data.value?.length },
+  { to: '/skills',        label: 'Skills',        icon: Sparkles, count: () => skills.data.value?.length },
+  { to: '/plans',         label: 'Plans',         icon: Map,      count: () => plans.data.value?.length },
+  { to: '/mcp',           label: 'MCP',           icon: Server,   count: () => mcp.data.value?.length },
+  { to: '/output-styles', label: 'Output styles', icon: Palette,  count: () => outputStyles.data.value?.length },
+  { to: '/plugins',       label: 'Plugins',       icon: Package,  count: () => plugins.data.value?.length },
+  { to: '/sessions',      label: 'Sessions',      icon: History,  count: () => projects.data.value?.length },
+  { to: '/settings',      label: 'Settings',      icon: Settings, count: () => undefined },
+])
 </script>
 
 <template>
@@ -48,7 +66,13 @@ const items: NavItem[] = [
       active-class="bg-neutral-100 font-medium text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
     >
       <component :is="item.icon" class="h-4 w-4" />
-      {{ item.label }}
+      <span class="flex-1">{{ item.label }}</span>
+      <span
+        v-if="item.count() !== undefined"
+        class="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] tabular-nums text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300"
+      >
+        {{ item.count() }}
+      </span>
     </RouterLink>
   </nav>
 </template>

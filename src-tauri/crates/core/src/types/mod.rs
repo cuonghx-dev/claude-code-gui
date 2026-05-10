@@ -1,5 +1,25 @@
+mod agents;
+mod commands;
 mod error;
 mod ids;
+mod mcp;
+mod output_styles;
+mod plans;
+mod plugins;
+mod projects;
+mod sessions;
+mod settings;
+mod skills;
 
+pub use agents::{Agent, AgentFrontmatter, AgentMemory, AgentModel};
+pub use commands::{Command, CommandFrontmatter};
 pub use error::{AppError, ErrorCode};
 pub use ids::{RequestId, SessionId};
+pub use mcp::{McpCapabilities, McpPrompt, McpResource, McpScope, McpServer, McpTool, McpTransport};
+pub use output_styles::{OutputStyle, OutputStyleFrontmatter, OutputStyleScope};
+pub use plans::Plan;
+pub use plugins::{Plugin, PluginDetail};
+pub use projects::{FileNode, GitFileStatus, GitStatus, Project, ProjectInfo};
+pub use sessions::{Message, MessageKind, Page, Role, SessionSummary, TokenUsage};
+pub use settings::{AppConfig, DirEntry, Settings};
+pub use skills::{Skill, SkillContext, SkillFrontmatter, SkillSource};

@@ -63,7 +63,30 @@ fn run() -> anyhow::Result<()> {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            // Phase 1+ wires command bindings here.
+            commands::agents::agents_list,
+            commands::agents::agents_get,
+            commands::agents::agents_skill_counts,
+            commands::cmds::commands_list,
+            commands::cmds::commands_get,
+            commands::skills::skills_list,
+            commands::skills::skills_get,
+            commands::plans::plans_list,
+            commands::plans::plans_get,
+            commands::output_styles::output_styles_list,
+            commands::output_styles::output_styles_get,
+            commands::mcp::mcp_list,
+            commands::mcp::mcp_get,
+            commands::plugins::plugins_list,
+            commands::plugins::plugins_get,
+            commands::projects::projects_list,
+            commands::projects::projects_get,
+            commands::projects::projects_resolve,
+            commands::projects::projects_files,
+            commands::sessions::sessions_list_for_project,
+            commands::sessions::sessions_messages,
+            commands::settings::settings_get,
+            commands::debug::debug_claude_cli,
+            commands::debug::app_version,
         ])
         .run(tauri::generate_context!())
         .map_err(|e| anyhow::anyhow!(e))?;

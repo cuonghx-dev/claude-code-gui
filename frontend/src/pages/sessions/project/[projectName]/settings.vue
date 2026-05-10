@@ -3,7 +3,7 @@ import { useRoute } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
 
 const route = useRoute()
-const projectName = route.params.projectName as string
+const projectName = (route.params as { projectName: string }).projectName
 </script>
 
 <template>
