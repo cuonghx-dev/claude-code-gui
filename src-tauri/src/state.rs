@@ -16,6 +16,7 @@ pub struct AppState {
     pub claude_cli: Arc<RwLock<Option<ClaudeCliInfo>>>,
     pub config: Arc<RwLock<AppConfig>>,
     pub watcher: Arc<watcher::WatcherHandle>,
+    pub pty: Arc<pty::PtyManager>,
 }
 
 const CONFIG_FILE: &str = ".app-config.json";

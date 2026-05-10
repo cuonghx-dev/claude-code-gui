@@ -5,13 +5,16 @@ import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import AgentForm from '@/components/forms/AgentForm.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ChatTerminal from '@/components/ChatTerminal.vue'
+import ContextPanel from '@/components/ContextPanel.vue'
 import {
   useAgent,
   useAgentDelete,
   useAgentExport,
   useAgentUpdate,
 } from '@/composables/useAgents'
-import type { AgentInput } from '@/types/ipc'
+import { useSettings } from '@/composables/useSettings'
+import type { AgentInput, TerminalOpts } from '@/types/ipc'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +27,24 @@ const exportMut = useAgentExport()
 
 const errorMessage = ref('')
 const confirmingDelete = ref(false)
+const showTerminal = ref(false)
+const terminalSessionId = ref<string>('')
+const settings = useSettings()
+
+const terminalOpts = computed<TerminalOpts | null>(() => {
+  if (!showTerminal.value || !data.value) return null
+  return {
+    agentSlug: data.value.slug,
+    cols: 100,
+    rows: 32,
+    workingDir: null,
+    model: data.value.frontmatter.model ?? null,
+    permissionMode: (settings.data.value?.defaultPermissionMode as TerminalOpts['permissionMode']) ?? null,
+    outputStyleId: null,
+    resumeSessionId: null,
+    commandTemplate: null,
+  } as TerminalOpts
+})
 
 async function onSubmit(input: AgentInput) {
   errorMessage.value = ''
@@ -67,32 +88,52 @@ async function onExport() {
 <template>
   <PageHeader :title="data?.frontmatter?.name ?? slug" :subtitle="data?.filePath">
     <template #actions>
+      <button
+        type="button"
+        class="ccg-btn-ghost"
+        @click="showTerminal = !showTerminal"
+      >
+        {{ showTerminal ? 'Hide terminal' : 'Test in terminal' }}
+      </button>
       <button type="button" class="ccg-btn-ghost" @click="onExport">Export</button>
       <button type="button" class="ccg-btn-danger" @click="confirmingDelete = true">Delete</button>
     </template>
   </PageHeader>
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
     <template #default="{ data: agent }">
-      <section v-if="agent" class="p-6">
-        <p
-          v-if="errorMessage"
-          class="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-        >
-          {{ errorMessage }}
-        </p>
-        <AgentForm
-          :draft-key="`agent:${agent.slug}`"
-          :initial="{
-            slug: agent.slug,
-            directory: agent.directory,
-            frontmatter: agent.frontmatter,
-            body: agent.body,
-          }"
-          :submitting="update.isPending.value"
-          submit-label="Save changes"
-          @submit="onSubmit"
-          @cancel="router.push('/agents')"
-        />
+      <section v-if="agent" class="grid h-[calc(100vh-65px)] grid-cols-1 gap-0" :class="showTerminal ? 'lg:grid-cols-2' : ''">
+        <div class="overflow-auto p-6">
+          <p
+            v-if="errorMessage"
+            class="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+          >
+            {{ errorMessage }}
+          </p>
+          <AgentForm
+            :draft-key="`agent:${agent.slug}`"
+            :initial="{
+              slug: agent.slug,
+              directory: agent.directory,
+              frontmatter: agent.frontmatter,
+              body: agent.body,
+            }"
+            :submitting="update.isPending.value"
+            submit-label="Save changes"
+            @submit="onSubmit"
+            @cancel="router.push('/agents')"
+          />
+        </div>
+        <div v-if="showTerminal && terminalOpts" class="grid grid-rows-[1fr_auto] border-l border-neutral-200 dark:border-neutral-800">
+          <ChatTerminal
+            :opts="terminalOpts"
+            class="min-h-0"
+            @ready="(id: string) => (terminalSessionId = id)"
+            @exit="() => (terminalSessionId = '')"
+          />
+          <div class="border-t border-neutral-200 p-3 dark:border-neutral-800">
+            <ContextPanel :session-id="terminalSessionId || undefined" />
+          </div>
+        </div>
       </section>
     </template>
   </QueryStateBoundary>

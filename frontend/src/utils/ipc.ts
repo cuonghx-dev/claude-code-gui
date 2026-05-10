@@ -30,12 +30,15 @@ import type {
   Project,
   ProjectInfo,
   RequestId,
+  SessionId,
   SessionSummary,
   SetupPayload,
   Settings,
   Skill,
   SkillImportSource,
   SkillInput,
+  TerminalOpts,
+  TerminalSession,
 } from '@/types/ipc'
 
 export { invoke } from '@tauri-apps/api/core'
@@ -133,6 +136,25 @@ export const marketplaceUninstall = (id: string) =>
 export const watchProjectDir = (path: string) =>
   invoke<string>('watch_project_dir', { path })
 export const unwatchPath = (id: string) => invoke<void>('unwatch_path', { id })
+
+// Terminal
+export const terminalSessionCreate = (opts: TerminalOpts) =>
+  invoke<SessionId>('terminal_session_create', { opts })
+export const terminalSessionInput = (sessionId: string, data: string) =>
+  invoke<void>('terminal_session_input', { sessionId, data })
+export const terminalSessionResize = (sessionId: string, cols: number, rows: number) =>
+  invoke<void>('terminal_session_resize', { sessionId, cols, rows })
+export const terminalSessionKill = (sessionId: string) =>
+  invoke<void>('terminal_session_kill', { sessionId })
+export const terminalSessionsList = () =>
+  invoke<TerminalSession[]>('terminal_sessions_list')
+export const terminalSessionGet = (sessionId: string) =>
+  invoke<TerminalSession>('terminal_session_get', { sessionId })
+export const commandsExecute = (
+  slug: string,
+  args?: string,
+  workingDir?: string,
+) => invoke<SessionId>('commands_execute', { slug, args, workingDir })
 
 // Projects
 export const projectsList = () => invoke<Project[]>('projects_list')

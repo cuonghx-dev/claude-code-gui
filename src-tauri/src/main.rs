@@ -67,11 +67,39 @@ fn run() -> anyhow::Result<()> {
                 tracing::warn!(error = %e, "watcher could not subscribe to claude_dir");
             }
 
+            // PTY manager: shares the emit-callback pattern. cli-history
+            // dir lives under claude_dir.
+            let app_for_pty_emit = app.handle().clone();
+            let pty_emit: pty::Emit = std::sync::Arc::new(move |name, payload| {
+                if let Err(e) = app_for_pty_emit.emit(name, payload) {
+                    tracing::warn!(error = %e, event = %name, "pty emit failed");
+                }
+            });
+            let pty_manager = pty::PtyManager::new(pty_emit, &claude_dir);
+
+            // Graceful shutdown: kill all PTYs when the main window
+            // requests close. The webview teardown otherwise races with
+            // PTY reader threads.
+            let pty_for_shutdown = std::sync::Arc::new(pty_manager);
+            let pty_for_event = std::sync::Arc::clone(&pty_for_shutdown);
+            if let Some(window) = app.get_webview_window("main") {
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { .. } = event {
+                        let pty = std::sync::Arc::clone(&pty_for_event);
+                        // best-effort: spawn on the runtime if possible.
+                        tauri::async_runtime::spawn(async move {
+                            pty.shutdown_all().await;
+                        });
+                    }
+                });
+            }
+
             app.manage(AppState {
                 claude_dir: Arc::new(RwLock::new(claude_dir)),
                 claude_cli: Arc::new(RwLock::new(claude_cli)),
                 config: Arc::new(RwLock::new(config)),
                 watcher: Arc::new(watcher_handle),
+                pty: pty_for_shutdown,
             });
 
             tracing::info!("claude-code-gui ready");
@@ -149,6 +177,13 @@ fn run() -> anyhow::Result<()> {
             commands::files::fs_home_dir,
             commands::files::watch_project_dir,
             commands::files::unwatch_path,
+            commands::terminal::terminal_session_create,
+            commands::terminal::terminal_session_input,
+            commands::terminal::terminal_session_resize,
+            commands::terminal::terminal_session_kill,
+            commands::terminal::terminal_sessions_list,
+            commands::terminal::terminal_session_get,
+            commands::terminal::commands_execute,
             commands::debug::debug_claude_cli,
             commands::debug::app_version,
         ])

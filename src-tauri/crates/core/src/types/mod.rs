@@ -10,6 +10,7 @@ mod projects;
 mod sessions;
 mod settings;
 mod skills;
+mod terminal;
 
 pub use agents::{Agent, AgentFrontmatter, AgentImport, AgentInput, AgentMemory, AgentModel};
 pub use commands::{Command, CommandFrontmatter, CommandInput};
@@ -28,3 +29,4 @@ pub use projects::{FileNode, GitFileStatus, GitStatus, Project, ProjectInfo};
 pub use sessions::{Message, MessageKind, Page, Role, SessionSummary, TokenUsage};
 pub use settings::{AppConfig, DirEntry, SetupPayload, Settings};
 pub use skills::{Skill, SkillContext, SkillFrontmatter, SkillImportSource, SkillInput, SkillSource};
+pub use terminal::{PermissionMode, TerminalOpts, TerminalSession, ToolCall};

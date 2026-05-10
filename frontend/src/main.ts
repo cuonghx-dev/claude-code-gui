@@ -8,6 +8,7 @@ import App from './App.vue'
 import { queryClient } from './lib/queryClient'
 
 import './styles.css'
+import '@xterm/xterm/css/xterm.css'
 
 const router = createRouter({
   history: createWebHashHistory(),
