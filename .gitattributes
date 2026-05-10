@@ -1,0 +1,19 @@
+* text=auto eol=lf
+
+# Generated TypeScript bindings (ts-rs)
+frontend/src/types/ipc/*.ts linguist-generated=true
+frontend/src/types/ipc/index.ts linguist-generated=true
+
+# Lockfiles
+Cargo.lock binary
+bun.lockb binary
+
+# Treat known binary types as binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.dmg binary
+*.msi binary

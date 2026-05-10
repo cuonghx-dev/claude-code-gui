@@ -3,3 +3,47 @@
 .dolt/
 *.db
 .beads-credential-key
+
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Node / Bun
+node_modules/
+dist/
+.vite/
+*.log
+.npm/
+.pnpm-store/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+src-tauri/.tauri/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+*.dmg
+*.app
+*.msi
+*.AppImage
+*.deb
+*.rpm

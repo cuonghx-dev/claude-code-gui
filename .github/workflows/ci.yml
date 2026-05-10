@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-22.04]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build deps
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            patchelf
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: bun install --cwd frontend --frozen-lockfile
+
+      - name: cargo fmt
+        working-directory: src-tauri
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        working-directory: src-tauri
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo test (regenerates ts-rs bindings)
+        working-directory: src-tauri
+        run: cargo test --workspace
+
+      - name: Regenerate ts-rs barrel
+        run: bun --cwd frontend run build:ipc-barrel
+
+      - name: Drift gate — generated TS must match committed
+        run: |
+          if ! git diff --exit-code -- frontend/src/types/ipc/; then
+            echo "::error::ts-rs generated types are stale. Run 'cd src-tauri && cargo test --workspace && cd .. && bun --cwd frontend run build:ipc-barrel' and commit the diff."
+            exit 1
+          fi
+
+      - name: Frontend lint
+        run: bun --cwd frontend run lint
+
+      - name: Frontend build
+        run: bun --cwd frontend run build
+
+      - name: Tauri debug smoke build
+        working-directory: src-tauri
+        run: cargo build --workspace

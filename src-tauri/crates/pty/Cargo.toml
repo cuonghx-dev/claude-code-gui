@@ -1,0 +1,27 @@
+[package]
+name        = "claude-code-gui-pty"
+version     = { workspace = true }
+edition     = { workspace = true }
+rust-version = { workspace = true }
+license     = { workspace = true }
+authors     = { workspace = true }
+
+[lib]
+name = "pty"
+path = "src/lib.rs"
+
+[dependencies]
+app_core = { path = "../core", package = "claude-code-gui-core" }
+
+serde         = { workspace = true }
+serde_json    = { workspace = true }
+ts-rs         = { workspace = true }
+thiserror     = { workspace = true }
+tracing       = { workspace = true }
+uuid          = { workspace = true }
+chrono        = { workspace = true }
+tokio         = { workspace = true }
+regex         = { workspace = true }
+once_cell     = { workspace = true }
+portable-pty       = { workspace = true }
+strip-ansi-escapes = { workspace = true }

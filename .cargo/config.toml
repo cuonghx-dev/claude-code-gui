@@ -1,0 +1,9 @@
+[net]
+git-fetch-with-cli = true
+
+[build]
+# Speed up local dev builds; CI overrides via Swatinem/rust-cache.
+incremental = true
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
