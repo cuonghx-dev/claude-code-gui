@@ -9,7 +9,11 @@ const { isPending, isError, error, data } = useMcpList('global')
 </script>
 
 <template>
-  <PageHeader title="MCP servers" subtitle="From ~/.claude/.mcp.json (global scope)" />
+  <PageHeader title="MCP servers" subtitle="From ~/.claude/.mcp.json (global scope)">
+    <template #actions>
+      <RouterLink to="/mcp/new" class="ccg-btn-primary">+ New</RouterLink>
+    </template>
+  </PageHeader>
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
     <template #default="{ data: items }">
       <section class="p-6">

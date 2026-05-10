@@ -1,35 +1,88 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
-import { useCommand } from '@/composables/useCommands'
+import CommandForm from '@/components/forms/CommandForm.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import {
+  useCommand,
+  useCommandDelete,
+  useCommandUpdate,
+} from '@/composables/useCommands'
+import type { CommandInput } from '@/types/ipc'
 
 const route = useRoute()
+const router = useRouter()
 const slug = computed(() => (route.params as { slug: string }).slug)
+
 const { isPending, isError, error, data } = useCommand(slug)
+const update = useCommandUpdate()
+const remove = useCommandDelete()
+
+const errorMessage = ref('')
+const confirmingDelete = ref(false)
+
+async function onSubmit(input: CommandInput) {
+  errorMessage.value = ''
+  try {
+    const next = await update.mutateAsync({ slug: slug.value, input })
+    if (next.slug !== slug.value) {
+      router.replace(`/commands/${encodeURIComponent(next.slug)}`)
+    }
+  } catch (e) {
+    errorMessage.value = (e as { message?: string })?.message ?? String(e)
+  }
+}
+
+async function onDelete() {
+  errorMessage.value = ''
+  try {
+    await remove.mutateAsync(slug.value)
+    router.push('/commands')
+  } catch (e) {
+    errorMessage.value = (e as { message?: string })?.message ?? String(e)
+  }
+}
 </script>
 
 <template>
-  <PageHeader :title="`/${slug}`" :subtitle="data?.frontmatter?.description ?? undefined" />
+  <PageHeader :title="`/${slug}`" :subtitle="data?.frontmatter?.description ?? undefined">
+    <template #actions>
+      <button type="button" class="ccg-btn-danger" @click="confirmingDelete = true">Delete</button>
+    </template>
+  </PageHeader>
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
     <template #default="{ data: cmd }">
-      <section v-if="cmd" class="grid grid-cols-1 gap-6 p-6 lg:grid-cols-2">
-        <dl class="grid grid-cols-3 gap-x-3 gap-y-2 rounded-lg border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-900">
-          <dt class="text-neutral-500">Argument hint</dt>
-          <dd class="col-span-2">{{ cmd.frontmatter.argumentHint ?? '—' }}</dd>
-          <dt class="text-neutral-500">Allowed tools</dt>
-          <dd class="col-span-2">
-            <span v-if="!cmd.frontmatter.allowedTools.length">—</span>
-            <span v-for="t in cmd.frontmatter.allowedTools" :key="t" class="mr-1 rounded bg-neutral-100 px-1.5 py-0.5 text-xs">{{ t }}</span>
-          </dd>
-          <dt class="text-neutral-500">Agent</dt>
-          <dd class="col-span-2">{{ cmd.frontmatter.agent ?? '—' }}</dd>
-          <dt class="text-neutral-500">Path</dt>
-          <dd class="col-span-2 break-all font-mono text-xs">{{ cmd.filePath }}</dd>
-        </dl>
-        <pre class="max-h-[70vh] overflow-auto rounded-lg border border-neutral-200 bg-white p-4 text-sm leading-relaxed dark:border-neutral-800 dark:bg-neutral-900">{{ cmd.body }}</pre>
+      <section v-if="cmd" class="p-6">
+        <p
+          v-if="errorMessage"
+          class="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+        >
+          {{ errorMessage }}
+        </p>
+        <CommandForm
+          :draft-key="`command:${cmd.slug}`"
+          :initial="{
+            slug: cmd.slug,
+            directory: cmd.directory,
+            frontmatter: cmd.frontmatter,
+            body: cmd.body,
+          }"
+          :submitting="update.isPending.value"
+          submit-label="Save changes"
+          @submit="onSubmit"
+          @cancel="router.push('/commands')"
+        />
       </section>
     </template>
   </QueryStateBoundary>
+  <ConfirmDialog
+    v-model:open="confirmingDelete"
+    title="Delete command?"
+    :message="`This will permanently remove '${slug}.md' from disk.`"
+    confirm-label="Delete"
+    danger
+    @confirm="onDelete"
+  />
 </template>

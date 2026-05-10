@@ -9,7 +9,11 @@ const { isPending, isError, error, data } = useCommandsList()
 </script>
 
 <template>
-  <PageHeader title="Commands" :subtitle="`${data?.length ?? 0} slash commands`" />
+  <PageHeader title="Commands" :subtitle="`${data?.length ?? 0} slash commands`">
+    <template #actions>
+      <RouterLink to="/commands/new" class="ccg-btn-primary">+ New</RouterLink>
+    </template>
+  </PageHeader>
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
     <template #default="{ data: items }">
       <section class="p-6">

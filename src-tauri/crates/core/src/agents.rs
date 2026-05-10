@@ -1,18 +1,21 @@
-//! Read-side logic for `~/.claude/agents/`.
+//! Read+write logic for `~/.claude/agents/`.
 //!
-//! Phase 1: list + get. Recursive walk over `agents/**/*.md`. Each file
-//! parses through `frontmatter::parse::<AgentFrontmatter>`. Slug derives
-//! from filename without extension. Tolerant: missing frontmatter keys
-//! become defaults; unknown keys land in `frontmatter.extra`.
+//! List/get walks `agents/**/*.md` recursively, parses frontmatter via
+//! `frontmatter::parse::<AgentFrontmatter>`, and tolerates unknown keys
+//! by stashing them in `frontmatter.extra`.
 //!
-//! Phase 2 will add create/update/delete/export/import + history.
+//! Create/update/delete write through `io::atomic_write` so a partial save
+//! never appears to the file watcher. Update treats slug+directory as the
+//! identity; if either changes the old file is removed after the new one
+//! is written.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
 
 use crate::frontmatter::{self, Document};
-use crate::types::{Agent, AgentFrontmatter};
+use crate::io;
+use crate::types::{Agent, AgentFrontmatter, AgentImport, AgentInput};
 use crate::{AppError, ErrorCode};
 
 const AGENTS_SUBDIR: &str = "agents";
@@ -100,6 +103,94 @@ fn relative_dir(root: &Path, file: &Path) -> String {
         .join("/")
 }
 
+pub fn create(claude_dir: &Path, input: AgentInput) -> Result<Agent, AppError> {
+    io::validate_slug(&input.slug)?;
+    io::validate_relative_dir(&input.directory)?;
+    let path = file_path(claude_dir, &input.directory, &input.slug);
+    if path.exists() {
+        return Err(AppError::invalid(format!(
+            "agent '{}' already exists",
+            input.slug
+        )));
+    }
+    write_doc(&path, &input)?;
+    get_at(claude_dir, &input.directory, &input.slug)
+}
+
+pub fn update(claude_dir: &Path, slug: &str, input: AgentInput) -> Result<Agent, AppError> {
+    io::validate_slug(&input.slug)?;
+    io::validate_relative_dir(&input.directory)?;
+    let existing = get(claude_dir, slug)?;
+    let new_path = file_path(claude_dir, &input.directory, &input.slug);
+    let old_path = PathBuf::from(&existing.file_path);
+
+    if old_path != new_path && new_path.exists() {
+        return Err(AppError::invalid(format!(
+            "target slug '{}' already exists at '{}'",
+            input.slug,
+            new_path.display()
+        )));
+    }
+    write_doc(&new_path, &input)?;
+    if old_path != new_path {
+        let _ = io::remove_file(&old_path);
+    }
+    get_at(claude_dir, &input.directory, &input.slug)
+}
+
+pub fn delete(claude_dir: &Path, slug: &str) -> Result<(), AppError> {
+    let existing = get(claude_dir, slug)?;
+    io::remove_file(Path::new(&existing.file_path))
+}
+
+/// Return the on-disk markdown source for an agent (frontmatter + body).
+pub fn export(claude_dir: &Path, slug: &str) -> Result<String, AppError> {
+    let agent = get(claude_dir, slug)?;
+    let raw = std::fs::read_to_string(&agent.file_path)?;
+    Ok(raw)
+}
+
+/// Write an externally-supplied markdown source verbatim. Validates that
+/// it parses as an agent before persisting.
+pub fn import(claude_dir: &Path, payload: AgentImport) -> Result<Agent, AppError> {
+    io::validate_slug(&payload.slug)?;
+    io::validate_relative_dir(&payload.directory)?;
+    let _: Document<AgentFrontmatter> = frontmatter::parse(&payload.content)?;
+    let path = file_path(claude_dir, &payload.directory, &payload.slug);
+    if path.exists() {
+        return Err(AppError::invalid(format!(
+            "agent '{}' already exists",
+            payload.slug
+        )));
+    }
+    io::atomic_write(&path, payload.content.as_bytes())?;
+    get_at(claude_dir, &payload.directory, &payload.slug)
+}
+
+fn file_path(claude_dir: &Path, directory: &str, slug: &str) -> PathBuf {
+    let mut p = claude_dir.join(AGENTS_SUBDIR);
+    if !directory.is_empty() {
+        p.push(directory);
+    }
+    p.push(format!("{slug}.md"));
+    p
+}
+
+fn write_doc(path: &Path, input: &AgentInput) -> Result<(), AppError> {
+    let doc = Document {
+        frontmatter: input.frontmatter.clone(),
+        body: input.body.clone(),
+    };
+    let serialized = frontmatter::serialize(&doc)?;
+    io::atomic_write(path, serialized.as_bytes())
+}
+
+fn get_at(claude_dir: &Path, directory: &str, slug: &str) -> Result<Agent, AppError> {
+    let root = claude_dir.join(AGENTS_SUBDIR);
+    let path = file_path(claude_dir, directory, slug);
+    read_one(&root, &path)
+}
+
 /// `agent_slug -> count of skills referenced in frontmatter`. Cheap O(n) scan.
 pub fn skill_counts(claude_dir: &Path) -> Result<std::collections::HashMap<String, usize>, AppError> {
     let mut counts = std::collections::HashMap::new();
@@ -173,5 +264,79 @@ mod tests {
     fn empty_dir_returns_empty_list() {
         let td = tempfile::tempdir().unwrap();
         assert!(list(td.path()).unwrap().is_empty());
+    }
+
+    #[test]
+    fn create_then_get_round_trips() {
+        let td = tempfile::tempdir().unwrap();
+        let input = AgentInput {
+            slug: "new-agent".into(),
+            directory: String::new(),
+            frontmatter: AgentFrontmatter {
+                name: Some("New".into()),
+                ..Default::default()
+            },
+            body: "hello\n".into(),
+        };
+        let created = create(td.path(), input).unwrap();
+        assert_eq!(created.slug, "new-agent");
+        let fetched = get(td.path(), "new-agent").unwrap();
+        assert_eq!(fetched.body.trim_end(), "hello");
+    }
+
+    #[test]
+    fn create_rejects_duplicate() {
+        let (_td, dir) = fixture();
+        let input = AgentInput {
+            slug: "reviewer".into(),
+            directory: String::new(),
+            frontmatter: AgentFrontmatter::default(),
+            body: String::new(),
+        };
+        assert_eq!(create(&dir, input).unwrap_err().code, ErrorCode::InvalidInput);
+    }
+
+    #[test]
+    fn update_can_rename_slug() {
+        let (_td, dir) = fixture();
+        let input = AgentInput {
+            slug: "renamed".into(),
+            directory: String::new(),
+            frontmatter: AgentFrontmatter {
+                name: Some("Renamed".into()),
+                ..Default::default()
+            },
+            body: "body\n".into(),
+        };
+        let updated = update(&dir, "reviewer", input).unwrap();
+        assert_eq!(updated.slug, "renamed");
+        assert_eq!(get(&dir, "reviewer").unwrap_err().code, ErrorCode::NotFound);
+    }
+
+    #[test]
+    fn delete_removes_file() {
+        let (_td, dir) = fixture();
+        delete(&dir, "reviewer").unwrap();
+        assert_eq!(get(&dir, "reviewer").unwrap_err().code, ErrorCode::NotFound);
+    }
+
+    #[test]
+    fn export_returns_raw_source() {
+        let (_td, dir) = fixture();
+        let raw = export(&dir, "reviewer").unwrap();
+        assert!(raw.starts_with("---"));
+        assert!(raw.contains("Reviewer"));
+    }
+
+    #[test]
+    fn import_parses_and_writes() {
+        let td = tempfile::tempdir().unwrap();
+        let payload = AgentImport {
+            slug: "imported".into(),
+            directory: String::new(),
+            content: "---\nname: Imported\n---\n\nfrom outside\n".into(),
+        };
+        let agent = import(td.path(), payload).unwrap();
+        assert_eq!(agent.frontmatter.name.as_deref(), Some("Imported"));
     }
 }

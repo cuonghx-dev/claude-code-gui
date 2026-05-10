@@ -15,3 +15,11 @@ pub struct Plan {
     pub size_bytes: u64,
     pub modified_at: String,
 }
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct PlanInput {
+    pub slug: String,
+    pub body: String,
+}

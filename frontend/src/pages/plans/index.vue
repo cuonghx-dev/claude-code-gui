@@ -9,7 +9,11 @@ const { isPending, isError, error, data } = usePlansList()
 </script>
 
 <template>
-  <PageHeader title="Plans" :subtitle="`${data?.length ?? 0} markdown plans in ~/.claude/plans/`" />
+  <PageHeader title="Plans" :subtitle="`${data?.length ?? 0} markdown plans in ~/.claude/plans/`">
+    <template #actions>
+      <RouterLink to="/plans/new" class="ccg-btn-primary">+ New</RouterLink>
+    </template>
+  </PageHeader>
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
     <template #default="{ data: items }">
       <section class="p-6">

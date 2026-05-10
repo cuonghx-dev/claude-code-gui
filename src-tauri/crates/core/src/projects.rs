@@ -1,15 +1,16 @@
-//! Read-side logic for `~/.claude/projects/`. Phase 1: list + get + resolve.
-//!
-//! Projects are encoded subdirs: `/Users/foo/app` → `-Users-foo-app`. Each
-//! contains JSONL session files. The decoded path is also the working dir
-//! for spawning `claude --resume`.
+//! Read+write logic for `~/.claude/projects/`. Projects are encoded
+//! subdirs: `/Users/foo/app` → `-Users-foo-app`. Each contains JSONL
+//! session files. The decoded path is also the working dir for spawning
+//! `claude --resume`.
 
 use std::path::{Path, PathBuf};
 
+use crate::io;
 use crate::types::{Project, ProjectInfo};
-use crate::AppError;
+use crate::{AppError, ErrorCode};
 
 const PROJECTS_SUBDIR: &str = "projects";
+const CLAUDE_MD: &str = "CLAUDE.md";
 
 pub fn list(claude_dir: &Path) -> Result<Vec<Project>, AppError> {
     let root = claude_dir.join(PROJECTS_SUBDIR);
@@ -119,6 +120,82 @@ pub fn files(claude_dir: &Path, project_name: &str, sub_path: Option<&str>) -> R
     Ok(out)
 }
 
+/// Create an empty project entry under `~/.claude/projects/`. The path is
+/// recorded by encoding it; the underlying working directory is *not*
+/// touched. Errors with `InvalidInput` if the project already exists.
+pub fn create(claude_dir: &Path, working_path: &str) -> Result<Project, AppError> {
+    if working_path.trim().is_empty() {
+        return Err(AppError::invalid("project path cannot be empty"));
+    }
+    let name = encode(working_path);
+    let dir = claude_dir.join(PROJECTS_SUBDIR).join(&name);
+    if dir.exists() {
+        return Err(AppError::invalid(format!(
+            "project '{name}' already exists"
+        )));
+    }
+    std::fs::create_dir_all(&dir)?;
+    get(claude_dir, &name).or_else(|_| {
+        // Brand-new dir has no sessions — synthesize a minimal record.
+        Ok(Project {
+            name: name.clone(),
+            working_dir: working_path.to_string(),
+            session_count: 0,
+            last_active: None,
+        })
+    })
+}
+
+pub fn rename(claude_dir: &Path, old_name: &str, new_name: &str) -> Result<(), AppError> {
+    if new_name.trim().is_empty() {
+        return Err(AppError::invalid("new project name cannot be empty"));
+    }
+    let root = claude_dir.join(PROJECTS_SUBDIR);
+    let from = root.join(old_name);
+    let to = root.join(new_name);
+    if !from.is_dir() {
+        return Err(AppError::not_found(format!(
+            "project '{old_name}' not found"
+        )));
+    }
+    if to.exists() {
+        return Err(AppError::invalid(format!(
+            "project '{new_name}' already exists"
+        )));
+    }
+    std::fs::rename(&from, &to)?;
+    Ok(())
+}
+
+pub fn delete(claude_dir: &Path, name: &str) -> Result<(), AppError> {
+    let dir = claude_dir.join(PROJECTS_SUBDIR).join(name);
+    if !dir.is_dir() {
+        return Err(AppError::not_found(format!("project '{name}' not found")));
+    }
+    io::remove_dir_all(&dir)
+}
+
+pub fn claude_md_get(claude_dir: &Path, name: &str) -> Result<String, AppError> {
+    let project = get(claude_dir, name)?;
+    let path = PathBuf::from(&project.working_dir).join(CLAUDE_MD);
+    if !path.is_file() {
+        return Ok(String::new());
+    }
+    Ok(std::fs::read_to_string(&path)?)
+}
+
+pub fn claude_md_put(claude_dir: &Path, name: &str, content: &str) -> Result<(), AppError> {
+    let project = get(claude_dir, name)?;
+    let wd = PathBuf::from(&project.working_dir);
+    if !wd.is_dir() {
+        return Err(AppError::new(
+            ErrorCode::NotFound,
+            "project working directory does not exist on disk",
+        ));
+    }
+    io::atomic_write(&wd.join(CLAUDE_MD), content.as_bytes())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -143,5 +220,19 @@ mod tests {
         assert_eq!(projs[0].name, "-tmp-test");
         assert_eq!(projs[0].working_dir, "/tmp/test");
         assert_eq!(projs[0].session_count, 2);
+    }
+
+    #[test]
+    fn create_rename_delete() {
+        let td = tempfile::tempdir().unwrap();
+        let p = create(td.path(), "/tmp/scratch").unwrap();
+        assert_eq!(p.name, "-tmp-scratch");
+
+        rename(td.path(), "-tmp-scratch", "-tmp-other").unwrap();
+        assert!(!td.path().join("projects/-tmp-scratch").exists());
+        assert!(td.path().join("projects/-tmp-other").is_dir());
+
+        delete(td.path(), "-tmp-other").unwrap();
+        assert!(!td.path().join("projects/-tmp-other").exists());
     }
 }

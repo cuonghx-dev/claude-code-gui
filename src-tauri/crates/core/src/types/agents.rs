@@ -59,3 +59,28 @@ pub enum AgentMemory {
     Local,
     None,
 }
+
+/// Payload for create/update. Slug + directory determine the file path on
+/// disk: `<claude_dir>/agents/<directory>/<slug>.md` (directory empty = root).
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct AgentInput {
+    pub slug: String,
+    #[serde(default)]
+    pub directory: String,
+    pub frontmatter: AgentFrontmatter,
+    pub body: String,
+}
+
+/// Import payload: serialized agent file content as a string.
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct AgentImport {
+    pub slug: String,
+    #[serde(default)]
+    pub directory: String,
+    /// Raw markdown source (frontmatter + body) to write verbatim.
+    pub content: String,
+}

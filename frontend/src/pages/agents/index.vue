@@ -1,13 +1,33 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { useAgentsList } from '@/composables/useAgents'
+import { useAgentImport, useAgentsList } from '@/composables/useAgents'
 
 const { isPending, isError, error, data } = useAgentsList()
 const search = ref('')
+const router = useRouter()
+const importMut = useAgentImport()
+const fileInput = ref<HTMLInputElement>()
+const importError = ref('')
+
+async function onFileChosen(e: Event) {
+  importError.value = ''
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const slug = file.name.replace(/\.md$/i, '')
+  const content = await file.text()
+  try {
+    await importMut.mutateAsync({ slug, directory: '', content })
+    if (fileInput.value) fileInput.value.value = ''
+    router.push(`/agents/${encodeURIComponent(slug)}`)
+  } catch (err) {
+    importError.value = (err as { message?: string })?.message ?? String(err)
+    if (fileInput.value) fileInput.value.value = ''
+  }
+}
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -28,10 +48,25 @@ const filtered = computed(() => {
       <input
         v-model="search"
         placeholder="Filter…"
-        class="w-48 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm placeholder:text-neutral-400 focus:border-violet-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800"
+        class="ccg-input w-48"
       />
+      <input
+        ref="fileInput"
+        type="file"
+        accept=".md,text/markdown"
+        class="hidden"
+        @change="onFileChosen"
+      />
+      <button type="button" class="ccg-btn-ghost" @click="fileInput?.click()">Import</button>
+      <RouterLink to="/agents/new" class="ccg-btn-primary">+ New</RouterLink>
     </template>
   </PageHeader>
+  <p
+    v-if="importError"
+    class="mx-6 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+  >
+    Import failed: {{ importError }}
+  </p>
 
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="filtered">
     <template #default="{ data: items }">

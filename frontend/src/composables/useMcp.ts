@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/vue-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, type MaybeRefOrGetter, toValue } from 'vue'
 import { qk } from '@/lib/queryKeys'
-import type { McpScope } from '@/types/ipc'
-import { mcpGet, mcpList } from '@/utils/ipc'
+import type { McpImportPayload, McpScope, McpServerInput } from '@/types/ipc'
+import { mcpCreate, mcpDelete, mcpGet, mcpImport, mcpList } from '@/utils/ipc'
 
 export const useMcpList = (
   scope: MaybeRefOrGetter<McpScope>,
@@ -23,3 +23,43 @@ export const useMcpServer = (
     queryFn: () => mcpGet(toValue(name), toValue(scope), toValue(workingDir)),
     enabled: computed(() => !!toValue(name)),
   })
+
+export const useMcpCreate = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      input,
+      scope,
+      workingDir,
+    }: {
+      input: McpServerInput
+      scope: McpScope
+      workingDir?: string
+    }) => mcpCreate(input, scope, workingDir),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.mcp.all }),
+  })
+}
+
+export const useMcpDelete = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      name,
+      scope,
+      workingDir,
+    }: {
+      name: string
+      scope: McpScope
+      workingDir?: string
+    }) => mcpDelete(name, scope, workingDir),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.mcp.all }),
+  })
+}
+
+export const useMcpImport = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: McpImportPayload) => mcpImport(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.mcp.all }),
+  })
+}

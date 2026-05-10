@@ -1,15 +1,43 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
+import { ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { useSkillsList } from '@/composables/useSkills'
+import { useSkillImport, useSkillsList } from '@/composables/useSkills'
 
 const { isPending, isError, error, data } = useSkillsList()
+const importMut = useSkillImport()
+const router = useRouter()
+const importError = ref('')
+
+async function importLocal() {
+  importError.value = ''
+  try {
+    const picked = await openDialog({ directory: true, multiple: false, title: 'Pick a skill directory' })
+    if (typeof picked !== 'string') return
+    const skills = await importMut.mutateAsync({ kind: 'local', path: picked })
+    if (skills[0]) router.push(`/skills/${encodeURIComponent(skills[0].slug)}`)
+  } catch (e) {
+    importError.value = (e as { message?: string })?.message ?? String(e)
+  }
+}
 </script>
 
 <template>
-  <PageHeader title="Skills" :subtitle="`${data?.length ?? 0} skills (local + plugin)`" />
+  <PageHeader title="Skills" :subtitle="`${data?.length ?? 0} skills (local + plugin)`">
+    <template #actions>
+      <button type="button" class="ccg-btn-ghost" @click="importLocal">Import folder</button>
+      <RouterLink to="/skills/new" class="ccg-btn-primary">+ New</RouterLink>
+    </template>
+  </PageHeader>
+  <p
+    v-if="importError"
+    class="mx-6 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+  >
+    Import failed: {{ importError }}
+  </p>
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
     <template #default="{ data: items }">
       <section class="p-6">

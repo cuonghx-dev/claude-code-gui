@@ -49,3 +49,25 @@ pub enum SkillContext {
     /// Always loaded into the agent.
     Always,
 }
+
+/// Payload for skill create/update. Writes to
+/// `<claude_dir>/skills/<slug>/SKILL.md`.
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct SkillInput {
+    pub slug: String,
+    pub frontmatter: SkillFrontmatter,
+    pub body: String,
+}
+
+/// Import a skill from external source. Phase 2: only `Local { path }`
+/// (a directory containing SKILL.md) is supported. `Github { url }` lands
+/// in Phase 3.
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum SkillImportSource {
+    Local { path: String },
+    Github { url: String },
+}

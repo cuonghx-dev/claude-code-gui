@@ -33,3 +33,15 @@ pub struct CommandFrontmatter {
     #[ts(skip)]
     pub extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
+
+/// Payload for command create/update.
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct CommandInput {
+    pub slug: String,
+    #[serde(default)]
+    pub directory: String,
+    pub frontmatter: CommandFrontmatter,
+    pub body: String,
+}

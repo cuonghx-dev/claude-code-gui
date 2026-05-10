@@ -50,12 +50,16 @@ fn run() -> anyhow::Result<()> {
             // Best-effort probe; None just surfaces a setup banner in the UI.
             let claude_cli = app_core::claude_cli::probe();
 
+            // Persisted AppConfig (theme, override, …). Best-effort load.
+            let config = state::load_config(&claude_dir);
+
             // Phase 3 wires the real watcher; Phase 0 is a no-op stub.
             let watcher_handle = watcher::start_global()?;
 
             app.manage(AppState {
                 claude_dir: Arc::new(RwLock::new(claude_dir)),
                 claude_cli: Arc::new(RwLock::new(claude_cli)),
+                config: Arc::new(RwLock::new(config)),
                 watcher: Arc::new(watcher_handle),
             });
 
@@ -66,25 +70,61 @@ fn run() -> anyhow::Result<()> {
             commands::agents::agents_list,
             commands::agents::agents_get,
             commands::agents::agents_skill_counts,
+            commands::agents::agents_create,
+            commands::agents::agents_update,
+            commands::agents::agents_delete,
+            commands::agents::agents_export,
+            commands::agents::agents_import,
             commands::cmds::commands_list,
             commands::cmds::commands_get,
+            commands::cmds::commands_create,
+            commands::cmds::commands_update,
+            commands::cmds::commands_delete,
             commands::skills::skills_list,
             commands::skills::skills_get,
+            commands::skills::skills_create,
+            commands::skills::skills_update,
+            commands::skills::skills_delete,
+            commands::skills::skills_export,
+            commands::skills::skills_import,
             commands::plans::plans_list,
             commands::plans::plans_get,
+            commands::plans::plans_create,
+            commands::plans::plans_update,
+            commands::plans::plans_delete,
             commands::output_styles::output_styles_list,
             commands::output_styles::output_styles_get,
+            commands::output_styles::output_styles_create,
+            commands::output_styles::output_styles_delete,
             commands::mcp::mcp_list,
             commands::mcp::mcp_get,
+            commands::mcp::mcp_create,
+            commands::mcp::mcp_delete,
+            commands::mcp::mcp_import,
             commands::plugins::plugins_list,
             commands::plugins::plugins_get,
             commands::projects::projects_list,
             commands::projects::projects_get,
             commands::projects::projects_resolve,
             commands::projects::projects_files,
+            commands::projects::projects_create,
+            commands::projects::projects_rename,
+            commands::projects::projects_delete,
+            commands::projects::projects_git_status,
+            commands::projects::projects_settings_get,
+            commands::projects::projects_settings_put,
+            commands::projects::projects_claude_md_get,
+            commands::projects::projects_claude_md_put,
             commands::sessions::sessions_list_for_project,
             commands::sessions::sessions_messages,
             commands::settings::settings_get,
+            commands::settings::settings_put,
+            commands::settings::config_get,
+            commands::settings::config_set,
+            commands::settings::setup_finalize,
+            commands::files::directories_list,
+            commands::files::files_read,
+            commands::files::fs_home_dir,
             commands::debug::debug_claude_cli,
             commands::debug::app_version,
         ])

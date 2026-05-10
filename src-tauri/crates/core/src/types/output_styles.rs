@@ -34,3 +34,16 @@ pub struct OutputStyleFrontmatter {
     #[ts(skip)]
     pub extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct OutputStyleInput {
+    pub id: String,
+    pub scope: OutputStyleScope,
+    /// Required when scope is Project.
+    #[serde(default)]
+    pub working_dir: Option<String>,
+    pub frontmatter: OutputStyleFrontmatter,
+    pub body: String,
+}

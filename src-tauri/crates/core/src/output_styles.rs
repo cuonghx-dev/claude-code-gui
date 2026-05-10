@@ -1,12 +1,13 @@
-//! Read-side logic for output styles. Phase 1: list + get with dual scope.
+//! Read+write logic for output styles with dual scope.
 //!
 //! Global: `~/.claude/output-styles/<id>.md`.
 //! Project: `<project>/.claude/output-styles/<id>.md`.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::frontmatter::{self, Document};
-use crate::types::{OutputStyle, OutputStyleFrontmatter, OutputStyleScope};
+use crate::io;
+use crate::types::{OutputStyle, OutputStyleFrontmatter, OutputStyleInput, OutputStyleScope};
 use crate::AppError;
 
 const SUBDIR: &str = "output-styles";
@@ -31,6 +32,52 @@ pub fn get(
         .into_iter()
         .find(|s| s.id == id && s.scope == scope)
         .ok_or_else(|| AppError::not_found(format!("output style '{id}' not found in {scope:?}")))
+}
+
+pub fn create(claude_dir: &Path, input: OutputStyleInput) -> Result<OutputStyle, AppError> {
+    io::validate_slug(&input.id)?;
+    let dir = scope_dir(claude_dir, input.scope, input.working_dir.as_deref())?;
+    let path = dir.join(format!("{}.md", input.id));
+    if path.exists() {
+        return Err(AppError::invalid(format!(
+            "output style '{}' already exists in {:?}",
+            input.id, input.scope
+        )));
+    }
+    let doc = Document {
+        frontmatter: input.frontmatter.clone(),
+        body: input.body.clone(),
+    };
+    let serialized = frontmatter::serialize(&doc)?;
+    io::atomic_write(&path, serialized.as_bytes())?;
+    let wd = input.working_dir.as_deref().map(Path::new);
+    get(claude_dir, &input.id, input.scope, wd)
+}
+
+pub fn delete(
+    claude_dir: &Path,
+    id: &str,
+    scope: OutputStyleScope,
+    working_dir: Option<&Path>,
+) -> Result<(), AppError> {
+    let existing = get(claude_dir, id, scope, working_dir)?;
+    io::remove_file(Path::new(&existing.file_path))
+}
+
+fn scope_dir(
+    claude_dir: &Path,
+    scope: OutputStyleScope,
+    working_dir: Option<&str>,
+) -> Result<PathBuf, AppError> {
+    Ok(match scope {
+        OutputStyleScope::Global => claude_dir.join(SUBDIR),
+        OutputStyleScope::Project => {
+            let wd = working_dir.ok_or_else(|| {
+                AppError::invalid("project-scoped output style requires workingDir")
+            })?;
+            PathBuf::from(wd).join(".claude").join(SUBDIR)
+        }
+    })
 }
 
 fn list_into(root: &Path, scope: OutputStyleScope, out: &mut Vec<OutputStyle>) -> Result<(), AppError> {
@@ -87,5 +134,26 @@ mod tests {
         assert_eq!(styles.len(), 2);
         assert_eq!(styles[0].scope, OutputStyleScope::Global);
         assert_eq!(styles[1].scope, OutputStyleScope::Project);
+    }
+
+    #[test]
+    fn create_and_delete_global() {
+        let td = tempfile::tempdir().unwrap();
+        let input = OutputStyleInput {
+            id: "terse".into(),
+            scope: OutputStyleScope::Global,
+            working_dir: None,
+            frontmatter: OutputStyleFrontmatter {
+                name: Some("Terse".into()),
+                ..Default::default()
+            },
+            body: "be terse".into(),
+        };
+        create(td.path(), input).unwrap();
+        let s = get(td.path(), "terse", OutputStyleScope::Global, None).unwrap();
+        assert_eq!(s.frontmatter.name.as_deref(), Some("Terse"));
+
+        delete(td.path(), "terse", OutputStyleScope::Global, None).unwrap();
+        assert!(get(td.path(), "terse", OutputStyleScope::Global, None).is_err());
     }
 }

@@ -40,3 +40,19 @@ pub struct DirEntry {
     pub path: String,
     pub is_dir: bool,
 }
+
+/// First-run wizard result. Persisted to `settings.json` (the public Claude
+/// CLI surface) and to `AppConfig` (private to claude-code-gui).
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct SetupPayload {
+    #[serde(default)]
+    pub claude_dir_override: Option<String>,
+    #[serde(default)]
+    pub default_model: Option<String>,
+    #[serde(default)]
+    pub default_permission_mode: Option<String>,
+    #[serde(default)]
+    pub theme: Option<String>,
+}

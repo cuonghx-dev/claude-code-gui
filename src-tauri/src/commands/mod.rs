@@ -1,6 +1,7 @@
 pub mod agents;
 pub mod cmds;
 pub mod debug;
+pub mod files;
 pub mod mcp;
 pub mod output_styles;
 pub mod plans;

@@ -1,9 +1,10 @@
-//! Read-side logic for `~/.claude/plans/`. Plain markdown — no frontmatter.
+//! Read+write logic for `~/.claude/plans/`. Plain markdown — no frontmatter.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use crate::types::Plan;
+use crate::io;
+use crate::types::{Plan, PlanInput};
 use crate::AppError;
 
 const PLANS_SUBDIR: &str = "plans";
@@ -70,6 +71,46 @@ fn read_one(path: &Path) -> Result<Plan, AppError> {
     })
 }
 
+pub fn create(claude_dir: &Path, input: PlanInput) -> Result<Plan, AppError> {
+    io::validate_slug(&input.slug)?;
+    let path = file_path(claude_dir, &input.slug);
+    if path.exists() {
+        return Err(AppError::invalid(format!(
+            "plan '{}' already exists",
+            input.slug
+        )));
+    }
+    io::atomic_write(&path, input.body.as_bytes())?;
+    get(claude_dir, &input.slug)
+}
+
+pub fn update(claude_dir: &Path, slug: &str, input: PlanInput) -> Result<Plan, AppError> {
+    io::validate_slug(&input.slug)?;
+    let existing = get(claude_dir, slug)?;
+    let new_path = file_path(claude_dir, &input.slug);
+    let old_path = PathBuf::from(&existing.file_path);
+    if old_path != new_path && new_path.exists() {
+        return Err(AppError::invalid(format!(
+            "target slug '{}' already exists",
+            input.slug
+        )));
+    }
+    io::atomic_write(&new_path, input.body.as_bytes())?;
+    if old_path != new_path {
+        let _ = io::remove_file(&old_path);
+    }
+    get(claude_dir, &input.slug)
+}
+
+pub fn delete(claude_dir: &Path, slug: &str) -> Result<(), AppError> {
+    let existing = get(claude_dir, slug)?;
+    io::remove_file(Path::new(&existing.file_path))
+}
+
+fn file_path(claude_dir: &Path, slug: &str) -> PathBuf {
+    claude_dir.join(PLANS_SUBDIR).join(format!("{slug}.md"))
+}
+
 fn first_heading(md: &str) -> Option<String> {
     md.lines()
         .find_map(|l| l.strip_prefix("# ").map(str::trim).map(str::to_string))
@@ -93,5 +134,35 @@ mod tests {
         assert_eq!(first.title, "First Plan");
         let second = get(td.path(), "second").unwrap();
         assert_eq!(second.title, "second");
+    }
+
+    #[test]
+    fn write_round_trip() {
+        let td = tempfile::tempdir().unwrap();
+        create(
+            td.path(),
+            PlanInput {
+                slug: "draft".into(),
+                body: "# Draft\n\nbody".into(),
+            },
+        )
+        .unwrap();
+        let p = get(td.path(), "draft").unwrap();
+        assert_eq!(p.title, "Draft");
+
+        update(
+            td.path(),
+            "draft",
+            PlanInput {
+                slug: "final".into(),
+                body: "# Final".into(),
+            },
+        )
+        .unwrap();
+        assert!(get(td.path(), "draft").is_err());
+        assert_eq!(get(td.path(), "final").unwrap().title, "Final");
+
+        delete(td.path(), "final").unwrap();
+        assert!(get(td.path(), "final").is_err());
     }
 }

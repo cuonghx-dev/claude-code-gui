@@ -71,3 +71,26 @@ pub struct McpPrompt {
     pub name: String,
     pub description: Option<String>,
 }
+
+/// Create payload for an MCP server.
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct McpServerInput {
+    pub name: String,
+    pub transport: McpTransport,
+}
+
+/// Bulk import: replace or merge servers in `.mcp.json` for the given scope.
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct McpImportPayload {
+    pub scope: McpScope,
+    #[serde(default)]
+    pub working_dir: Option<String>,
+    pub servers: Vec<McpServerInput>,
+    /// `true` replaces the entire file; `false` merges (later wins).
+    #[serde(default)]
+    pub replace: bool,
+}
