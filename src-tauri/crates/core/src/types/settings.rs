@@ -30,6 +30,11 @@ pub struct AppConfig {
     pub theme: Option<String>,
     #[serde(default)]
     pub experimental_hooks_metrics: bool,
+    /// Updater track: "stable" (default) or "beta". Read at startup by
+    /// `tauri-plugin-updater` and substituted into the manifest endpoint
+    /// via the `{{channel}}` placeholder.
+    #[serde(default)]
+    pub updater_channel: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]

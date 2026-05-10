@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Toaster } from 'vue-sonner'
 import AppShell from '@/components/AppShell.vue'
 import { attachFsListener, detachFsListener } from '@/lib/fsListener'
+import { attachDeepLinkListener } from '@/lib/deepLink'
 
-let detach: (() => void) | undefined
+let detachFs: (() => void) | undefined
+let detachDeep: (() => void) | undefined
+const router = useRouter()
 
 onMounted(async () => {
-  detach = await attachFsListener()
+  detachFs = await attachFsListener()
+  detachDeep = await attachDeepLinkListener(router)
 })
 
 onBeforeUnmount(() => {
-  detach?.()
+  detachFs?.()
+  detachDeep?.()
   detachFsListener()
 })
 </script>

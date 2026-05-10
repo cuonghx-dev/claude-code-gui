@@ -4,4 +4,10 @@
  * App-level config persisted via `tauri-plugin-store`. Distinct from
  * `Settings` (which is the Claude CLI's `~/.claude/settings.json`).
  */
-export type AppConfig = { claudeDirOverride: string | null, theme: string | null, experimentalHooksMetrics: boolean, };
+export type AppConfig = { claudeDirOverride: string | null, theme: string | null, experimentalHooksMetrics: boolean, 
+/**
+ * Updater track: "stable" (default) or "beta". Read at startup by
+ * `tauri-plugin-updater` and substituted into the manifest endpoint
+ * via the `{{channel}}` placeholder.
+ */
+updaterChannel: string | null, };

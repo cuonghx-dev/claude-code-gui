@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -16,6 +16,9 @@ import {
   useMarketplaceSources,
 } from '@/composables/useMarketplace'
 import { useAsyncRequest } from '@/composables/useAsyncRequest'
+
+const route = useRoute()
+const router = useRouter()
 
 const tab = ref<'installed' | 'discover'>('installed')
 
@@ -89,6 +92,26 @@ async function startInstall(name: string, source: string) {
 
 const installedIds = computed(
   () => new Set((installed.data.value ?? []).map((p) => p.id)),
+)
+
+// Deep-link auto-install: `/plugins?autoInstall=foo&source=bar` switches
+// to Discover and kicks the install flow exactly once. Removes the
+// query params after triggering so a refresh doesn't re-run it.
+async function handleAutoInstall() {
+  const auto = route.query.autoInstall
+  const source = route.query.source
+  if (typeof auto !== 'string' || typeof source !== 'string') return
+  tab.value = 'discover'
+  void router.replace({ query: {} })
+  await startInstall(auto, source)
+}
+
+onMounted(() => {
+  void handleAutoInstall()
+})
+watch(
+  () => [route.query.autoInstall, route.query.source],
+  () => void handleAutoInstall(),
 )
 </script>
 
