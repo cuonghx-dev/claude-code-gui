@@ -53,8 +53,19 @@ fn run() -> anyhow::Result<()> {
             // Persisted AppConfig (theme, override, …). Best-effort load.
             let config = state::load_config(&claude_dir);
 
-            // Phase 3 wires the real watcher; Phase 0 is a no-op stub.
-            let watcher_handle = watcher::start_global()?;
+            // Real watcher: emit callback bridges into Tauri events.
+            let app_for_emit = app.handle().clone();
+            let emit: watcher::Emit = std::sync::Arc::new(move |name, payload| {
+                if let Err(e) = app_for_emit.emit(name, payload) {
+                    tracing::warn!(error = %e, event = %name, "failed to emit watcher event");
+                }
+            });
+            let watcher_handle = watcher::start_global(emit)?;
+            // Subscribe to ~/.claude/** unconditionally; project subs are
+            // added on demand via `watch_project_dir`.
+            if let Err(e) = watcher_handle.watch_claude_dir(&claude_dir) {
+                tracing::warn!(error = %e, "watcher could not subscribe to claude_dir");
+            }
 
             app.manage(AppState {
                 claude_dir: Arc::new(RwLock::new(claude_dir)),
@@ -75,6 +86,7 @@ fn run() -> anyhow::Result<()> {
             commands::agents::agents_delete,
             commands::agents::agents_export,
             commands::agents::agents_import,
+            commands::agents::agents_improve_instructions,
             commands::cmds::commands_list,
             commands::cmds::commands_get,
             commands::cmds::commands_create,
@@ -103,6 +115,16 @@ fn run() -> anyhow::Result<()> {
             commands::mcp::mcp_import,
             commands::plugins::plugins_list,
             commands::plugins::plugins_get,
+            commands::plugins::plugins_delete,
+            commands::plugins::plugins_set_enabled,
+            commands::plugins::plugins_update_skills,
+            commands::marketplace::marketplace_available,
+            commands::marketplace::marketplace_sources_list,
+            commands::marketplace::marketplace_sources_add,
+            commands::marketplace::marketplace_sources_remove,
+            commands::marketplace::marketplace_sources_update,
+            commands::marketplace::marketplace_install,
+            commands::marketplace::marketplace_uninstall,
             commands::projects::projects_list,
             commands::projects::projects_get,
             commands::projects::projects_resolve,
@@ -125,6 +147,8 @@ fn run() -> anyhow::Result<()> {
             commands::files::directories_list,
             commands::files::files_read,
             commands::files::fs_home_dir,
+            commands::files::watch_project_dir,
+            commands::files::unwatch_path,
             commands::debug::debug_claude_cli,
             commands::debug::app_version,
         ])

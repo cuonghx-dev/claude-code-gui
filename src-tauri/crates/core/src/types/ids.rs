@@ -50,3 +50,19 @@ impl std::fmt::Display for SessionId {
         self.0.fmt(f)
     }
 }
+
+/// Payload for `agents_improve_instructions`. The frontend builds it from
+/// the agent's current body (`prompt`) and a fixed instruction template
+/// (`system`). The backend pipes both through `claude -p` and streams text
+/// deltas back via `claude:improve:{request_id}` events.
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct ImproveRequest {
+    pub system: String,
+    pub prompt: String,
+    /// Optional model override; defaults to the agent's own model on the
+    /// backend if absent.
+    #[serde(default)]
+    pub model: Option<String>,
+}

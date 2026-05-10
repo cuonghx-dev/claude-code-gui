@@ -1,8 +1,9 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use app_core::types::{Agent, AgentImport, AgentInput};
-use app_core::AppError;
-use tauri::State;
+use app_core::types::{Agent, AgentImport, AgentInput, ImproveRequest};
+use app_core::{AppError, RequestId};
+use tauri::{AppHandle, Emitter, State};
 
 use crate::state::AppState;
 
@@ -62,4 +63,22 @@ pub async fn agents_import(
 ) -> Result<Agent, AppError> {
     let claude_dir = state.claude_dir.read().await.clone();
     app_core::agents::import(&claude_dir, payload)
+}
+
+/// Async one-shot. Returns the request id immediately; deltas arrive on
+/// `claude:improve:{request_id}`.
+#[tauri::command]
+pub async fn agents_improve_instructions(
+    app: AppHandle,
+    input: ImproveRequest,
+) -> Result<RequestId, AppError> {
+    let id = RequestId::new();
+    let app_for_emit = app.clone();
+    let emit: claude_cli::Emit = Arc::new(move |name, payload| {
+        if let Err(e) = app_for_emit.emit(name, payload) {
+            tracing::warn!(error = %e, event = %name, "improve emit failed");
+        }
+    });
+    claude_cli::improve_instructions(emit, id, input)?;
+    Ok(id)
 }

@@ -12,6 +12,7 @@ import {
   useProjectGitStatus,
   useProjectRename,
 } from '@/composables/useProjects'
+import { useProjectWatcher } from '@/composables/useProjectWatcher'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +20,7 @@ const projectName = computed(() => (route.params as { projectName: string }).pro
 const { data: project } = useProject(projectName)
 const sessions = useSessionsForProject(projectName)
 const git = useProjectGitStatus(projectName)
+useProjectWatcher(() => project.value?.workingDir)
 const rename = useProjectRename()
 const remove = useProjectDelete()
 

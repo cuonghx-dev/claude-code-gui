@@ -1,4 +1,5 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { toast } from 'vue-sonner'
 import { queryClient } from './queryClient'
 import { qk } from './queryKeys'
 
@@ -47,8 +48,9 @@ export async function attachFsListener(): Promise<() => void> {
   })
 
   unlistenFsFlood = await listen<FsFloodPayload>('fs:flood', (e) => {
-    // Phase 3: surface as a non-blocking toast banner.
-    console.warn('fs:flood', e.payload)
+    toast.warning(`Watcher paused on ${e.payload.root}`, {
+      description: `${e.payload.eventsPerSec} events/sec exceeded the cap; paused 5s.`,
+    })
   })
 
   unlistenClaudeDirChanged = await listen<{ path: string }>('app:claude_dir_changed', () => {

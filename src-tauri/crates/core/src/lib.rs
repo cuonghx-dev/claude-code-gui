@@ -6,6 +6,7 @@ pub mod files;
 pub mod frontmatter;
 pub mod git;
 pub mod io;
+pub mod marketplace;
 pub mod mcp;
 pub mod models;
 pub mod output_styles;

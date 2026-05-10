@@ -14,7 +14,7 @@ mod skills;
 pub use agents::{Agent, AgentFrontmatter, AgentImport, AgentInput, AgentMemory, AgentModel};
 pub use commands::{Command, CommandFrontmatter, CommandInput};
 pub use error::{AppError, ErrorCode};
-pub use ids::{RequestId, SessionId};
+pub use ids::{ImproveRequest, RequestId, SessionId};
 pub use mcp::{
     McpCapabilities, McpImportPayload, McpPrompt, McpResource, McpScope, McpServer,
     McpServerInput, McpTool, McpTransport,
@@ -23,7 +23,7 @@ pub use output_styles::{
     OutputStyle, OutputStyleFrontmatter, OutputStyleInput, OutputStyleScope,
 };
 pub use plans::{Plan, PlanInput};
-pub use plugins::{Plugin, PluginDetail};
+pub use plugins::{AvailablePlugin, MarketplaceSource, MarketplaceSourceInput, Plugin, PluginDetail};
 pub use projects::{FileNode, GitFileStatus, GitStatus, Project, ProjectInfo};
 pub use sessions::{Message, MessageKind, Page, Role, SessionSummary, TokenUsage};
 pub use settings::{AppConfig, DirEntry, SetupPayload, Settings};

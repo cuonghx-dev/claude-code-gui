@@ -4,12 +4,16 @@ import type {
   AgentImport,
   AgentInput,
   AppConfig,
+  AvailablePlugin,
   ClaudeCliInfo,
   Command,
   CommandInput,
   DirEntry,
   FileNode,
   GitStatus,
+  ImproveRequest,
+  MarketplaceSource,
+  MarketplaceSourceInput,
   McpImportPayload,
   McpScope,
   McpServer,
@@ -25,6 +29,7 @@ import type {
   PluginDetail,
   Project,
   ProjectInfo,
+  RequestId,
   SessionSummary,
   SetupPayload,
   Settings,
@@ -46,6 +51,8 @@ export const agentsUpdate = (slug: string, input: AgentInput) =>
 export const agentsDelete = (slug: string) => invoke<void>('agents_delete', { slug })
 export const agentsExport = (slug: string) => invoke<string>('agents_export', { slug })
 export const agentsImport = (payload: AgentImport) => invoke<Agent>('agents_import', { payload })
+export const agentsImproveInstructions = (input: ImproveRequest) =>
+  invoke<RequestId>('agents_improve_instructions', { input })
 
 // Commands
 export const commandsList = () => invoke<Command[]>('commands_list')
@@ -100,6 +107,32 @@ export const mcpImport = (payload: McpImportPayload) =>
 // Plugins
 export const pluginsList = () => invoke<Plugin[]>('plugins_list')
 export const pluginsGet = (id: string) => invoke<PluginDetail>('plugins_get', { id })
+export const pluginsDelete = (id: string) => invoke<void>('plugins_delete', { id })
+export const pluginsSetEnabled = (id: string, enabled: boolean) =>
+  invoke<void>('plugins_set_enabled', { id, enabled })
+export const pluginsUpdateSkills = (id: string, slugs: string[]) =>
+  invoke<void>('plugins_update_skills', { id, slugs })
+
+// Marketplace
+export const marketplaceAvailable = () =>
+  invoke<AvailablePlugin[]>('marketplace_available')
+export const marketplaceSourcesList = () =>
+  invoke<MarketplaceSource[]>('marketplace_sources_list')
+export const marketplaceSourcesAdd = (input: MarketplaceSourceInput) =>
+  invoke<void>('marketplace_sources_add', { input })
+export const marketplaceSourcesRemove = (name: string) =>
+  invoke<void>('marketplace_sources_remove', { name })
+export const marketplaceSourcesUpdate = (name: string) =>
+  invoke<void>('marketplace_sources_update', { name })
+export const marketplaceInstall = (name: string, source: string) =>
+  invoke<RequestId>('marketplace_install', { name, source })
+export const marketplaceUninstall = (id: string) =>
+  invoke<void>('marketplace_uninstall', { id })
+
+// Watcher
+export const watchProjectDir = (path: string) =>
+  invoke<string>('watch_project_dir', { path })
+export const unwatchPath = (id: string) => invoke<void>('unwatch_path', { id })
 
 // Projects
 export const projectsList = () => invoke<Project[]>('projects_list')

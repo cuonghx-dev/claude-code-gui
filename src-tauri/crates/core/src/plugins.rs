@@ -1,10 +1,10 @@
-//! Read-side logic for `~/.claude/plugins/`. Phase 1: list + get + readme.
-//!
-//! Plugin layout: `<plugin-id>/{plugin.json, skills/<slug>/SKILL.md, README.md}`.
-//! The `plugin.json` is tolerantly parsed; missing fields default to None.
+//! Read+write logic for `~/.claude/plugins/`. Plugin layout:
+//! `<plugin-id>/{plugin.json, skills/<slug>/SKILL.md, README.md}`. The
+//! `plugin.json` is tolerantly parsed; missing fields default to None.
 
 use std::path::Path;
 
+use crate::io;
 use crate::types::{Plugin, PluginDetail};
 use crate::AppError;
 
@@ -96,6 +96,57 @@ fn read_one(dir: &Path) -> Result<Plugin, AppError> {
     })
 }
 
+pub fn delete(claude_dir: &Path, id: &str) -> Result<(), AppError> {
+    let dir = claude_dir.join(PLUGINS_SUBDIR).join(id);
+    if !dir.is_dir() {
+        return Err(AppError::not_found(format!("plugin '{id}' not found")));
+    }
+    io::remove_dir_all(&dir)
+}
+
+pub fn set_enabled(claude_dir: &Path, id: &str, enabled: bool) -> Result<(), AppError> {
+    let dir = claude_dir.join(PLUGINS_SUBDIR).join(id);
+    if !dir.is_dir() {
+        return Err(AppError::not_found(format!("plugin '{id}' not found")));
+    }
+    let manifest_path = dir.join("plugin.json");
+    let mut manifest: serde_json::Map<String, serde_json::Value> = if manifest_path.is_file() {
+        serde_json::from_str(&std::fs::read_to_string(&manifest_path)?)?
+    } else {
+        serde_json::Map::new()
+    };
+    manifest.insert("enabled".into(), serde_json::Value::Bool(enabled));
+    let serialized = serde_json::to_string_pretty(&manifest)?;
+    io::atomic_write(&manifest_path, serialized.as_bytes())
+}
+
+/// Replace the `skills` array in the plugin manifest. The on-disk skill
+/// directories are not touched; this list is purely advisory metadata that
+/// upstream tooling can use to enable a subset of skills.
+pub fn update_skills(claude_dir: &Path, id: &str, slugs: Vec<String>) -> Result<(), AppError> {
+    let dir = claude_dir.join(PLUGINS_SUBDIR).join(id);
+    if !dir.is_dir() {
+        return Err(AppError::not_found(format!("plugin '{id}' not found")));
+    }
+    let manifest_path = dir.join("plugin.json");
+    let mut manifest: serde_json::Map<String, serde_json::Value> = if manifest_path.is_file() {
+        serde_json::from_str(&std::fs::read_to_string(&manifest_path)?)?
+    } else {
+        serde_json::Map::new()
+    };
+    manifest.insert(
+        "activeSkills".into(),
+        serde_json::Value::Array(
+            slugs
+                .into_iter()
+                .map(serde_json::Value::String)
+                .collect(),
+        ),
+    );
+    let serialized = serde_json::to_string_pretty(&manifest)?;
+    io::atomic_write(&manifest_path, serialized.as_bytes())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,5 +167,27 @@ mod tests {
 
         let detail = get(td.path(), "test-plugin").unwrap();
         assert!(detail.readme.is_some());
+    }
+
+    #[test]
+    fn set_enabled_round_trip() {
+        let td = tempfile::tempdir().unwrap();
+        let plugin = td.path().join("plugins/p");
+        std::fs::create_dir_all(&plugin).unwrap();
+        std::fs::write(plugin.join("plugin.json"), r#"{"name":"P","enabled":true}"#).unwrap();
+        set_enabled(td.path(), "p", false).unwrap();
+        let raw = std::fs::read_to_string(plugin.join("plugin.json")).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(v["enabled"], false);
+    }
+
+    #[test]
+    fn delete_removes_dir() {
+        let td = tempfile::tempdir().unwrap();
+        let plugin = td.path().join("plugins/p");
+        std::fs::create_dir_all(&plugin).unwrap();
+        std::fs::write(plugin.join("plugin.json"), "{}").unwrap();
+        delete(td.path(), "p").unwrap();
+        assert!(!plugin.exists());
     }
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
+import { Toaster } from 'vue-sonner'
 import AppShell from '@/components/AppShell.vue'
 import { attachFsListener, detachFsListener } from '@/lib/fsListener'
 
@@ -19,4 +20,5 @@ onBeforeUnmount(() => {
   <AppShell>
     <RouterView />
   </AppShell>
+  <Toaster position="bottom-right" rich-colors close-button />
 </template>
