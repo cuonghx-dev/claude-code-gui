@@ -6,7 +6,7 @@ import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import FormField from '@/components/forms/FormField.vue'
-import { usePluginsList } from '@/composables/usePlugins'
+import { usePluginSetEnabled, usePluginsList } from '@/composables/usePlugins'
 import {
   useMarketplaceAvailable,
   useMarketplaceInstall,
@@ -17,6 +17,8 @@ import {
 } from '@/composables/useMarketplace'
 import { useAsyncRequest } from '@/composables/useAsyncRequest'
 import { describePlugin } from '@/utils/description'
+import { ChevronRight, Store } from 'lucide-vue-next'
+import type { Plugin } from '@/types/ipc'
 
 const route = useRoute()
 const router = useRouter()
@@ -95,6 +97,41 @@ const installedIds = computed(
   () => new Set((installed.data.value ?? []).map((p) => p.id)),
 )
 
+const setEnabled = usePluginSetEnabled()
+
+function groupByMarketplace(items: Plugin[]): { name: string; plugins: Plugin[] }[] {
+  const map = new Map<string, Plugin[]>()
+  for (const p of items) {
+    const key = p.marketplace ?? '(local)'
+    const arr = map.get(key) ?? []
+    arr.push(p)
+    map.set(key, arr)
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, plugins]) => ({
+      name,
+      plugins: plugins.slice().sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+}
+
+const dateFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+function formatDate(iso: string | null) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return dateFmt.format(d)
+}
+
+async function togglePlugin(p: Plugin) {
+  errorMessage.value = ''
+  try {
+    await setEnabled.mutateAsync({ id: p.id, enabled: !p.enabled })
+  } catch (e) {
+    errorMessage.value = (e as { message?: string })?.message ?? String(e)
+  }
+}
+
 // Deep-link auto-install: `/plugins?autoInstall=foo&source=bar` switches
 // to Discover and kicks the install flow exactly once. Removes the
 // query params after triggering so a refresh doesn't re-run it.
@@ -155,23 +192,58 @@ watch(
     >
       <template #default="{ data: items }">
         <EmptyState v-if="!items?.length" title="No plugins installed" hint="Switch to Discover to browse." />
-        <ul v-else class="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <li v-for="p in items" :key="p.id">
-            <RouterLink :to="`/plugins/${p.id}`" class="block rounded-lg border border-neutral-200 bg-white p-4 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900">
-              <div class="flex items-baseline justify-between gap-3">
-                <span class="text-sm font-semibold">{{ p.name }}</span>
-                <span v-if="p.version" class="text-xs text-neutral-400">v{{ p.version }}</span>
-              </div>
-              <p class="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">{{ describePlugin(p.description, p.skills) }}</p>
-              <p class="mt-2 text-[11px] text-neutral-400">
-                {{ p.skills.length }} skill{{ p.skills.length === 1 ? '' : 's' }} ·
-                <span :class="p.enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-500'">
-                  {{ p.enabled ? 'enabled' : 'disabled' }}
-                </span>
-              </p>
-            </RouterLink>
-          </li>
-        </ul>
+        <div v-else class="space-y-6">
+          <div v-for="group in groupByMarketplace(items)" :key="group.name">
+            <header class="mb-2 flex items-center gap-2 text-xs">
+              <Store class="h-4 w-4 text-neutral-500" />
+              <code class="font-mono text-sm">{{ group.name }}</code>
+              <span class="text-neutral-500">{{ group.plugins.length }}</span>
+            </header>
+            <ul class="divide-y divide-neutral-200 overflow-hidden rounded-lg border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
+              <li
+                v-for="p in group.plugins"
+                :key="p.id"
+                class="flex items-center gap-4 px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
+              >
+                <button
+                  type="button"
+                  role="switch"
+                  :aria-checked="p.enabled"
+                  :aria-label="`Toggle ${p.name}`"
+                  :disabled="setEnabled.isPending.value"
+                  class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition disabled:opacity-50"
+                  :class="p.enabled ? 'bg-amber-500' : 'bg-neutral-300 dark:bg-neutral-700'"
+                  @click="togglePlugin(p)"
+                >
+                  <span
+                    class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition"
+                    :class="p.enabled ? 'translate-x-[1.125rem]' : 'translate-x-0.5'"
+                  />
+                </button>
+                <RouterLink
+                  :to="`/plugins/${encodeURIComponent(p.id)}`"
+                  class="flex min-w-0 flex-1 items-center gap-4"
+                >
+                  <span class="w-44 shrink-0 truncate text-sm font-semibold">{{ p.name }}</span>
+                  <span
+                    v-if="p.version"
+                    class="shrink-0 rounded bg-neutral-100 px-2 py-0.5 font-mono text-[11px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
+                  >v{{ p.version }}</span>
+                  <span class="line-clamp-1 flex-1 text-xs text-neutral-500 dark:text-neutral-400">
+                    {{ describePlugin(p.description, p.skills) }}
+                  </span>
+                  <span class="shrink-0 text-[11px] text-neutral-500">
+                    {{ p.skills.length }} skill{{ p.skills.length === 1 ? '' : 's' }}
+                  </span>
+                  <span class="w-24 shrink-0 text-right text-[11px] text-neutral-500">
+                    {{ formatDate(p.installedAt) }}
+                  </span>
+                  <ChevronRight class="h-4 w-4 shrink-0 text-neutral-400" />
+                </RouterLink>
+              </li>
+            </ul>
+          </div>
+        </div>
       </template>
     </QueryStateBoundary>
   </section>

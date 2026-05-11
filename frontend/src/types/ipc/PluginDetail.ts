@@ -4,4 +4,13 @@ export type PluginDetail = { readme: string | null, id: string, name: string, ve
 /**
  * Skill slugs the plugin contributes.
  */
-skills: Array<string>, };
+skills: Array<string>, 
+/**
+ * Marketplace name (the `<mkt>` half of `<plugin>@<mkt>`).
+ */
+marketplace: string | null, 
+/**
+ * ISO-8601 timestamp from the registry entry (`lastUpdated` falling back
+ * to `installedAt`). `None` if neither is present.
+ */
+installedAt: string | null, };

@@ -13,6 +13,11 @@ pub struct Plugin {
     pub dir: String,
     /// Skill slugs the plugin contributes.
     pub skills: Vec<String>,
+    /// Marketplace name (the `<mkt>` half of `<plugin>@<mkt>`).
+    pub marketplace: Option<String>,
+    /// ISO-8601 timestamp from the registry entry (`lastUpdated` falling back
+    /// to `installedAt`). `None` if neither is present.
+    pub installed_at: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
