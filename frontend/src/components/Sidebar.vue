@@ -51,6 +51,9 @@ const items = computed<NavItem[]>(() => [
   { to: '/hooks',         label: 'Hooks',         icon: Webhook,  count: () => hooks.data.value?.length },
   { to: '/plugins',       label: 'Plugins',       icon: Package,  count: () => plugins.data.value?.length },
   { to: '/sessions',      label: 'Sessions',      icon: History,  count: () => projects.data.value?.length },
+])
+
+const bottomItems = computed<NavItem[]>(() => [
   { to: '/settings',      label: 'Settings',      icon: Settings, count: () => undefined },
 ])
 </script>
@@ -65,10 +68,8 @@ const items = computed<NavItem[]>(() => [
         class="h-10 w-10 shrink-0 rounded-md"
         style="image-rendering: pixelated;"
       />
-      <h1 class="ccg-pixel-title text-3xl">
-        <span class="block">Claude</span>
-        <span class="block">Code</span>
-        <span class="sr-only">GUI</span>
+      <h1 class="ccg-pixel-title text-xl">
+        <span class="block">Claude Code GUI</span>
       </h1>
     </div>
     <RouterLink
@@ -88,5 +89,24 @@ const items = computed<NavItem[]>(() => [
         {{ item.count() }}
       </span>
     </RouterLink>
+    <div class="mt-auto flex flex-col gap-1 border-t border-neutral-200 pt-2 dark:border-neutral-800">
+      <RouterLink
+        v-for="item in bottomItems"
+        :key="item.to"
+        :to="item.to"
+        class="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+        active-class="bg-neutral-100 font-medium text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
+      >
+        <component :is="item.icon" class="h-4 w-4" />
+        <span class="flex-1">{{ item.label }}</span>
+        <span
+          v-if="item.count() !== undefined"
+          class="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] tabular-nums text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100"
+          :aria-label="`${item.count()} ${item.label.toLowerCase()}`"
+        >
+          {{ item.count() }}
+        </span>
+      </RouterLink>
+    </div>
   </nav>
 </template>
