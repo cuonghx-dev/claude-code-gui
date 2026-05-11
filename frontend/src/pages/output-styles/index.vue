@@ -11,6 +11,7 @@ import {
   useOutputStylesList,
 } from '@/composables/useOutputStyles'
 import type { OutputStyleInput, OutputStyleScope } from '@/types/ipc'
+import { describe } from '@/utils/description'
 
 const { isPending, isError, error, data } = useOutputStylesList()
 const create = useOutputStyleCreate()
@@ -92,7 +93,7 @@ async function onConfirmDelete() {
               </div>
             </div>
             <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              {{ s.frontmatter.description ?? '—' }}
+              {{ describe(s.frontmatter.description, s.body) }}
             </p>
             <pre class="mt-3 max-h-48 overflow-auto rounded border border-neutral-100 bg-neutral-50 p-3 text-xs dark:border-neutral-800 dark:bg-neutral-950">{{ s.body }}</pre>
           </li>

@@ -9,6 +9,7 @@ import {
   usePluginDelete,
   usePluginSetEnabled,
 } from '@/composables/usePlugins'
+import { describe } from '@/utils/description'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,7 +67,7 @@ async function onDelete() {
       <section v-if="detail" class="p-6 space-y-4">
         <dl class="grid grid-cols-3 gap-x-3 gap-y-2 rounded-lg border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-900">
           <dt class="text-neutral-500">Description</dt>
-          <dd class="col-span-2">{{ detail.description ?? '—' }}</dd>
+          <dd class="col-span-2">{{ describe(detail.description, detail.readme) }}</dd>
           <dt class="text-neutral-500">Skills</dt>
           <dd class="col-span-2">{{ detail.skills.join(', ') || '—' }}</dd>
           <dt class="text-neutral-500">Enabled</dt>
