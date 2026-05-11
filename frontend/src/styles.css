@@ -1,9 +1,27 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+@font-face {
+  font-family: "Jersey 25 Charted";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/Jersey25Charted.ttf") format("truetype");
+}
+
 @theme {
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-pixel: "Jersey 25 Charted", ui-monospace, monospace;
+}
+
+.ccg-pixel-title {
+  font-family: var(--font-pixel);
+  color: #e88f6e;
+  text-shadow: 2px 2px 0 rgba(232, 143, 110, 0.55);
+  letter-spacing: 0.04em;
+  line-height: 0.85;
+  text-transform: uppercase;
 }
 
 @layer base {

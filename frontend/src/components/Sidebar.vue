@@ -57,16 +57,18 @@ const items = computed<NavItem[]>(() => [
 
 <template>
   <nav class="flex w-56 shrink-0 flex-col gap-1 border-r border-neutral-200 bg-white px-2 py-4 dark:border-neutral-800 dark:bg-neutral-900">
-    <div class="mb-3 flex items-center gap-2 px-3">
+    <div class="mb-4 flex items-center gap-3 px-3">
       <img
         :src="logoUrl"
         alt=""
         aria-hidden="true"
-        class="h-8 w-8 shrink-0 rounded-md"
+        class="h-10 w-10 shrink-0 rounded-md"
         style="image-rendering: pixelated;"
       />
-      <h1 class="min-w-0 truncate text-sm font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-        Claude Code GUI
+      <h1 class="ccg-pixel-title text-3xl">
+        <span class="block">Claude</span>
+        <span class="block">Code</span>
+        <span class="sr-only">GUI</span>
       </h1>
     </div>
     <RouterLink
