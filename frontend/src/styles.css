@@ -1,78 +1,174 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-@font-face {
-  font-family: "Jersey 25 Charted";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("./assets/fonts/Jersey25Charted.ttf") format("truetype");
-}
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/jetbrains-mono/400.css";
 
 @theme {
-  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-pixel: "Jersey 25 Charted", ui-monospace, monospace;
-}
+  --color-canvas:           var(--ccg-canvas);
+  --color-canvas-soft:      var(--ccg-canvas-soft);
+  --color-surface-card:     var(--ccg-surface-card);
+  --color-surface-strong:   var(--ccg-surface-strong);
+  --color-hairline:         var(--ccg-hairline);
+  --color-hairline-soft:    var(--ccg-hairline-soft);
+  --color-hairline-strong:  var(--ccg-hairline-strong);
+  --color-ink:              var(--ccg-ink);
+  --color-body:             var(--ccg-body);
+  --color-muted:            var(--ccg-muted);
+  --color-muted-soft:       var(--ccg-muted-soft);
+  --color-primary:          var(--ccg-primary);
+  --color-primary-active:   var(--ccg-primary-active);
+  --color-on-primary:       var(--ccg-on-primary);
+  --color-success:          var(--ccg-success);
+  --color-error:            var(--ccg-error);
+  --color-timeline-thinking:var(--ccg-timeline-thinking);
+  --color-timeline-grep:    var(--ccg-timeline-grep);
+  --color-timeline-read:    var(--ccg-timeline-read);
+  --color-timeline-edit:    var(--ccg-timeline-edit);
+  --color-timeline-done:    var(--ccg-timeline-done);
 
-.ccg-pixel-title {
-  font-family: var(--font-pixel);
-  color: #e88f6e;
-  text-shadow: 2px 2px 0 rgba(232, 143, 110, 0.55);
-  letter-spacing: 0.04em;
-  line-height: 0.85;
-  text-transform: uppercase;
+  --font-sans: "Inter", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-md: 8px;
+  --radius-lg: 12px;
 }
 
 @layer base {
   :root {
     color-scheme: light dark;
+
+    --ccg-canvas:           #f7f7f4;
+    --ccg-canvas-soft:      #fafaf7;
+    --ccg-surface-card:     #ffffff;
+    --ccg-surface-strong:   #e6e5e0;
+    --ccg-hairline:         #e6e5e0;
+    --ccg-hairline-soft:    #efeee8;
+    --ccg-hairline-strong:  #cfcdc4;
+    --ccg-ink:              #26251e;
+    --ccg-body:             #5a5852;
+    --ccg-muted:            #807d72;
+    --ccg-muted-soft:       #a09c92;
+    --ccg-primary:          #f54e00;
+    --ccg-primary-active:   #d04200;
+    --ccg-on-primary:       #ffffff;
+    --ccg-success:          #1f8a65;
+    --ccg-error:            #cf2d56;
+    --ccg-timeline-thinking:#dfa88f;
+    --ccg-timeline-grep:    #9fc9a2;
+    --ccg-timeline-read:    #9fbbe0;
+    --ccg-timeline-edit:    #c0a8dd;
+    --ccg-timeline-done:    #c08532;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ccg-canvas:           #1a1916;
+      --ccg-canvas-soft:      #232220;
+      --ccg-surface-card:     #1f1e1b;
+      --ccg-surface-strong:   #2e2c25;
+      --ccg-hairline:         #2e2c25;
+      --ccg-hairline-soft:    #262522;
+      --ccg-hairline-strong:  #3a382f;
+      --ccg-ink:              #ebeae3;
+      --ccg-body:             #b5b3aa;
+      --ccg-muted:            #8a8779;
+      --ccg-muted-soft:       #6a6760;
+    }
   }
 
   html, body, #app {
     height: 100%;
     margin: 0;
     font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    letter-spacing: -0.011em;
+    background-color: var(--ccg-canvas);
+    color: var(--ccg-body);
     -webkit-font-smoothing: antialiased;
+  }
+
+  code, pre, kbd, samp {
+    font-family: var(--font-mono);
   }
 }
 
 @layer components {
   .ccg-input {
-    @apply rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm
-           placeholder:text-neutral-400
-           focus:border-violet-500 focus:outline-none
-           focus-visible:ring-2 focus-visible:ring-violet-500/40
-           dark:border-neutral-700 dark:bg-neutral-800;
+    @apply rounded-md border bg-surface-card text-ink
+           placeholder:text-muted-soft
+           focus:outline-none focus-visible:ring-2;
+    border-color: var(--ccg-hairline);
+    padding: 12px 16px;
+    height: 44px;
+    line-height: 1.4;
+  }
+
+  .ccg-input:focus,
+  .ccg-input:focus-visible {
+    border-color: var(--ccg-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ccg-primary) 25%, transparent);
   }
 
   .ccg-btn-primary {
-    @apply rounded-md bg-violet-600 px-3 py-1.5 text-sm text-white
-           hover:bg-violet-700 disabled:opacity-50
-           focus-visible:outline-none focus-visible:ring-2
-           focus-visible:ring-violet-500 focus-visible:ring-offset-2
-           focus-visible:ring-offset-white
-           dark:focus-visible:ring-offset-neutral-900;
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium
+           disabled:opacity-50
+           focus-visible:outline-none focus-visible:ring-2;
+    background-color: var(--ccg-primary);
+    color: var(--ccg-on-primary);
+    padding: 10px 18px;
+    height: 40px;
+    transition: background-color 120ms ease;
+  }
+
+  .ccg-btn-primary:hover:not(:disabled),
+  .ccg-btn-primary:active {
+    background-color: var(--ccg-primary-active);
+  }
+
+  .ccg-btn-primary:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ccg-primary) 35%, transparent);
   }
 
   .ccg-btn-ghost {
-    @apply rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm
-           hover:bg-neutral-50
-           focus-visible:outline-none focus-visible:ring-2
-           focus-visible:ring-violet-500 focus-visible:ring-offset-2
-           focus-visible:ring-offset-white
-           dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700
-           dark:focus-visible:ring-offset-neutral-900;
+    @apply inline-flex items-center justify-center rounded-md text-sm
+           focus-visible:outline-none focus-visible:ring-2;
+    background-color: var(--ccg-surface-card);
+    color: var(--ccg-ink);
+    border: 1px solid var(--ccg-hairline-strong);
+    padding: 9px 16px;
+    height: 40px;
+    transition: background-color 120ms ease;
+  }
+
+  .ccg-btn-ghost:hover {
+    background-color: var(--ccg-canvas-soft);
+  }
+
+  .ccg-btn-ghost:focus-visible {
+    border-color: var(--ccg-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ccg-primary) 25%, transparent);
   }
 
   .ccg-btn-danger {
-    @apply rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm
-           text-red-700 hover:bg-red-50
-           focus-visible:outline-none focus-visible:ring-2
-           focus-visible:ring-red-500 focus-visible:ring-offset-2
-           focus-visible:ring-offset-white
-           dark:border-red-900 dark:bg-neutral-900 dark:text-red-300 dark:hover:bg-red-950/40
-           dark:focus-visible:ring-offset-neutral-900;
+    @apply inline-flex items-center justify-center rounded-md text-sm
+           focus-visible:outline-none focus-visible:ring-2;
+    background-color: var(--ccg-surface-card);
+    color: var(--ccg-error);
+    border: 1px solid var(--ccg-error);
+    padding: 9px 16px;
+    height: 40px;
+    transition: background-color 120ms ease;
+  }
+
+  .ccg-btn-danger:hover {
+    background-color: var(--ccg-surface-strong);
+  }
+
+  .ccg-btn-danger:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ccg-error) 25%, transparent);
   }
 }
 
