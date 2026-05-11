@@ -102,49 +102,52 @@ function relativeTime(iso: string | null | undefined) {
           title="No projects"
           hint="Open `claude` in any directory or use Add project."
         />
-        <ul v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <ul
+          v-else
+          class="divide-y rounded-lg border bg-surface-card"
+          style="border-color: var(--ccg-hairline);"
+        >
           <li
             v-for="p in items"
             :key="p.name"
-            class="group relative rounded-xl border border-neutral-200 bg-white p-4 hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+            class="group relative flex items-center gap-3 px-4 py-3 hover:bg-canvas-soft"
+            style="border-color: var(--ccg-hairline);"
           >
             <RouterLink
               :to="`/sessions/project/${encodeURIComponent(p.name)}`"
-              class="absolute inset-0 rounded-xl"
+              class="absolute inset-0"
               :aria-label="`Open ${basename(p.workingDir)}`"
             />
-            <div class="flex items-start gap-3">
-              <Folder class="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-              <div class="min-w-0 flex-1">
-                <h3 class="truncate text-base font-semibold">{{ basename(p.workingDir) }}</h3>
-              </div>
-              <div class="relative z-10 flex shrink-0 items-center gap-1">
-                <button
-                  type="button"
-                  class="rounded-md p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-                  :aria-label="`Rename ${p.name}`"
-                  @click="renaming = { name: p.name, value: p.name }"
-                >
-                  <Pencil class="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  class="rounded-md p-1.5 text-red-500 hover:bg-red-500/10"
-                  :aria-label="`Delete ${p.name}`"
-                  @click="confirmingDelete = p.name"
-                >
-                  <Trash2 class="h-4 w-4" />
-                </button>
-                <ChevronRight class="h-4 w-4 text-neutral-400" />
-              </div>
+            <Folder class="h-5 w-5 shrink-0" style="color: var(--ccg-muted);" />
+            <div class="min-w-0 flex-1">
+              <h3 class="truncate text-sm font-medium text-ink">{{ basename(p.workingDir) }}</h3>
+              <p class="truncate text-xs" style="color: var(--ccg-muted);">{{ p.workingDir }}</p>
             </div>
-            <p class="mt-1 ml-8 truncate text-sm text-neutral-500 dark:text-neutral-400">
-              {{ p.workingDir }}
-            </p>
-            <p class="mt-1 ml-8 text-sm text-neutral-400">
-              {{ p.sessionCount }} session{{ p.sessionCount === 1 ? '' : 's' }}
-              <span class="ml-2">{{ relativeTime(p.lastActive) }}</span>
-            </p>
+            <div class="hidden shrink-0 text-right text-xs sm:block" style="color: var(--ccg-muted);">
+              <div>{{ p.sessionCount }} session{{ p.sessionCount === 1 ? '' : 's' }}</div>
+              <div>{{ relativeTime(p.lastActive) }}</div>
+            </div>
+            <div class="relative z-10 flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                class="rounded-md p-1.5 hover:bg-surface-strong"
+                style="color: var(--ccg-muted);"
+                :aria-label="`Rename ${p.name}`"
+                @click="renaming = { name: p.name, value: p.name }"
+              >
+                <Pencil class="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                class="rounded-md p-1.5 hover:bg-surface-strong"
+                style="color: var(--ccg-error);"
+                :aria-label="`Delete ${p.name}`"
+                @click="confirmingDelete = p.name"
+              >
+                <Trash2 class="h-4 w-4" />
+              </button>
+              <ChevronRight class="h-4 w-4" style="color: var(--ccg-muted-soft);" />
+            </div>
           </li>
         </ul>
       </section>

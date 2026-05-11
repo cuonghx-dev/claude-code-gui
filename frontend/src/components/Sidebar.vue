@@ -60,19 +60,23 @@ const bottomItems = computed<NavItem[]>(() => [
 
 <template>
   <nav class="flex w-56 shrink-0 flex-col gap-1 border-r bg-canvas px-2 py-4" style="border-color: var(--ccg-hairline);">
-    <div class="mb-4 flex items-center gap-3 px-3">
+    <div class="mb-6 mt-4 flex items-center gap-2 px-3">
       <img
         :src="logoUrl"
         alt=""
         aria-hidden="true"
-        class="h-9 w-9 shrink-0 rounded-md"
+        class="h-7 w-7 shrink-0 rounded-md"
         style="image-rendering: pixelated;"
       />
       <h1
-        class="text-lg font-medium leading-tight"
-        style="color: var(--ccg-primary); letter-spacing: -0.022em;"
+        class="flex items-baseline gap-1.5 text-sm font-medium leading-none text-ink"
+        style="letter-spacing: -0.015em;"
       >
-        Claude Code GUI
+        <span>Claude Code</span>
+        <span
+          class="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+          style="background-color: var(--ccg-primary); color: var(--ccg-on-primary);"
+        >GUI</span>
       </h1>
     </div>
     <RouterLink
