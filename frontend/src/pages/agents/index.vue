@@ -5,6 +5,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { useAgentImport, useAgentsList } from '@/composables/useAgents'
+import { describe } from '@/utils/description'
 
 const { isPending, isError, error, data } = useAgentsList()
 const search = ref('')
@@ -93,7 +94,7 @@ const filtered = computed(() => {
                 </span>
               </div>
               <p class="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">
-                {{ a.frontmatter.description ?? '—' }}
+                {{ describe(a.frontmatter.description, a.body) }}
               </p>
               <div class="mt-2 flex flex-wrap gap-1">
                 <span

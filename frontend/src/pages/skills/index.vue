@@ -6,6 +6,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { useSkillImport, useSkillsList } from '@/composables/useSkills'
+import { describe } from '@/utils/description'
 
 const { isPending, isError, error, data } = useSkillsList()
 const importMut = useSkillImport()
@@ -51,7 +52,7 @@ async function importLocal() {
                   {{ s.source.kind === 'plugin' ? `plugin: ${s.source.id}` : 'local' }}
                 </span>
               </div>
-              <p class="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">{{ s.frontmatter.description ?? '—' }}</p>
+              <p class="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">{{ describe(s.frontmatter.description, s.body) }}</p>
             </RouterLink>
           </li>
         </ul>

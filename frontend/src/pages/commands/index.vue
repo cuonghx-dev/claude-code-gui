@@ -4,6 +4,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { useCommandsList } from '@/composables/useCommands'
+import { describe } from '@/utils/description'
 
 const { isPending, isError, error, data } = useCommandsList()
 </script>
@@ -25,7 +26,7 @@ const { isPending, isError, error, data } = useCommandsList()
                 <span class="font-mono text-sm">/{{ c.slug }}</span>
                 <span v-if="c.frontmatter.argumentHint" class="text-xs text-neutral-400">{{ c.frontmatter.argumentHint }}</span>
               </div>
-              <p class="mt-0.5 line-clamp-1 text-xs text-neutral-500 dark:text-neutral-400">{{ c.frontmatter.description ?? '—' }}</p>
+              <p class="mt-0.5 line-clamp-1 text-xs text-neutral-500 dark:text-neutral-400">{{ describe(c.frontmatter.description, c.body) }}</p>
             </RouterLink>
           </li>
         </ul>
