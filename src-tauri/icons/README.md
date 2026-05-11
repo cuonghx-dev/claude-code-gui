@@ -1,15 +1,18 @@
 # Icons
 
-Placeholder. Replace before 1.0 release. Required files:
+Generated from `frontend/src/assets/logo.png` via `cargo tauri icon`.
+Regenerate after changing the master:
+
+```bash
+cargo tauri icon ../frontend/src/assets/logo.png
+```
+
+Bundle-required:
 
 - `32x32.png`
 - `128x128.png`
-- `128x128@2x.png` (macOS retina)
+- `128x128@2x.png`
 - `icon.icns` (macOS bundle)
 - `icon.ico` (Windows bundle)
 
-Generate with [`tauri icon`](https://tauri.app/develop/icons/) from a single 1024x1024 master:
-
-```bash
-cargo tauri icon path/to/master.png
-```
+`android/` and `ios/` subdirs come along for free; unused today.
