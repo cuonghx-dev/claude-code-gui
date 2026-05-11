@@ -12,6 +12,7 @@ import {
   History,
   Settings,
 } from 'lucide-vue-next'
+import logoUrl from '@/assets/logo.png'
 import { useAgentsList } from '@/composables/useAgents'
 import { useCommandsList } from '@/composables/useCommands'
 import { useSkillsList } from '@/composables/useSkills'
@@ -52,11 +53,17 @@ const items = computed<NavItem[]>(() => [
 
 <template>
   <nav class="flex w-56 shrink-0 flex-col gap-1 border-r border-neutral-200 bg-white px-2 py-4 dark:border-neutral-800 dark:bg-neutral-900">
-    <div class="mb-3 px-3">
-      <h1 class="text-sm font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+    <div class="mb-3 flex items-center gap-2 px-3">
+      <img
+        :src="logoUrl"
+        alt=""
+        aria-hidden="true"
+        class="h-8 w-8 shrink-0 rounded-md"
+        style="image-rendering: pixelated;"
+      />
+      <h1 class="min-w-0 truncate text-sm font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
         Claude Code GUI
       </h1>
-      <p class="text-xs text-neutral-500 dark:text-neutral-400">v0.1.0</p>
     </div>
     <RouterLink
       v-for="item in items"
