@@ -35,6 +35,7 @@ declare module 'vue-router/auto-routes' {
     '/plugins/': RouteRecordInfo<'/plugins/', '/plugins', Record<never, never>, Record<never, never>>,
     '/plugins/[id]': RouteRecordInfo<'/plugins/[id]', '/plugins/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/sessions/': RouteRecordInfo<'/sessions/', '/sessions', Record<never, never>, Record<never, never>>,
+    '/sessions/project/[projectName]': RouteRecordInfo<'/sessions/project/[projectName]', '/sessions/project/:projectName', { projectName: ParamValue<true> }, { projectName: ParamValue<false> }>,
     '/sessions/project/[projectName]/': RouteRecordInfo<'/sessions/project/[projectName]/', '/sessions/project/:projectName', { projectName: ParamValue<true> }, { projectName: ParamValue<false> }>,
     '/sessions/project/[projectName]/session/[sessionId]': RouteRecordInfo<'/sessions/project/[projectName]/session/[sessionId]', '/sessions/project/:projectName/session/:sessionId', { projectName: ParamValue<true>, sessionId: ParamValue<true> }, { projectName: ParamValue<false>, sessionId: ParamValue<false> }>,
     '/sessions/project/[projectName]/settings': RouteRecordInfo<'/sessions/project/[projectName]/settings', '/sessions/project/:projectName/settings', { projectName: ParamValue<true> }, { projectName: ParamValue<false> }>,

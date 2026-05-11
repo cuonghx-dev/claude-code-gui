@@ -53,7 +53,7 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
       </button>
     </template>
   </PageHeader>
-  <section class="grid h-[calc(100vh-65px)] grid-cols-1" :class="resuming ? 'lg:grid-cols-2' : ''">
+  <section class="grid min-h-0 flex-1 grid-cols-1" :class="resuming ? 'lg:grid-cols-2' : ''">
     <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
       <template #default="{ data: page }">
         <div v-if="page" class="overflow-auto p-6 space-y-3">

@@ -1,20 +1,24 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import FormField from '@/components/forms/FormField.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import {
   useProject,
   useProjectClaudeMd,
   useProjectClaudeMdPut,
+  useProjectDelete,
+  useProjectRename,
   useProjectSettings,
   useProjectSettingsPut,
 } from '@/composables/useProjects'
 import type { Settings } from '@/types/ipc'
 
 const route = useRoute()
+const router = useRouter()
 const projectName = computed(() => (route.params as { projectName: string }).projectName)
 
 const project = useProject(projectName)
@@ -22,11 +26,16 @@ const settings = useProjectSettings(projectName)
 const claudeMd = useProjectClaudeMd(projectName)
 const settingsPut = useProjectSettingsPut()
 const claudeMdPut = useProjectClaudeMdPut()
+const rename = useProjectRename()
+const remove = useProjectDelete()
 
 const sLocal = ref({ defaultModel: '', defaultPermissionMode: '' })
 const mdLocal = ref('')
 const status = ref('')
 const errorMessage = ref('')
+const renaming = ref(false)
+const renameTo = ref('')
+const confirmingDelete = ref(false)
 
 watchEffect(() => {
   const s = settings.data.value
@@ -65,13 +74,60 @@ async function saveClaudeMd() {
     errorMessage.value = (e as { message?: string })?.message ?? String(e)
   }
 }
+
+async function doRename() {
+  if (!renameTo.value.trim()) {
+    renaming.value = false
+    return
+  }
+  errorMessage.value = ''
+  try {
+    const next = renameTo.value.trim()
+    await rename.mutateAsync({ name: projectName.value, newName: next })
+    renaming.value = false
+    router.replace(`/sessions/project/${encodeURIComponent(next)}/settings`)
+  } catch (e) {
+    errorMessage.value = (e as { message?: string })?.message ?? String(e)
+  }
+}
+
+async function doDelete() {
+  errorMessage.value = ''
+  try {
+    await remove.mutateAsync(projectName.value)
+    router.push('/sessions')
+  } catch (e) {
+    errorMessage.value = (e as { message?: string })?.message ?? String(e)
+  }
+}
 </script>
 
 <template>
   <PageHeader
     :title="project.data.value?.workingDir ?? projectName"
     subtitle="Project settings + CLAUDE.md editor"
-  />
+  >
+    <template #actions>
+      <button type="button" class="ccg-btn-ghost" @click="renaming = true; renameTo = projectName">
+        Rename
+      </button>
+      <button type="button" class="ccg-btn-danger" @click="confirmingDelete = true">
+        Delete
+      </button>
+    </template>
+  </PageHeader>
+
+  <section v-if="renaming" class="mx-6 mt-4 rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+    <div class="flex items-center gap-2">
+      <input
+        v-model="renameTo"
+        :placeholder="projectName"
+        class="ccg-input flex-1 font-mono text-xs"
+      />
+      <button type="button" class="ccg-btn-primary" @click="doRename">Save</button>
+      <button type="button" class="ccg-btn-ghost" @click="renaming = false">Cancel</button>
+    </div>
+  </section>
   <p
     v-if="errorMessage"
     class="mx-6 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
@@ -143,4 +199,13 @@ async function saveClaudeMd() {
       </section>
     </template>
   </QueryStateBoundary>
+
+  <ConfirmDialog
+    v-model:open="confirmingDelete"
+    title="Delete project entry?"
+    :message="`This removes ~/.claude/projects/${projectName}/ permanently. The actual working directory is not touched.`"
+    confirm-label="Delete"
+    danger
+    @confirm="doDelete"
+  />
 </template>
