@@ -74,6 +74,25 @@ pub async fn marketplace_install(
             ))
         })?;
 
+    // Reject relative / empty install URLs synchronously so the UI sees
+    // the error via the IPC return value instead of waiting on a progress
+    // event that may have already fired before the frontend subscribed.
+    let trimmed = install_url.trim();
+    if trimmed.is_empty() || trimmed.starts_with('.') || !trimmed.contains("://") && !trimmed.starts_with("git@") {
+        return Err(AppError::invalid(format!(
+            "plugin '{name}' has no installable URL (got '{install_url}'). \
+             Claude Code-managed marketplaces install via the CLI: \
+             `claude plugins install {name}`."
+        )));
+    }
+
+    // Ditto for the destination slug: validate before spawning so the error
+    // doesn't get lost between IPC return and event-listener attach.
+    let safe_id = name.split('@').next().unwrap_or(&name).to_string();
+    if let Err(e) = app_core::io::validate_slug(&safe_id) {
+        return Err(e);
+    }
+
     let app_for_emit = app.clone();
     let event_for_cb = event.clone();
     let progress: app_core::marketplace::Progress = Arc::new(move |step, pct| {
@@ -89,7 +108,7 @@ pub async fn marketplace_install(
 
     // Run on the blocking pool — git2 clone is sync.
     let claude_dir_for_task = claude_dir.clone();
-    let id = name.clone();
+    let id = safe_id;
     let progress_for_task = Arc::clone(&progress);
     tokio::task::spawn_blocking(move || {
         match app_core::marketplace::install(

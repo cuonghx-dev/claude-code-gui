@@ -17,7 +17,7 @@ import {
 } from '@/composables/useMarketplace'
 import { useAsyncRequest } from '@/composables/useAsyncRequest'
 import { describePlugin } from '@/utils/description'
-import { ChevronRight, Store } from 'lucide-vue-next'
+import { ChevronRight, Plus, RefreshCw, Store, Trash2 } from 'lucide-vue-next'
 import type { Plugin } from '@/types/ipc'
 
 const route = useRoute()
@@ -130,6 +130,20 @@ async function togglePlugin(p: Plugin) {
   } catch (e) {
     errorMessage.value = (e as { message?: string })?.message ?? String(e)
   }
+}
+
+function sourceRepo(s: { sourceType: string; url: string }) {
+  if (s.sourceType === 'github') {
+    return s.url
+      .replace(/^https?:\/\/github\.com\//, '')
+      .replace(/\.git$/, '')
+  }
+  return s.url
+}
+
+function isInstallable(installUrl: string | null | undefined): boolean {
+  if (!installUrl) return false
+  return /^(https?:\/\/|git@)/.test(installUrl.trim())
 }
 
 // Deep-link auto-install: `/plugins?autoInstall=foo&source=bar` switches
@@ -250,15 +264,52 @@ watch(
 
   <!-- Discover tab -->
   <section v-else class="p-6 space-y-6">
-    <div class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-      <div class="flex items-center justify-between">
-        <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Sources</h3>
-        <button type="button" class="ccg-btn-ghost text-xs" @click="showSourceForm = !showSourceForm">
-          {{ showSourceForm ? 'Cancel' : '+ Add source' }}
-        </button>
-      </div>
+    <div>
+      <p class="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
+        Marketplaces are catalogs of plugins. Add a source to discover new plugins.
+      </p>
 
-      <div v-if="showSourceForm" class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+      <ul v-if="sources.data.value?.length" class="space-y-2">
+        <li
+          v-for="s in sources.data.value"
+          :key="s.name"
+          class="flex items-center gap-3 rounded-lg px-2 py-3 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
+        >
+          <Store class="h-4 w-4 shrink-0 text-neutral-500" />
+          <code class="w-48 shrink-0 truncate font-mono text-sm">{{ s.name }}</code>
+          <span class="shrink-0 rounded bg-neutral-100 px-2 py-0.5 font-mono text-[11px] text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+            {{ s.sourceType }}
+          </span>
+          <span class="flex-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
+            {{ sourceRepo(s) }}
+          </span>
+          <span class="w-24 shrink-0 text-right text-[11px] text-neutral-500">
+            {{ formatDate(s.lastUpdated) }}
+          </span>
+          <button
+            type="button"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+            :disabled="sourceUpdate.isPending.value"
+            @click="refreshSource(s.name)"
+          >
+            <RefreshCw class="h-3.5 w-3.5" :class="sourceUpdate.isPending.value ? 'animate-spin' : ''" />
+            Update
+          </button>
+          <button
+            type="button"
+            class="shrink-0 rounded-md p-1.5 text-neutral-500 hover:bg-red-500/10 hover:text-red-500"
+            :aria-label="`Remove ${s.name}`"
+            @click="confirmingSourceRemove = s.name"
+          >
+            <Trash2 class="h-4 w-4" />
+          </button>
+        </li>
+      </ul>
+      <p v-else class="text-xs text-neutral-500 dark:text-neutral-400">
+        No marketplaces configured.
+      </p>
+
+      <div v-if="showSourceForm" class="mt-4 grid grid-cols-1 gap-3 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800 md:grid-cols-3">
         <FormField label="Name">
           <input v-model="sourceForm.name" class="ccg-input" />
         </FormField>
@@ -271,49 +322,30 @@ watch(
         <FormField label="URL">
           <input v-model="sourceForm.url" class="ccg-input" />
         </FormField>
-        <div class="md:col-span-3">
+        <div class="flex gap-2 md:col-span-3">
           <button
             type="button"
             class="ccg-btn-primary"
             :disabled="sourceAdd.isPending.value || !sourceForm.name || !sourceForm.url"
             @click="addSource"
           >
-            {{ sourceAdd.isPending.value ? 'Adding…' : 'Add source' }}
+            {{ sourceAdd.isPending.value ? 'Adding…' : 'Add' }}
+          </button>
+          <button type="button" class="ccg-btn-ghost" @click="showSourceForm = false">
+            Cancel
           </button>
         </div>
       </div>
 
-      <ul v-if="sources.data.value?.length" class="mt-3 divide-y divide-neutral-200 dark:divide-neutral-800">
-        <li v-for="s in sources.data.value" :key="s.name" class="flex items-center gap-3 py-2 text-sm">
-          <div class="flex-1">
-            <div class="font-semibold">{{ s.name }}</div>
-            <div class="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
-              {{ s.sourceType }} · {{ s.url }}
-            </div>
-            <div v-if="s.lastUpdated" class="text-[11px] text-neutral-400">
-              Updated {{ s.lastUpdated.slice(0, 16) }} · {{ s.plugins.length }} plugins
-            </div>
-          </div>
-          <button
-            type="button"
-            class="ccg-btn-ghost text-xs"
-            :disabled="sourceUpdate.isPending.value"
-            @click="refreshSource(s.name)"
-          >
-            Refresh
-          </button>
-          <button
-            type="button"
-            class="text-xs text-red-600 hover:underline dark:text-red-400"
-            @click="confirmingSourceRemove = s.name"
-          >
-            Remove
-          </button>
-        </li>
-      </ul>
-      <p v-else class="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-        No sources configured. Add a github or http source to discover plugins.
-      </p>
+      <button
+        v-if="!showSourceForm"
+        type="button"
+        class="mt-4 inline-flex items-center gap-2 rounded-md bg-emerald-600/20 px-3 py-1.5 text-sm font-medium text-emerald-400 hover:bg-emerald-600/30"
+        @click="showSourceForm = true"
+      >
+        <Plus class="h-4 w-4" />
+        Add Marketplace
+      </button>
     </div>
 
     <div>
@@ -343,6 +375,7 @@ watch(
               <p class="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">{{ p.description ?? '—' }}</p>
               <p class="mt-2 text-[11px] text-neutral-400">From source: {{ p.source }}</p>
               <button
+                v-if="isInstallable(p.installUrl)"
                 type="button"
                 class="mt-3 ccg-btn-primary text-xs"
                 :disabled="installedIds.has(p.id) || install.isPending.value || installFlow.inFlight.value"
@@ -350,6 +383,10 @@ watch(
               >
                 {{ installedIds.has(p.id) ? 'Installed' : 'Install' }}
               </button>
+              <p v-else class="mt-3 text-[11px] text-neutral-500 dark:text-neutral-400">
+                Install via CLI:
+                <code class="rounded bg-neutral-100 px-1 dark:bg-neutral-800">claude plugins install {{ p.id }}</code>
+              </p>
             </li>
           </ul>
         </template>
