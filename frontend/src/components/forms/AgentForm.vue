@@ -5,8 +5,6 @@ import MarkdownEditor from '../MarkdownEditor.vue'
 import { agentSchema, flattenErrors } from '@/lib/schemas'
 import { useDraftRecovery } from '@/composables/useDraftRecovery'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
-import { useAsyncRequest } from '@/composables/useAsyncRequest'
-import { agentsImproveInstructions } from '@/utils/ipc'
 import type { AgentInput } from '@/types/ipc'
 
 const props = defineProps<{
@@ -102,46 +100,17 @@ function onSubmit() {
   draft.clear()
 }
 
-const improve = useAsyncRequest()
-const improveError = ref('')
-async function runImprove() {
-  improveError.value = ''
-  const body = state.body
-  if (!body.trim()) {
-    improveError.value = 'Body is empty.'
-    return
-  }
-  try {
-    const requestId = await agentsImproveInstructions({
-      system:
-        'You rewrite Claude Code agent instructions to be clearer, more specific, and more actionable. Preserve all technical content. Return the revised body only — no preamble.',
-      prompt: body,
-      model: state.model || null,
-    } as Parameters<typeof agentsImproveInstructions>[0])
-    // Replace body with streamed text as deltas arrive.
-    state.body = ''
-    improve.buffer.value = ''
-    // Drain deltas into the editor by watching `improve.buffer`.
-    const stop = watch(
-      () => improve.buffer.value,
-      (b) => {
-        state.body = b
-      },
-    )
-    try {
-      await improve.start('claude:improve', String(requestId))
-    } finally {
-      stop()
-    }
-  } catch (e) {
-    improveError.value = (e as { message?: string })?.message ?? String(e)
-  }
+function onCancel() {
+  draft.clear()
+  Object.assign(state, JSON.parse(initial))
+  emit('cancel')
 }
 </script>
 
 <template>
-  <form class="grid grid-cols-1 gap-6 lg:grid-cols-2" @submit.prevent="onSubmit">
-    <div class="space-y-4">
+  <form class="flex h-full min-h-0 flex-col gap-4" @submit.prevent="onSubmit">
+    <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="space-y-4 overflow-auto pr-1">
       <FormField label="Slug" required :error="errors.slug" hint="Filename without .md">
         <input
           v-model="state.slug"
@@ -218,41 +187,17 @@ async function runImprove() {
       </FormField>
     </div>
 
-    <div class="flex flex-col gap-3">
-      <div class="flex items-center justify-between">
-        <h3 class="text-xs font-medium text-neutral-700 dark:text-neutral-300">Instructions</h3>
-        <button
-          type="button"
-          class="ccg-btn-ghost text-xs"
-          :disabled="improve.inFlight.value"
-          @click="runImprove"
-        >
-          {{ improve.inFlight.value ? 'Improving…' : 'Improve with Claude' }}
-        </button>
-      </div>
-      <p
-        v-if="improveError"
-        class="rounded-md border border-red-300 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-      >
-        {{ improveError }}
-      </p>
-      <MarkdownEditor v-model="state.body" min-height="420px" />
-      <p
-        v-if="improve.inFlight.value || improve.errorMessage.value"
-        class="text-xs text-neutral-500 dark:text-neutral-400"
-      >
-        <span v-if="improve.inFlight.value">Streaming improvements from claude -p…</span>
-        <span v-else-if="improve.errorMessage.value" class="text-red-600 dark:text-red-400">
-          {{ improve.errorMessage.value }}
-        </span>
-      </p>
+    <div class="flex min-h-0 flex-col gap-3">
+      <h3 class="text-xs font-medium text-neutral-700 dark:text-neutral-300">Instructions</h3>
+      <MarkdownEditor v-model="state.body" fill class="min-h-0 flex-1" />
+    </div>
     </div>
 
-    <div class="col-span-full flex items-center justify-end gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+    <div class="flex items-center justify-end gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
       <button
         type="button"
         class="ccg-btn-ghost"
-        @click="emit('cancel')"
+        @click="onCancel"
       >
         Cancel
       </button>

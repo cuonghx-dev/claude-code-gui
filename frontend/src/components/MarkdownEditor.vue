@@ -12,8 +12,9 @@ const props = withDefaults(
     language?: 'markdown' | 'yaml'
     minHeight?: string
     placeholder?: string
+    fill?: boolean
   }>(),
-  { language: 'markdown', minHeight: '240px' },
+  { language: 'markdown', minHeight: '240px', fill: false },
 )
 const emit = defineEmits<{ 'update:modelValue': [string] }>()
 
@@ -40,8 +41,13 @@ onMounted(() => {
         }
       }),
       EditorView.theme({
-        '&': { fontSize: '13px', minHeight: props.minHeight },
-        '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' },
+        '&': props.fill
+          ? { fontSize: '13px', height: '100%' }
+          : { fontSize: '13px', minHeight: props.minHeight },
+        '.cm-scroller': {
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          overflow: 'auto',
+        },
         '.cm-content': { padding: '8px 0' },
       }),
     ],
