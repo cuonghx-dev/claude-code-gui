@@ -2,13 +2,14 @@
 //! paginated messages.
 //!
 //! Tolerant deserialization: CLI session JSONL schemas drift across
-//! versions, so we only require an `id` and `kind` and let everything else
-//! default. Unknown JSONL line shapes become `Status` messages with raw
-//! content.
+//! versions. Real lines use a top-level `type` ("user"|"assistant"|"summary"|
+//! "attachment"|"file-history-snapshot"|"ai-title"|"last-prompt"…) with
+//! `message.content` either a string or array of content blocks. Unknown
+//! shapes are dropped to avoid polluting the chat view.
 
 use std::path::Path;
 
-use crate::types::{Message, MessageKind, Page, SessionSummary};
+use crate::types::{Message, MessageKind, Page, Role, SessionSummary};
 use crate::AppError;
 
 const PROJECTS_SUBDIR: &str = "projects";
@@ -53,7 +54,7 @@ pub fn messages(
         if line.trim().is_empty() {
             continue;
         }
-        all.push(parse_line(line));
+        all.extend(parse_line(line));
     }
     let total = all.len();
     let start = after_index.unwrap_or(0);
@@ -151,18 +152,164 @@ fn extract_user_text(v: &serde_json::Value) -> Option<String> {
     None
 }
 
-/// Tolerant parser: accept anything that looks JSONy, fall back to a
-/// `Status` message containing the raw line if parsing fails.
-fn parse_line(line: &str) -> Message {
-    if let Ok(m) = serde_json::from_str::<Message>(line) {
-        return m;
+/// Parse a JSONL line into zero or more renderable messages.
+///
+/// Real CLI schema: top-level `type` says what the record is. For user/
+/// assistant we extract content blocks (text/tool_use/tool_result/thinking)
+/// and emit one Message per block. `summary` becomes a single text Message.
+/// Bookkeeping types (attachment, file-history-snapshot, ai-title,
+/// last-prompt) are dropped — they're noise in the chat view.
+fn parse_line(line: &str) -> Vec<Message> {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+        return vec![];
+    };
+    let record_type = v.get("type").and_then(|t| t.as_str()).unwrap_or("");
+    let uuid = v
+        .get("uuid")
+        .and_then(|u| u.as_str())
+        .unwrap_or("")
+        .to_string();
+    let timestamp = v
+        .get("timestamp")
+        .and_then(|t| t.as_str())
+        .map(|s| s.to_string());
+
+    match record_type {
+        "summary" => {
+            let text = v
+                .get("summary")
+                .and_then(|s| s.as_str())
+                .unwrap_or("")
+                .to_string();
+            if text.is_empty() {
+                return vec![];
+            }
+            vec![Message {
+                id: uuid,
+                kind: MessageKind::Text,
+                role: Some(Role::System),
+                timestamp,
+                content: Some(text),
+                ..Default::default()
+            }]
+        }
+        "user" | "assistant" => {
+            let role = if record_type == "user" {
+                Role::User
+            } else {
+                Role::Assistant
+            };
+            extract_message_blocks(&v, &uuid, role, timestamp)
+        }
+        _ => vec![],
     }
-    Message {
-        id: String::new(),
-        kind: MessageKind::Status,
-        content: Some(line.to_string()),
-        ..Default::default()
+}
+
+fn extract_message_blocks(
+    v: &serde_json::Value,
+    uuid: &str,
+    role: Role,
+    timestamp: Option<String>,
+) -> Vec<Message> {
+    let Some(content) = v.get("message").and_then(|m| m.get("content")) else {
+        return vec![];
+    };
+    if let Some(s) = content.as_str() {
+        if s.is_empty() {
+            return vec![];
+        }
+        return vec![Message {
+            id: uuid.to_string(),
+            kind: MessageKind::Text,
+            role: Some(role),
+            timestamp,
+            content: Some(s.to_string()),
+            ..Default::default()
+        }];
     }
+    let Some(arr) = content.as_array() else {
+        return vec![];
+    };
+    let mut out = Vec::new();
+    for (i, block) in arr.iter().enumerate() {
+        let id = format!("{uuid}#{i}");
+        let block_type = block.get("type").and_then(|t| t.as_str()).unwrap_or("");
+        match block_type {
+            "text" => {
+                let text = block
+                    .get("text")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                if text.is_empty() {
+                    continue;
+                }
+                out.push(Message {
+                    id,
+                    kind: MessageKind::Text,
+                    role: Some(role),
+                    timestamp: timestamp.clone(),
+                    content: Some(text),
+                    ..Default::default()
+                });
+            }
+            "thinking" => {
+                let text = block
+                    .get("thinking")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                out.push(Message {
+                    id,
+                    kind: MessageKind::Thinking,
+                    role: Some(role),
+                    timestamp: timestamp.clone(),
+                    thinking: Some(text),
+                    ..Default::default()
+                });
+            }
+            "tool_use" => {
+                out.push(Message {
+                    id,
+                    kind: MessageKind::ToolUse,
+                    role: Some(role),
+                    timestamp: timestamp.clone(),
+                    tool_name: block
+                        .get("name")
+                        .and_then(|n| n.as_str())
+                        .map(|s| s.to_string()),
+                    tool_input: block.get("input").cloned(),
+                    ..Default::default()
+                });
+            }
+            "tool_result" => {
+                let is_error = block
+                    .get("is_error")
+                    .and_then(|e| e.as_bool())
+                    .unwrap_or(false);
+                out.push(Message {
+                    id,
+                    kind: MessageKind::ToolResult,
+                    role: Some(role),
+                    timestamp: timestamp.clone(),
+                    tool_result: block.get("content").cloned(),
+                    is_error,
+                    ..Default::default()
+                });
+            }
+            "image" => {
+                out.push(Message {
+                    id,
+                    kind: MessageKind::Image,
+                    role: Some(role),
+                    timestamp: timestamp.clone(),
+                    ..Default::default()
+                });
+            }
+            _ => {}
+        }
+    }
+    out
 }
 
 fn truncate(s: &str, max: usize) -> String {
@@ -220,9 +367,27 @@ mod tests {
         let td = tempfile::tempdir().unwrap();
         let dir = td.path().join("projects/-tmp-y");
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("a.jsonl"), "not-json\n{}\n").unwrap();
+        std::fs::write(
+            dir.join("a.jsonl"),
+            "not-json\n{}\n{\"type\":\"file-history-snapshot\"}\n",
+        )
+        .unwrap();
         let page = messages(td.path(), "-tmp-y", "a", None, None).unwrap();
+        assert!(page.items.is_empty());
+    }
+
+    #[test]
+    fn assistant_array_content_emits_blocks() {
+        let td = tempfile::tempdir().unwrap();
+        let dir = td.path().join("projects/-tmp-z");
+        std::fs::create_dir_all(&dir).unwrap();
+        let body = r#"{"type":"assistant","uuid":"u1","timestamp":"2026-01-01T00:00:00Z","message":{"role":"assistant","content":[{"type":"text","text":"hello"},{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"ls"}}]}}"#;
+        std::fs::write(dir.join("b.jsonl"), body).unwrap();
+        let page = messages(td.path(), "-tmp-z", "b", None, None).unwrap();
         assert_eq!(page.items.len(), 2);
-        assert_eq!(page.items[0].kind, MessageKind::Status);
+        assert_eq!(page.items[0].kind, MessageKind::Text);
+        assert_eq!(page.items[0].content.as_deref(), Some("hello"));
+        assert_eq!(page.items[1].kind, MessageKind::ToolUse);
+        assert_eq!(page.items[1].tool_name.as_deref(), Some("Bash"));
     }
 }
