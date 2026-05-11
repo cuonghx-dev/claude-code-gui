@@ -2,6 +2,7 @@ pub mod agents;
 pub mod cmds;
 pub mod debug;
 pub mod files;
+pub mod hooks;
 pub mod marketplace;
 pub mod mcp;
 pub mod output_styles;

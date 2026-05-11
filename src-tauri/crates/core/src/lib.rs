@@ -5,6 +5,7 @@ pub mod commands;
 pub mod files;
 pub mod frontmatter;
 pub mod git;
+pub mod hooks;
 pub mod io;
 pub mod marketplace;
 pub mod mcp;

@@ -30,6 +30,10 @@ export const qk = {
     all: ['outputStyles'] as const,
     list: () => ['outputStyles', 'list'] as const,
   },
+  hooks: {
+    all: ['hooks'] as const,
+    list: (wd?: string) => ['hooks', 'list', wd ?? ''] as const,
+  },
   plugins: {
     all: ['plugins'] as const,
     list: () => ['plugins', 'list'] as const,

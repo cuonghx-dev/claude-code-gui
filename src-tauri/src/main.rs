@@ -132,6 +132,7 @@ fn run() -> anyhow::Result<()> {
             commands::plans::plans_create,
             commands::plans::plans_update,
             commands::plans::plans_delete,
+            commands::hooks::hooks_list,
             commands::output_styles::output_styles_list,
             commands::output_styles::output_styles_get,
             commands::output_styles::output_styles_create,

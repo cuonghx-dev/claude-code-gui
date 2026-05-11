@@ -1,6 +1,7 @@
 mod agents;
 mod commands;
 mod error;
+mod hooks;
 mod ids;
 mod mcp;
 mod output_styles;
@@ -15,6 +16,7 @@ mod terminal;
 pub use agents::{Agent, AgentFrontmatter, AgentImport, AgentInput, AgentMemory, AgentModel};
 pub use commands::{Command, CommandFrontmatter, CommandInput};
 pub use error::{AppError, ErrorCode};
+pub use hooks::{HookEntry, HookGroup};
 pub use ids::{ImproveRequest, RequestId, SessionId};
 pub use mcp::{
     McpCapabilities, McpImportPayload, McpPrompt, McpResource, McpScope, McpServer,

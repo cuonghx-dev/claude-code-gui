@@ -10,6 +10,7 @@ import {
   Palette,
   Package,
   History,
+  Webhook,
   Settings,
 } from 'lucide-vue-next'
 import logoUrl from '@/assets/logo.png'
@@ -19,6 +20,7 @@ import { useSkillsList } from '@/composables/useSkills'
 import { usePlansList } from '@/composables/usePlans'
 import { useMcpList } from '@/composables/useMcp'
 import { useOutputStylesList } from '@/composables/useOutputStyles'
+import { useHooksList } from '@/composables/useHooks'
 import { usePluginsList } from '@/composables/usePlugins'
 import { useProjectsList } from '@/composables/useProjects'
 
@@ -28,6 +30,7 @@ const skills = useSkillsList()
 const plans = usePlansList()
 const mcp = useMcpList('global')
 const outputStyles = useOutputStylesList()
+const hooks = useHooksList()
 const plugins = usePluginsList()
 const projects = useProjectsList()
 
@@ -45,6 +48,7 @@ const items = computed<NavItem[]>(() => [
   { to: '/plans',         label: 'Plans',         icon: Map,      count: () => plans.data.value?.length },
   { to: '/mcp',           label: 'MCP',           icon: Server,   count: () => mcp.data.value?.length },
   { to: '/output-styles', label: 'Output styles', icon: Palette,  count: () => outputStyles.data.value?.length },
+  { to: '/hooks',         label: 'Hooks',         icon: Webhook,  count: () => hooks.data.value?.length },
   { to: '/plugins',       label: 'Plugins',       icon: Package,  count: () => plugins.data.value?.length },
   { to: '/sessions',      label: 'Sessions',      icon: History,  count: () => projects.data.value?.length },
   { to: '/settings',      label: 'Settings',      icon: Settings, count: () => undefined },

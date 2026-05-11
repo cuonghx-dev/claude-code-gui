@@ -11,6 +11,7 @@ import type {
   DirEntry,
   FileNode,
   GitStatus,
+  HookGroup,
   ImproveRequest,
   MarketplaceSource,
   MarketplaceSourceInput,
@@ -86,6 +87,10 @@ export const plansCreate = (input: PlanInput) => invoke<Plan>('plans_create', { 
 export const plansUpdate = (slug: string, input: PlanInput) =>
   invoke<Plan>('plans_update', { slug, input })
 export const plansDelete = (slug: string) => invoke<void>('plans_delete', { slug })
+
+// Hooks
+export const hooksList = (workingDir?: string) =>
+  invoke<HookGroup[]>('hooks_list', { workingDir })
 
 // Output styles
 export const outputStylesList = (workingDir?: string) =>
