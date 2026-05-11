@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref, watchEffect } from 'vue'
+import { Loader2 } from 'lucide-vue-next'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import FormField from '@/components/forms/FormField.vue'
@@ -158,7 +159,8 @@ async function redoOnboarding() {
             </FormField>
           </div>
           <div class="mt-3 flex items-center gap-2">
-            <button type="button" class="ccg-btn-primary" :disabled="settingsMut.isPending.value" @click="saveSettings">
+            <button type="button" class="ccg-btn-primary inline-flex items-center gap-1.5" :disabled="settingsMut.isPending.value" @click="saveSettings">
+              <Loader2 v-if="settingsMut.isPending.value" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
               {{ settingsMut.isPending.value ? 'Saving…' : 'Save settings.json' }}
             </button>
             <button type="button" class="ccg-btn-ghost" @click="redoOnboarding">
@@ -181,7 +183,8 @@ async function redoOnboarding() {
               <input v-model="cLocal.claudeDirOverride" type="text" class="ccg-input" />
             </FormField>
           </div>
-          <button type="button" class="mt-3 ccg-btn-primary" :disabled="configMut.isPending.value" @click="saveConfig">
+          <button type="button" class="mt-3 ccg-btn-primary inline-flex items-center gap-1.5" :disabled="configMut.isPending.value" @click="saveConfig">
+            <Loader2 v-if="configMut.isPending.value" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
             {{ configMut.isPending.value ? 'Saving…' : 'Save preferences' }}
           </button>
         </div>
@@ -197,15 +200,17 @@ async function redoOnboarding() {
             </FormField>
           </div>
           <div class="mt-3 flex items-center gap-2">
-            <button type="button" class="ccg-btn-primary" :disabled="configMut.isPending.value" @click="saveConfig">
+            <button type="button" class="ccg-btn-primary inline-flex items-center gap-1.5" :disabled="configMut.isPending.value" @click="saveConfig">
+              <Loader2 v-if="configMut.isPending.value" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
               Save channel
             </button>
             <button
               type="button"
-              class="ccg-btn-ghost"
+              class="ccg-btn-ghost inline-flex items-center gap-1.5"
               :disabled="checkingUpdate"
               @click="checkForUpdates"
             >
+              <Loader2 v-if="checkingUpdate" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
               {{ checkingUpdate ? 'Checking…' : 'Check for updates' }}
             </button>
           </div>

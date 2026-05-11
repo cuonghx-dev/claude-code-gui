@@ -69,7 +69,8 @@ const items = computed<NavItem[]>(() => [
       <span class="flex-1">{{ item.label }}</span>
       <span
         v-if="item.count() !== undefined"
-        class="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] tabular-nums text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300"
+        class="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] tabular-nums text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100"
+        :aria-label="`${item.count()} ${item.label.toLowerCase()}`"
       >
         {{ item.count() }}
       </span>

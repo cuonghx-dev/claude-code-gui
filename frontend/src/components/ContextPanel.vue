@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { CircleCheck, CircleDot } from 'lucide-vue-next'
 
 interface TokenPayload {
   input: number
@@ -85,9 +86,14 @@ onBeforeUnmount(() => {
           :key="`${t.name}-${i}`"
           class="flex items-baseline justify-between gap-2 font-mono"
         >
-          <span class="truncate">
-            <span :class="t.state === 'completed' ? 'text-emerald-600 dark:text-emerald-400' : 'text-violet-600 dark:text-violet-400'">●</span>
-            {{ t.name }}
+          <span class="flex min-w-0 items-center gap-1.5 truncate">
+            <component
+              :is="t.state === 'completed' ? CircleCheck : CircleDot"
+              class="h-3 w-3 shrink-0"
+              :class="t.state === 'completed' ? 'text-emerald-600 dark:text-emerald-400' : 'text-violet-600 dark:text-violet-400'"
+              :aria-label="t.state === 'completed' ? 'completed' : 'running'"
+            />
+            <span class="truncate">{{ t.name }}</span>
           </span>
           <span class="tabular-nums text-neutral-500">
             {{ t.state }}<span v-if="t.durationMs">  · {{ t.durationMs }}ms</span>

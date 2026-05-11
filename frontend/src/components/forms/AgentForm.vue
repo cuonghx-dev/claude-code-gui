@@ -147,34 +147,34 @@ async function runImprove() {
           v-model="state.slug"
           :readonly="lockSlug"
           type="text"
-          class="rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+          class="ccg-input"
         />
       </FormField>
       <FormField label="Directory" :error="errors.directory" hint="Subdir under agents/. Leave blank for top level.">
         <input
           v-model="state.directory"
           type="text"
-          class="rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+          class="ccg-input"
         />
       </FormField>
       <FormField label="Name" :error="errors['frontmatter.name']">
         <input
           v-model="state.name"
           type="text"
-          class="rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+          class="ccg-input"
         />
       </FormField>
       <FormField label="Description" :error="errors['frontmatter.description']">
         <textarea
           v-model="state.description"
           rows="2"
-          class="rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+          class="ccg-input"
         />
       </FormField>
       <FormField label="Model" :error="errors['frontmatter.model']">
         <select
           v-model="state.model"
-          class="rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+          class="ccg-input"
         >
           <option value="">— inherit —</option>
           <option value="opus">Opus</option>
@@ -187,13 +187,13 @@ async function runImprove() {
           v-model="state.color"
           type="text"
           placeholder="#7c3aed"
-          class="rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+          class="ccg-input"
         />
       </FormField>
       <FormField label="Memory">
         <select
           v-model="state.memory"
-          class="rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+          class="ccg-input"
         >
           <option value="">— inherit —</option>
           <option value="user">user</option>
@@ -206,14 +206,14 @@ async function runImprove() {
         <input
           v-model="state.skills"
           type="text"
-          class="rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+          class="ccg-input"
         />
       </FormField>
       <FormField label="Tools" hint="Comma-separated">
         <input
           v-model="state.tools"
           type="text"
-          class="rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+          class="ccg-input"
         />
       </FormField>
     </div>
@@ -251,7 +251,7 @@ async function runImprove() {
     <div class="col-span-full flex items-center justify-end gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
       <button
         type="button"
-        class="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+        class="ccg-btn-ghost"
         @click="emit('cancel')"
       >
         Cancel
@@ -259,7 +259,7 @@ async function runImprove() {
       <button
         type="submit"
         :disabled="submitting"
-        class="rounded-md bg-violet-600 px-3 py-1.5 text-sm text-white hover:bg-violet-700 disabled:opacity-50"
+        class="ccg-btn-primary"
       >
         {{ submitting ? 'Saving…' : (submitLabel ?? 'Save') }}
       </button>

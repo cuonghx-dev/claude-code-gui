@@ -48,7 +48,14 @@ async function complete() {
           <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
             A few questions to set up your defaults. You can change everything later in Settings.
           </p>
-          <div class="mt-3 flex gap-1">
+          <div
+            class="mt-3 flex gap-1"
+            role="progressbar"
+            :aria-valuenow="step + 1"
+            aria-valuemin="1"
+            :aria-valuemax="totalSteps"
+            :aria-label="`Step ${step + 1} of ${totalSteps}`"
+          >
             <span
               v-for="i in totalSteps"
               :key="i"
@@ -56,6 +63,9 @@ async function complete() {
               :class="i - 1 <= step ? 'bg-violet-600' : 'bg-neutral-200 dark:bg-neutral-700'"
             />
           </div>
+          <p class="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            Step {{ step + 1 }} of {{ totalSteps }}
+          </p>
         </header>
 
         <p
