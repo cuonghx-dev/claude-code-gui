@@ -16,6 +16,9 @@ pub struct OutputStyle {
 #[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
 #[serde(rename_all = "lowercase")]
 pub enum OutputStyleScope {
+    /// Hard-coded styles shipped with Claude Code itself (Default,
+    /// Explanatory, Learning). Read-only.
+    Builtin,
     Global,
     Project,
 }

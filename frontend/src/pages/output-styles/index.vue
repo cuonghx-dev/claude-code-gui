@@ -80,22 +80,33 @@ async function onConfirmDelete() {
             class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
           >
             <div class="flex items-baseline justify-between gap-3">
-              <span class="text-sm font-semibold">{{ s.frontmatter.name ?? s.id }}</span>
               <div class="flex items-center gap-2">
-                <span class="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide dark:bg-neutral-800">{{ s.scope }}</span>
-                <button
-                  type="button"
-                  class="text-xs text-red-600 hover:underline dark:text-red-400"
-                  @click="confirmingDelete = { id: s.id, scope: s.scope }"
+                <span class="text-sm font-semibold">{{ s.frontmatter.name ?? s.id }}</span>
+                <span
+                  class="rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                  :class="s.scope === 'builtin'
+                    ? 'border-amber-500/60 text-amber-500'
+                    : 'border-neutral-300 text-neutral-500 dark:border-neutral-700 dark:text-neutral-400'"
                 >
-                  Delete
-                </button>
+                  {{ s.scope === 'builtin' ? 'Built-in' : s.scope }}
+                </span>
               </div>
+              <button
+                v-if="s.scope !== 'builtin'"
+                type="button"
+                class="text-xs text-red-600 hover:underline dark:text-red-400"
+                @click="confirmingDelete = { id: s.id, scope: s.scope }"
+              >
+                Delete
+              </button>
             </div>
             <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               {{ describe(s.frontmatter.description, s.body) }}
             </p>
-            <pre class="mt-3 max-h-48 overflow-auto rounded border border-neutral-100 bg-neutral-50 p-3 text-xs dark:border-neutral-800 dark:bg-neutral-950">{{ s.body }}</pre>
+            <pre
+              v-if="s.body"
+              class="mt-3 max-h-48 overflow-auto rounded border border-neutral-100 bg-neutral-50 p-3 text-xs dark:border-neutral-800 dark:bg-neutral-950"
+            >{{ s.body }}</pre>
           </li>
         </ul>
       </section>

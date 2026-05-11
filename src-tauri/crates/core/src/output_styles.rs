@@ -13,13 +13,46 @@ use crate::AppError;
 const SUBDIR: &str = "output-styles";
 
 pub fn list(claude_dir: &Path, working_dir: Option<&Path>) -> Result<Vec<OutputStyle>, AppError> {
-    let mut out = Vec::new();
+    let mut out = builtin_styles();
     list_into(&claude_dir.join(SUBDIR), OutputStyleScope::Global, &mut out)?;
     if let Some(wd) = working_dir {
         list_into(&wd.join(".claude").join(SUBDIR), OutputStyleScope::Project, &mut out)?;
     }
     out.sort_by(|a, b| (a.scope as u8, a.id.clone()).cmp(&(b.scope as u8, b.id.clone())));
     Ok(out)
+}
+
+fn builtin_styles() -> Vec<OutputStyle> {
+    use crate::types::OutputStyleFrontmatter;
+    let mk = |id: &str, name: &str, desc: &str| OutputStyle {
+        id: id.to_string(),
+        scope: OutputStyleScope::Builtin,
+        frontmatter: OutputStyleFrontmatter {
+            name: Some(name.to_string()),
+            description: Some(desc.to_string()),
+            keep_coding_instructions: Some(true),
+            extra: Default::default(),
+        },
+        body: String::new(),
+        file_path: String::new(),
+    };
+    vec![
+        mk(
+            "default",
+            "Default",
+            "Claude Code's standard output style, designed for efficient software engineering tasks.",
+        ),
+        mk(
+            "explanatory",
+            "Explanatory",
+            "Provides educational \"Insights\" to help you understand implementation choices and codebase patterns.",
+        ),
+        mk(
+            "learning",
+            "Learning",
+            "Collaborative, learn-by-doing mode. Claude will share \"Insights\" and ask you to contribute code yourself using TODO(human) markers.",
+        ),
+    ]
 }
 
 pub fn get(
@@ -35,6 +68,9 @@ pub fn get(
 }
 
 pub fn create(claude_dir: &Path, input: OutputStyleInput) -> Result<OutputStyle, AppError> {
+    if input.scope == OutputStyleScope::Builtin {
+        return Err(AppError::invalid("cannot create a built-in output style"));
+    }
     io::validate_slug(&input.id)?;
     let dir = scope_dir(claude_dir, input.scope, input.working_dir.as_deref())?;
     let path = dir.join(format!("{}.md", input.id));
@@ -60,6 +96,9 @@ pub fn delete(
     scope: OutputStyleScope,
     working_dir: Option<&Path>,
 ) -> Result<(), AppError> {
+    if scope == OutputStyleScope::Builtin {
+        return Err(AppError::invalid("cannot delete a built-in output style"));
+    }
     let existing = get(claude_dir, id, scope, working_dir)?;
     io::remove_file(Path::new(&existing.file_path))
 }
@@ -70,6 +109,9 @@ fn scope_dir(
     working_dir: Option<&str>,
 ) -> Result<PathBuf, AppError> {
     Ok(match scope {
+        OutputStyleScope::Builtin => {
+            return Err(AppError::invalid("built-in output styles have no filesystem path"));
+        }
         OutputStyleScope::Global => claude_dir.join(SUBDIR),
         OutputStyleScope::Project => {
             let wd = working_dir.ok_or_else(|| {
@@ -131,9 +173,38 @@ mod tests {
         std::fs::write(project_styles.join("verbose.md"), "---\nname: Verbose\n---\n\n").unwrap();
 
         let styles = list(td.path(), Some(&project)).unwrap();
-        assert_eq!(styles.len(), 2);
-        assert_eq!(styles[0].scope, OutputStyleScope::Global);
-        assert_eq!(styles[1].scope, OutputStyleScope::Project);
+        let user: Vec<_> = styles
+            .iter()
+            .filter(|s| s.scope != OutputStyleScope::Builtin)
+            .collect();
+        assert_eq!(user.len(), 2);
+        assert_eq!(user[0].scope, OutputStyleScope::Global);
+        assert_eq!(user[1].scope, OutputStyleScope::Project);
+        let builtins: Vec<_> = styles
+            .iter()
+            .filter(|s| s.scope == OutputStyleScope::Builtin)
+            .collect();
+        assert_eq!(builtins.len(), 3);
+    }
+
+    #[test]
+    fn builtins_are_read_only() {
+        let td = tempfile::tempdir().unwrap();
+        let err = create(
+            td.path(),
+            OutputStyleInput {
+                id: "default".into(),
+                scope: OutputStyleScope::Builtin,
+                working_dir: None,
+                frontmatter: OutputStyleFrontmatter::default(),
+                body: String::new(),
+            },
+        )
+        .unwrap_err();
+        assert!(format!("{err:?}").to_lowercase().contains("built-in"));
+
+        let err = delete(td.path(), "default", OutputStyleScope::Builtin, None).unwrap_err();
+        assert!(format!("{err:?}").to_lowercase().contains("built-in"));
     }
 
     #[test]
