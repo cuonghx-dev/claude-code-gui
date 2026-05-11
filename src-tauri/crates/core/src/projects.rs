@@ -3,6 +3,7 @@
 //! session files. The decoded path is also the working dir for spawning
 //! `claude --resume`.
 
+use std::io::BufRead;
 use std::path::{Path, PathBuf};
 
 use crate::io;
@@ -24,7 +25,7 @@ pub fn list(claude_dir: &Path) -> Result<Vec<Project>, AppError> {
             continue;
         }
         let Some(encoded) = path.file_name().and_then(|s| s.to_str()) else { continue };
-        let decoded = decode(encoded);
+        let decoded = decode_with_sessions(&path, encoded);
         let (count, last) = scan_sessions(&path);
         out.push(Project {
             name: encoded.to_string(),
@@ -59,9 +60,54 @@ pub fn encode(abs_path: &str) -> String {
     abs_path.replace('/', "-")
 }
 
-/// Decode `-Users-foo-app` → `/Users/foo/app`.
+/// Naïve inverse of [`encode`]. Claude Code does not escape hyphens that
+/// were already in the path, so `-Users-foo-claude-code-gui` is ambiguous
+/// between `/Users/foo/claude/code/gui` and `/Users/foo/claude-code-gui`.
+/// Use [`decode_with_sessions`] when you have a project dir on disk and
+/// want the authoritative cwd; fall back here when no sessions exist.
 pub fn decode(encoded: &str) -> String {
     encoded.replace('-', "/")
+}
+
+/// Authoritative decode: scan the project dir's session files for a
+/// `"cwd": "..."` record and return that path. Falls back to the naive
+/// [`decode`] when no session yields a cwd.
+pub fn decode_with_sessions(project_dir: &Path, encoded: &str) -> String {
+    read_first_cwd(project_dir).unwrap_or_else(|| decode(encoded))
+}
+
+fn read_first_cwd(project_dir: &Path) -> Option<String> {
+    let entries = std::fs::read_dir(project_dir).ok()?;
+    let mut paths: Vec<PathBuf> = entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("jsonl"))
+        .collect();
+    // Newest first — recent sessions are most likely to reflect the
+    // project's current cwd in case the user moved it.
+    paths.sort_by_key(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok());
+    paths.reverse();
+    for path in paths {
+        let Ok(file) = std::fs::File::open(&path) else { continue };
+        let reader = std::io::BufReader::new(file);
+        for (i, line) in reader.lines().enumerate() {
+            if i >= 200 {
+                break;
+            }
+            let Ok(line) = line else { break };
+            if !line.contains("\"cwd\"") {
+                continue;
+            }
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) {
+                if let Some(cwd) = v.get("cwd").and_then(|c| c.as_str()) {
+                    if !cwd.is_empty() {
+                        return Some(cwd.to_string());
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 fn scan_sessions(project_dir: &Path) -> (usize, Option<String>) {
@@ -204,6 +250,31 @@ mod tests {
     fn encode_decode_roundtrip() {
         assert_eq!(encode("/Users/foo/app"), "-Users-foo-app");
         assert_eq!(decode("-Users-foo-app"), "/Users/foo/app");
+    }
+
+    #[test]
+    fn decode_with_sessions_prefers_cwd_record() {
+        let td = tempfile::tempdir().unwrap();
+        let project = td.path().join("-Users-me-Documents-claude-code-gui");
+        std::fs::create_dir_all(&project).unwrap();
+        std::fs::write(
+            project.join("a.jsonl"),
+            r#"{"type":"snapshot"}
+{"cwd":"/Users/me/Documents/claude-code-gui","other":1}
+"#,
+        )
+        .unwrap();
+        let decoded = decode_with_sessions(&project, "-Users-me-Documents-claude-code-gui");
+        assert_eq!(decoded, "/Users/me/Documents/claude-code-gui");
+    }
+
+    #[test]
+    fn decode_with_sessions_falls_back_when_no_cwd() {
+        let td = tempfile::tempdir().unwrap();
+        let project = td.path().join("-tmp-x");
+        std::fs::create_dir_all(&project).unwrap();
+        let decoded = decode_with_sessions(&project, "-tmp-x");
+        assert_eq!(decoded, "/tmp/x");
     }
 
     #[test]

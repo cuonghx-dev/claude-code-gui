@@ -8,7 +8,7 @@
 
 use std::path::Path;
 
-use crate::types::{Message, MessageKind, Page, Role, SessionSummary};
+use crate::types::{Message, MessageKind, Page, SessionSummary};
 use crate::AppError;
 
 const PROJECTS_SUBDIR: &str = "projects";
@@ -78,29 +78,45 @@ fn summarize(path: &Path, project_name: &str) -> Result<SessionSummary, AppError
     let mut count = 0;
     let mut started_at: Option<String> = None;
     let mut last_message_at: Option<String> = None;
-    let mut preview: Option<String> = None;
+    let mut first_user_text: Option<String> = None;
+    let mut summary_text: Option<String> = None;
+
     for line in raw.lines() {
-        if line.trim().is_empty() {
+        let line = line.trim();
+        if line.is_empty() {
             continue;
         }
-        let m = parse_line(line);
-        if started_at.is_none() {
-            started_at = m.timestamp.clone();
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        let kind = v.get("type").and_then(|t| t.as_str()).unwrap_or("");
+
+        if kind == "summary" {
+            if summary_text.is_none() {
+                if let Some(s) = v.get("summary").and_then(|s| s.as_str()) {
+                    if !s.is_empty() {
+                        summary_text = Some(truncate(s, 120));
+                    }
+                }
+            }
+            continue;
         }
-        if m.timestamp.is_some() {
-            last_message_at = m.timestamp.clone();
-        }
-        if preview.is_none()
-            && m.kind == MessageKind::Text
-            && m.role == Some(Role::User)
-        {
-            preview = m
-                .content
-                .as_ref()
-                .map(|c| truncate(c, 120));
+        if kind != "user" && kind != "assistant" {
+            continue;
         }
         count += 1;
+        if let Some(ts) = v.get("timestamp").and_then(|t| t.as_str()) {
+            if started_at.is_none() {
+                started_at = Some(ts.to_string());
+            }
+            last_message_at = Some(ts.to_string());
+        }
+        if first_user_text.is_none() && kind == "user" {
+            first_user_text = extract_user_text(&v).map(|s| truncate(&s, 120));
+        }
     }
+
+    let preview = summary_text.or(first_user_text);
     let meta = std::fs::metadata(path)?;
     Ok(SessionSummary {
         session_id,
@@ -112,6 +128,27 @@ fn summarize(path: &Path, project_name: &str) -> Result<SessionSummary, AppError
         size_bytes: meta.len(),
         preview,
     })
+}
+
+/// Extract the user-visible text from a `type:"user"` JSONL record.
+/// `message.content` is either a plain string or an array of content blocks;
+/// for arrays we return the first text-bearing block.
+fn extract_user_text(v: &serde_json::Value) -> Option<String> {
+    let content = v.get("message")?.get("content")?;
+    if let Some(s) = content.as_str() {
+        return Some(s.to_string());
+    }
+    if let Some(arr) = content.as_array() {
+        for block in arr {
+            if let Some(s) = block.as_str() {
+                return Some(s.to_string());
+            }
+            if let Some(t) = block.get("text").and_then(|t| t.as_str()) {
+                return Some(t.to_string());
+            }
+        }
+    }
+    None
 }
 
 /// Tolerant parser: accept anything that looks JSONy, fall back to a
@@ -146,18 +183,36 @@ mod tests {
         let dir = td.path().join("projects/-tmp-x");
         std::fs::create_dir_all(&dir).unwrap();
         let lines: Vec<String> = (0..5)
-            .map(|i| format!(r#"{{"id":"m{i}","kind":"text","role":"user","content":"hi {i}"}}"#))
+            .map(|i| format!(
+                r#"{{"type":"user","timestamp":"2026-01-0{}T00:00:00Z","message":{{"role":"user","content":"hi {i}"}}}}"#,
+                i + 1,
+            ))
             .collect();
         std::fs::write(dir.join("01h.jsonl"), lines.join("\n")).unwrap();
 
         let summaries = list_for_project(td.path(), "-tmp-x").unwrap();
         assert_eq!(summaries.len(), 1);
         assert_eq!(summaries[0].message_count, 5);
+        assert_eq!(summaries[0].preview.as_deref(), Some("hi 0"));
+        assert!(summaries[0].started_at.is_some());
+        assert!(summaries[0].last_message_at.is_some());
 
         let page = messages(td.path(), "-tmp-x", "01h", Some(2), Some(2)).unwrap();
         assert_eq!(page.items.len(), 2);
-        assert_eq!(page.items[0].id, "m2");
         assert_eq!(page.next_after, Some(4));
+    }
+
+    #[test]
+    fn summary_record_overrides_first_user_message() {
+        let td = tempfile::tempdir().unwrap();
+        let dir = td.path().join("projects/-tmp-s");
+        std::fs::create_dir_all(&dir).unwrap();
+        let body = r#"{"type":"summary","summary":"Refactor sessions list"}
+{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"long original prompt that should be hidden"}}
+"#;
+        std::fs::write(dir.join("01.jsonl"), body).unwrap();
+        let summaries = list_for_project(td.path(), "-tmp-s").unwrap();
+        assert_eq!(summaries[0].preview.as_deref(), Some("Refactor sessions list"));
     }
 
     #[test]
