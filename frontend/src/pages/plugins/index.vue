@@ -16,6 +16,7 @@ import {
   useMarketplaceSources,
 } from '@/composables/useMarketplace'
 import { useAsyncRequest } from '@/composables/useAsyncRequest'
+import { describePlugin } from '@/utils/description'
 
 const route = useRoute()
 const router = useRouter()
@@ -161,7 +162,7 @@ watch(
                 <span class="text-sm font-semibold">{{ p.name }}</span>
                 <span v-if="p.version" class="text-xs text-neutral-400">v{{ p.version }}</span>
               </div>
-              <p class="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">{{ p.description ?? '—' }}</p>
+              <p class="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">{{ describePlugin(p.description, p.skills) }}</p>
               <p class="mt-2 text-[11px] text-neutral-400">
                 {{ p.skills.length }} skill{{ p.skills.length === 1 ? '' : 's' }} ·
                 <span :class="p.enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-500'">
