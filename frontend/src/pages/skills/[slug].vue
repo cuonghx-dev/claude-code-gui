@@ -1,39 +1,58 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
-import SkillForm from '@/components/forms/SkillForm.vue'
+import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import {
   useSkill,
   useSkillDelete,
   useSkillExport,
-  useSkillUpdate,
+  useSkillReadRaw,
+  useSkillUpdateRaw,
 } from '@/composables/useSkills'
-import type { SkillInput } from '@/types/ipc'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 
 const route = useRoute()
 const router = useRouter()
 const slug = computed(() => (route.params as { slug: string }).slug)
 
 const { isPending, isError, error, data } = useSkill(slug)
-const update = useSkillUpdate()
+const update = useSkillUpdateRaw()
 const remove = useSkillDelete()
 const exportMut = useSkillExport()
+const readRaw = useSkillReadRaw()
 
 const errorMessage = ref('')
 const confirmingDelete = ref(false)
+const content = ref('')
+const initial = ref('')
 
 const isLocal = computed(() => data.value?.source.kind === 'local')
+const dirty = computed(() => content.value !== initial.value)
+useUnsavedChanges(dirty)
 
-async function onSubmit(input: SkillInput) {
+watch(
+  data,
+  async (s) => {
+    if (!s) return
+    try {
+      const raw = await readRaw.mutateAsync(s.slug)
+      content.value = raw
+      initial.value = raw
+    } catch (e) {
+      errorMessage.value = (e as { message?: string })?.message ?? String(e)
+    }
+  },
+  { immediate: true },
+)
+
+async function onSave() {
   errorMessage.value = ''
   try {
-    const next = await update.mutateAsync({ slug: slug.value, input })
-    if (next.slug !== slug.value) {
-      router.replace(`/skills/${encodeURIComponent(next.slug)}`)
-    }
+    await update.mutateAsync({ slug: slug.value, content: content.value })
+    initial.value = content.value
   } catch (e) {
     errorMessage.value = (e as { message?: string })?.message ?? String(e)
   }
@@ -43,6 +62,7 @@ async function onDelete() {
   errorMessage.value = ''
   try {
     await remove.mutateAsync(slug.value)
+    initial.value = content.value
     router.push('/skills')
   } catch (e) {
     errorMessage.value = (e as { message?: string })?.message ?? String(e)
@@ -81,12 +101,21 @@ async function onExport() {
       >
         Delete
       </button>
+      <button
+        v-if="isLocal"
+        type="button"
+        class="ccg-btn-primary"
+        :disabled="!dirty || update.isPending.value"
+        @click="onSave"
+      >
+        {{ update.isPending.value ? 'Saving…' : 'Save' }}
+      </button>
     </template>
   </PageHeader>
 
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
     <template #default="{ data: skill }">
-      <section v-if="skill" class="p-6">
+      <section v-if="skill" class="flex h-[calc(100vh-65px)] min-h-0 flex-col p-6">
         <p
           v-if="errorMessage"
           class="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
@@ -99,23 +128,7 @@ async function onExport() {
         >
           Plugin-bundled skills are read-only. Edit the source plugin to change them.
         </p>
-        <template v-if="isLocal">
-          <SkillForm
-            :draft-key="`skill:${skill.slug}`"
-            :initial="{
-              slug: skill.slug,
-              frontmatter: skill.frontmatter,
-              body: skill.body,
-            }"
-            :submitting="update.isPending.value"
-            submit-label="Save changes"
-            @submit="onSubmit"
-            @cancel="router.push('/skills')"
-          />
-        </template>
-        <template v-else>
-          <pre class="max-h-[70vh] overflow-auto rounded-lg border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-900">{{ skill.body }}</pre>
-        </template>
+        <MarkdownEditor v-model="content" fill class="min-h-0 flex-1" />
       </section>
     </template>
   </QueryStateBoundary>

@@ -3,12 +3,15 @@ import { computed, type MaybeRefOrGetter, toValue } from 'vue'
 import { qk } from '@/lib/queryKeys'
 import {
   skillsCreate,
+  skillsCreateRaw,
   skillsDelete,
   skillsExport,
   skillsGet,
   skillsImport,
   skillsList,
+  skillsReadRaw,
   skillsUpdate,
+  skillsUpdateRaw,
 } from '@/utils/ipc'
 import type { SkillImportSource, SkillInput } from '@/types/ipc'
 
@@ -48,6 +51,30 @@ export const useSkillDelete = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.skills.all }),
   })
 }
+
+export const useSkillCreateRaw = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ slug, content }: { slug: string; content: string }) =>
+      skillsCreateRaw(slug, content),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.skills.all }),
+  })
+}
+
+export const useSkillUpdateRaw = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ slug, content }: { slug: string; content: string }) =>
+      skillsUpdateRaw(slug, content),
+    onSuccess: (_d, { slug }) => {
+      qc.invalidateQueries({ queryKey: qk.skills.all })
+      qc.invalidateQueries({ queryKey: qk.skills.get(slug) })
+    },
+  })
+}
+
+export const useSkillReadRaw = () =>
+  useMutation({ mutationFn: (slug: string) => skillsReadRaw(slug) })
 
 export const useSkillExport = () =>
   useMutation({ mutationFn: (slug: string) => skillsExport(slug) })

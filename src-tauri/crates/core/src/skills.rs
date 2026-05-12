@@ -117,6 +117,39 @@ pub fn update(claude_dir: &Path, slug: &str, input: SkillInput) -> Result<Skill,
     get(claude_dir, &input.slug)
 }
 
+/// Create a local skill from raw SKILL.md source. Validates frontmatter
+/// parses, then writes verbatim.
+pub fn create_raw(claude_dir: &Path, slug: &str, content: &str) -> Result<Skill, AppError> {
+    io::validate_slug(slug)?;
+    let _: Document<SkillFrontmatter> = frontmatter::parse(content)?;
+    let dir = claude_dir.join(SKILLS_SUBDIR).join(slug);
+    if dir.exists() {
+        return Err(AppError::invalid(format!(
+            "skill '{slug}' already exists"
+        )));
+    }
+    std::fs::create_dir_all(&dir)?;
+    io::atomic_write(&dir.join(SKILL_FILE), content.as_bytes())?;
+    get(claude_dir, slug)
+}
+
+/// Replace SKILL.md of an existing local skill with `content`. Validates parse.
+pub fn update_raw(claude_dir: &Path, slug: &str, content: &str) -> Result<Skill, AppError> {
+    let existing = get(claude_dir, slug)?;
+    let SkillSource::Local = existing.source else {
+        return Err(AppError::invalid("cannot update plugin-bundled skills"));
+    };
+    let _: Document<SkillFrontmatter> = frontmatter::parse(content)?;
+    io::atomic_write(Path::new(&existing.file_path), content.as_bytes())?;
+    get(claude_dir, slug)
+}
+
+/// Read SKILL.md raw source for use in a markdown editor.
+pub fn read_raw(claude_dir: &Path, slug: &str) -> Result<String, AppError> {
+    let s = get(claude_dir, slug)?;
+    Ok(std::fs::read_to_string(&s.file_path)?)
+}
+
 pub fn delete(claude_dir: &Path, slug: &str) -> Result<(), AppError> {
     let existing = get(claude_dir, slug)?;
     let SkillSource::Local = existing.source else {

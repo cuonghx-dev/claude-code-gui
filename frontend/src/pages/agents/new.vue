@@ -48,20 +48,8 @@ function slugify(s: string): string {
 function onSubmit() {
   errorMessage.value = ''
   const trimmed = content.value.replace(/^﻿/, '').trimStart()
-  if (!/^---\r?\n/.test(trimmed)) {
-    errorMessage.value = 'Markdown must start with YAML frontmatter (---).'
-    return
-  }
   const name = sniffName(trimmed)
-  if (!name) {
-    errorMessage.value = 'Add `name:` to the frontmatter; it becomes the slug.'
-    return
-  }
-  const slug = slugify(name)
-  if (!/^[a-z0-9_]+(?:-[a-z0-9_]+)*$/.test(slug)) {
-    errorMessage.value = `Derived slug "${slug}" is invalid. Use lowercase letters, digits, "-" or "_" in name.`
-    return
-  }
+  const slug = name ? slugify(name) : `untitled-${Date.now()}`
 
   importMut
     .mutateAsync({ slug, directory: '', content: trimmed })

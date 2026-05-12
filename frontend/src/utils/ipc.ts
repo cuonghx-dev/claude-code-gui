@@ -80,8 +80,13 @@ export const commandsDelete = (slug: string) => invoke<void>('commands_delete', 
 export const skillsList = () => invoke<Skill[]>('skills_list')
 export const skillsGet = (slug: string) => invoke<Skill>('skills_get', { slug })
 export const skillsCreate = (input: SkillInput) => invoke<Skill>('skills_create', { input })
+export const skillsCreateRaw = (slug: string, content: string) =>
+  invoke<Skill>('skills_create_raw', { slug, content })
 export const skillsUpdate = (slug: string, input: SkillInput) =>
   invoke<Skill>('skills_update', { slug, input })
+export const skillsUpdateRaw = (slug: string, content: string) =>
+  invoke<Skill>('skills_update_raw', { slug, content })
+export const skillsReadRaw = (slug: string) => invoke<string>('skills_read_raw', { slug })
 export const skillsDelete = (slug: string) => invoke<void>('skills_delete', { slug })
 export const skillsExport = (slug: string) => invoke<number[]>('skills_export', { slug })
 export const skillsImport = (source: SkillImportSource) =>
