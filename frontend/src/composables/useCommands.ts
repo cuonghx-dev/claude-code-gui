@@ -4,9 +4,12 @@ import { qk } from '@/lib/queryKeys'
 import {
   commandsCreate,
   commandsDelete,
+  commandsExport,
   commandsGet,
+  commandsImportRaw,
   commandsList,
   commandsUpdate,
+  commandsUpdateRaw,
 } from '@/utils/ipc'
 import type { CommandInput } from '@/types/ipc'
 
@@ -39,6 +42,30 @@ export const useCommandUpdate = () => {
     },
   })
 }
+
+export const useCommandUpdateRaw = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ slug, content }: { slug: string; content: string }) =>
+      commandsUpdateRaw(slug, content),
+    onSuccess: (_d, { slug }) => {
+      qc.invalidateQueries({ queryKey: qk.commands.all })
+      qc.invalidateQueries({ queryKey: qk.commands.get(slug) })
+    },
+  })
+}
+
+export const useCommandImportRaw = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ slug, directory, content }: { slug: string; directory: string; content: string }) =>
+      commandsImportRaw(slug, directory, content),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.commands.all }),
+  })
+}
+
+export const useCommandExport = () =>
+  useMutation({ mutationFn: (slug: string) => commandsExport(slug) })
 
 export const useCommandDelete = () => {
   const qc = useQueryClient()

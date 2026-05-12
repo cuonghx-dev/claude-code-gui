@@ -109,6 +109,43 @@ pub fn update(claude_dir: &Path, slug: &str, input: CommandInput) -> Result<Comm
     get(claude_dir, &input.slug)
 }
 
+/// Import a command from raw markdown source: validates frontmatter parses,
+/// then writes verbatim. Mirrors `agents::import`.
+pub fn import_raw(
+    claude_dir: &Path,
+    slug: &str,
+    directory: &str,
+    content: &str,
+) -> Result<Command, AppError> {
+    io::validate_slug(slug)?;
+    io::validate_relative_dir(directory)?;
+    let _: Document<CommandFrontmatter> = frontmatter::parse(content)?;
+    let path = file_path(claude_dir, directory, slug);
+    if path.exists() {
+        return Err(AppError::invalid(format!(
+            "command '{slug}' already exists"
+        )));
+    }
+    io::atomic_write(&path, content.as_bytes())?;
+    get(claude_dir, slug)
+}
+
+/// Update an existing command by replacing file contents with `content`.
+/// Validates that `content` parses before writing.
+pub fn update_raw(claude_dir: &Path, slug: &str, content: &str) -> Result<Command, AppError> {
+    let existing = get(claude_dir, slug)?;
+    let _: Document<CommandFrontmatter> = frontmatter::parse(content)?;
+    io::atomic_write(Path::new(&existing.file_path), content.as_bytes())?;
+    get(claude_dir, slug)
+}
+
+/// Return on-disk markdown source for a command.
+pub fn export(claude_dir: &Path, slug: &str) -> Result<String, AppError> {
+    let c = get(claude_dir, slug)?;
+    let raw = std::fs::read_to_string(&c.file_path)?;
+    Ok(raw)
+}
+
 pub fn delete(claude_dir: &Path, slug: &str) -> Result<(), AppError> {
     let existing = get(claude_dir, slug)?;
     io::remove_file(Path::new(&existing.file_path))

@@ -69,6 +69,11 @@ export const commandsCreate = (input: CommandInput) =>
   invoke<Command>('commands_create', { input })
 export const commandsUpdate = (slug: string, input: CommandInput) =>
   invoke<Command>('commands_update', { slug, input })
+export const commandsUpdateRaw = (slug: string, content: string) =>
+  invoke<Command>('commands_update_raw', { slug, content })
+export const commandsImportRaw = (slug: string, directory: string, content: string) =>
+  invoke<Command>('commands_import_raw', { slug, directory, content })
+export const commandsExport = (slug: string) => invoke<string>('commands_export', { slug })
 export const commandsDelete = (slug: string) => invoke<void>('commands_delete', { slug })
 
 // Skills

@@ -36,6 +36,33 @@ pub async fn commands_update(
 }
 
 #[tauri::command]
+pub async fn commands_update_raw(
+    state: State<'_, AppState>,
+    slug: String,
+    content: String,
+) -> Result<Command, AppError> {
+    let claude_dir = state.claude_dir.read().await.clone();
+    app_core::commands::update_raw(&claude_dir, &slug, &content)
+}
+
+#[tauri::command]
+pub async fn commands_import_raw(
+    state: State<'_, AppState>,
+    slug: String,
+    directory: String,
+    content: String,
+) -> Result<Command, AppError> {
+    let claude_dir = state.claude_dir.read().await.clone();
+    app_core::commands::import_raw(&claude_dir, &slug, &directory, &content)
+}
+
+#[tauri::command]
+pub async fn commands_export(state: State<'_, AppState>, slug: String) -> Result<String, AppError> {
+    let claude_dir = state.claude_dir.read().await.clone();
+    app_core::commands::export(&claude_dir, &slug)
+}
+
+#[tauri::command]
 pub async fn commands_delete(state: State<'_, AppState>, slug: String) -> Result<(), AppError> {
     let claude_dir = state.claude_dir.read().await.clone();
     app_core::commands::delete(&claude_dir, &slug)
