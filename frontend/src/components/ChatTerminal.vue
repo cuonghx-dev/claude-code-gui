@@ -53,6 +53,7 @@ async function start() {
   if (host.value) {
     term.open(host.value)
     fit.fit()
+    term.focus()
   }
 
   let id: string
@@ -126,11 +127,25 @@ onBeforeUnmount(() => {
   void stop()
 })
 
-// Re-launch when opts identity changes (the parent passes a fresh opts
-// object when the user picks a different agent / resume id).
+// Re-launch only when meaningful fields change. The parent often passes a
+// fresh opts object literal on background refetches (tanstack-query window
+// focus, etc.); reference-only watching would kill the live PTY mid-keystroke.
+function optsEqual(a: TerminalOpts, b: TerminalOpts) {
+  return (
+    a.agentSlug === b.agentSlug &&
+    a.workingDir === b.workingDir &&
+    a.model === b.model &&
+    a.permissionMode === b.permissionMode &&
+    a.outputStyleId === b.outputStyleId &&
+    a.resumeSessionId === b.resumeSessionId &&
+    a.commandTemplate === b.commandTemplate
+  )
+}
+
 watch(
   () => props.opts,
-  async () => {
+  async (next, prev) => {
+    if (prev && optsEqual(prev, next)) return
     await stop()
     await start()
   },
