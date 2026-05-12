@@ -8,17 +8,26 @@ use crate::io;
 use crate::types::{McpImportPayload, McpScope, McpServer, McpServerInput, McpTransport};
 use crate::AppError;
 
+/// Resolve the file we read/write for a given scope.
+///
+/// - `Global` (Claude Code calls this `user` scope): `~/.claude.json` —
+///   the user-level config the CLI writes via `claude mcp add --scope user`.
+///   `claude_dir` is `~/.claude/`, so the parent is the user's home dir.
+/// - `Project`: `<workingDir>/.mcp.json` checked into the repo.
+fn scope_file(claude_dir: &Path, scope: McpScope, working_dir: Option<&Path>) -> Option<PathBuf> {
+    match scope {
+        McpScope::Global => claude_dir.parent().map(|p| p.join(".claude.json")),
+        McpScope::Project => working_dir.map(|wd| wd.join(".mcp.json")),
+    }
+}
+
 pub fn list(
     claude_dir: &Path,
     scope: McpScope,
     working_dir: Option<&Path>,
 ) -> Result<Vec<McpServer>, AppError> {
-    let path = match scope {
-        McpScope::Global => claude_dir.join(".mcp.json"),
-        McpScope::Project => match working_dir {
-            Some(wd) => wd.join(".mcp.json"),
-            None => return Ok(vec![]),
-        },
+    let Some(path) = scope_file(claude_dir, scope, working_dir) else {
+        return Ok(vec![]);
     };
     if !path.is_file() {
         return Ok(vec![]);
@@ -118,11 +127,11 @@ fn file_for(
     scope: McpScope,
     working_dir: Option<&Path>,
 ) -> Result<PathBuf, AppError> {
-    Ok(match scope {
-        McpScope::Global => claude_dir.join(".mcp.json"),
-        McpScope::Project => working_dir
-            .ok_or_else(|| AppError::invalid("project-scoped mcp requires workingDir"))?
-            .join(".mcp.json"),
+    scope_file(claude_dir, scope, working_dir).ok_or_else(|| match scope {
+        McpScope::Global => AppError::invalid(
+            "could not resolve user MCP file (~/.claude.json): claude_dir has no parent",
+        ),
+        McpScope::Project => AppError::invalid("project-scoped mcp requires workingDir"),
     })
 }
 
@@ -213,11 +222,20 @@ impl McpDef {
 mod tests {
     use super::*;
 
+    /// Mirror prod layout: `<home>/.claude/` is `claude_dir`,
+    /// user-scoped MCP lives at `<home>/.claude.json`.
+    fn fixture() -> (tempfile::TempDir, PathBuf) {
+        let td = tempfile::tempdir().unwrap();
+        let claude_dir = td.path().join(".claude");
+        std::fs::create_dir_all(&claude_dir).unwrap();
+        (td, claude_dir)
+    }
+
     #[test]
     fn parses_stdio_and_http() {
-        let td = tempfile::tempdir().unwrap();
+        let (td, claude_dir) = fixture();
         std::fs::write(
-            td.path().join(".mcp.json"),
+            td.path().join(".claude.json"),
             r#"{
   "mcpServers": {
     "stdio-server": { "command": "/usr/bin/foo", "args": ["a", "b"] },
@@ -226,7 +244,7 @@ mod tests {
 }"#,
         )
         .unwrap();
-        let mut servers = list(td.path(), McpScope::Global, None).unwrap();
+        let mut servers = list(&claude_dir, McpScope::Global, None).unwrap();
         servers.sort_by(|a, b| a.name.cmp(&b.name));
         assert_eq!(servers.len(), 2);
         assert!(matches!(&servers[0].transport, McpTransport::HttpSse { url, .. } if url.starts_with("https")));
@@ -235,9 +253,9 @@ mod tests {
 
     #[test]
     fn create_then_delete_global() {
-        let td = tempfile::tempdir().unwrap();
+        let (_td, claude_dir) = fixture();
         create(
-            td.path(),
+            &claude_dir,
             McpServerInput {
                 name: "alpha".into(),
                 transport: McpTransport::Stdio {
@@ -250,22 +268,22 @@ mod tests {
             None,
         )
         .unwrap();
-        let servers = list(td.path(), McpScope::Global, None).unwrap();
+        let servers = list(&claude_dir, McpScope::Global, None).unwrap();
         assert_eq!(servers.len(), 1);
-        delete(td.path(), "alpha", McpScope::Global, None).unwrap();
-        assert!(list(td.path(), McpScope::Global, None).unwrap().is_empty());
+        delete(&claude_dir, "alpha", McpScope::Global, None).unwrap();
+        assert!(list(&claude_dir, McpScope::Global, None).unwrap().is_empty());
     }
 
     #[test]
     fn import_replace_overwrites() {
-        let td = tempfile::tempdir().unwrap();
+        let (td, claude_dir) = fixture();
         std::fs::write(
-            td.path().join(".mcp.json"),
+            td.path().join(".claude.json"),
             r#"{"mcpServers":{"keep":{"command":"x"}}}"#,
         )
         .unwrap();
         let imported = import(
-            td.path(),
+            &claude_dir,
             McpImportPayload {
                 scope: McpScope::Global,
                 working_dir: None,
@@ -282,5 +300,32 @@ mod tests {
         .unwrap();
         assert_eq!(imported.len(), 1);
         assert_eq!(imported[0].name, "fresh");
+    }
+
+    #[test]
+    fn preserves_other_top_level_keys_on_write() {
+        let (td, claude_dir) = fixture();
+        std::fs::write(
+            td.path().join(".claude.json"),
+            r#"{"theme":"dark","mcpServers":{}}"#,
+        )
+        .unwrap();
+        create(
+            &claude_dir,
+            McpServerInput {
+                name: "x".into(),
+                transport: McpTransport::Stdio {
+                    command: "y".into(),
+                    args: vec![],
+                    env: Default::default(),
+                },
+            },
+            McpScope::Global,
+            None,
+        )
+        .unwrap();
+        let raw = std::fs::read_to_string(td.path().join(".claude.json")).unwrap();
+        assert!(raw.contains("\"theme\": \"dark\""));
+        assert!(raw.contains("\"x\""));
     }
 }
