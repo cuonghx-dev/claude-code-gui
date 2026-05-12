@@ -138,6 +138,16 @@ pub fn update(claude_dir: &Path, slug: &str, input: AgentInput) -> Result<Agent,
     get_at(claude_dir, &input.directory, &input.slug)
 }
 
+/// Update an existing agent by replacing its file contents with `content`.
+/// Validates that `content` parses as an agent before writing. Does not
+/// rename the file — slug stays as-is.
+pub fn update_raw(claude_dir: &Path, slug: &str, content: &str) -> Result<Agent, AppError> {
+    let existing = get(claude_dir, slug)?;
+    let _: Document<AgentFrontmatter> = frontmatter::parse(content)?;
+    io::atomic_write(Path::new(&existing.file_path), content.as_bytes())?;
+    get_at(claude_dir, &existing.directory, &existing.slug)
+}
+
 pub fn delete(claude_dir: &Path, slug: &str) -> Result<(), AppError> {
     let existing = get(claude_dir, slug)?;
     io::remove_file(Path::new(&existing.file_path))

@@ -45,6 +45,16 @@ pub async fn agents_update(
 }
 
 #[tauri::command]
+pub async fn agents_update_raw(
+    state: State<'_, AppState>,
+    slug: String,
+    content: String,
+) -> Result<Agent, AppError> {
+    let claude_dir = state.claude_dir.read().await.clone();
+    app_core::agents::update_raw(&claude_dir, &slug, &content)
+}
+
+#[tauri::command]
 pub async fn agents_delete(state: State<'_, AppState>, slug: String) -> Result<(), AppError> {
     let claude_dir = state.claude_dir.read().await.clone();
     app_core::agents::delete(&claude_dir, &slug)

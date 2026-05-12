@@ -54,6 +54,8 @@ export const agentsSkillCounts = () => invoke<Record<string, number>>('agents_sk
 export const agentsCreate = (input: AgentInput) => invoke<Agent>('agents_create', { input })
 export const agentsUpdate = (slug: string, input: AgentInput) =>
   invoke<Agent>('agents_update', { slug, input })
+export const agentsUpdateRaw = (slug: string, content: string) =>
+  invoke<Agent>('agents_update_raw', { slug, content })
 export const agentsDelete = (slug: string) => invoke<void>('agents_delete', { slug })
 export const agentsExport = (slug: string) => invoke<string>('agents_export', { slug })
 export const agentsImport = (payload: AgentImport) => invoke<Agent>('agents_import', { payload })

@@ -48,7 +48,8 @@ onMounted(() => {
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
           overflow: 'auto',
         },
-        '.cm-content': { padding: '8px 0' },
+        '.cm-content': { padding: '8px 0', caretColor: '#ffffff' },
+        '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#ffffff' },
       }),
     ],
   })

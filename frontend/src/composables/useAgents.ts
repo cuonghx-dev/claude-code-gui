@@ -10,6 +10,7 @@ import {
   agentsList,
   agentsSkillCounts,
   agentsUpdate,
+  agentsUpdateRaw,
 } from '@/utils/ipc'
 import type { AgentImport, AgentInput } from '@/types/ipc'
 
@@ -39,6 +40,18 @@ export const useAgentUpdate = () => {
   return useMutation({
     mutationFn: ({ slug, input }: { slug: string; input: AgentInput }) =>
       agentsUpdate(slug, input),
+    onSuccess: (_data, { slug }) => {
+      qc.invalidateQueries({ queryKey: qk.agents.all })
+      qc.invalidateQueries({ queryKey: qk.agents.get(slug) })
+    },
+  })
+}
+
+export const useAgentUpdateRaw = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ slug, content }: { slug: string; content: string }) =>
+      agentsUpdateRaw(slug, content),
     onSuccess: (_data, { slug }) => {
       qc.invalidateQueries({ queryKey: qk.agents.all })
       qc.invalidateQueries({ queryKey: qk.agents.get(slug) })

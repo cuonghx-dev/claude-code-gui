@@ -111,6 +111,7 @@ fn run() -> anyhow::Result<()> {
             commands::agents::agents_skill_counts,
             commands::agents::agents_create,
             commands::agents::agents_update,
+            commands::agents::agents_update_raw,
             commands::agents::agents_delete,
             commands::agents::agents_export,
             commands::agents::agents_import,
