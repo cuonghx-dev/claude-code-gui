@@ -43,6 +43,11 @@ fn run() -> anyhow::Result<()> {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
+            // macOS GUI apps inherit only the bare launchd PATH; pull in the
+            // login-shell PATH so `claude`, `git`, `node`, etc. resolve.
+            // Must run before any binary lookup.
+            app_core::claude_cli::inherit_login_path();
+
             // Resolve claude_dir (env > default ~/.claude) and ensure it exists.
             let claude_dir = app_core::claude_dir::resolve(None)?;
             app_core::claude_dir::ensure(&claude_dir)?;

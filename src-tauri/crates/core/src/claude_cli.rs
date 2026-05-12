@@ -14,6 +14,54 @@ pub struct ClaudeCliInfo {
     pub version: String,
 }
 
+/// Augment the process `PATH` with the user's login-shell `PATH`. macOS GUI
+/// apps inherit only `/usr/bin:/bin:/usr/sbin:/sbin` from launchd, which
+/// misses Homebrew, npm-global, nvm, pnpm, etc. Run this once at startup
+/// before any binary lookups happen.
+///
+/// Best-effort: on Windows or if `$SHELL` isn't usable, this is a no-op.
+pub fn inherit_login_path() {
+    if cfg!(windows) {
+        return;
+    }
+    let Ok(shell) = std::env::var("SHELL") else {
+        return;
+    };
+    // `-l` triggers login profile, `-i` triggers interactive rc, `-c` runs
+    // the command. zsh and bash both honor this combination. We use the
+    // printf "%s" form (not echo) to avoid shells that strip trailing
+    // newlines or print "PATH" on completion banners.
+    let Ok(out) = Command::new(&shell)
+        .arg("-lic")
+        .arg("printf '%s' \"$PATH\"")
+        .output()
+    else {
+        return;
+    };
+    if !out.status.success() {
+        return;
+    }
+    let new_path = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if new_path.is_empty() {
+        return;
+    }
+    let current = std::env::var("PATH").unwrap_or_default();
+    let existing: std::collections::HashSet<&str> = current.split(':').filter(|s| !s.is_empty()).collect();
+    let extra: Vec<&str> = new_path
+        .split(':')
+        .filter(|s| !s.is_empty() && !existing.contains(s))
+        .collect();
+    if extra.is_empty() {
+        return;
+    }
+    let merged = if current.is_empty() {
+        extra.join(":")
+    } else {
+        format!("{}:{current}", extra.join(":"))
+    };
+    std::env::set_var("PATH", merged);
+}
+
 /// Best-effort probe for the `claude` binary on PATH. Returns `None` (not an
 /// error) if the binary is missing — the UI surfaces a setup banner.
 pub fn probe() -> Option<ClaudeCliInfo> {
