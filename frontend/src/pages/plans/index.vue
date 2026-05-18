@@ -19,7 +19,7 @@ const { isPending, isError, error, data } = usePlansList()
       <section class="p-6">
         <EmptyState v-if="!items?.length" title="No plans" />
         <ul v-else class="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
-          <li v-for="p in items" :key="p.slug">
+          <li v-for="p in [...items].sort((a, b) => (b.modifiedAt ?? '').localeCompare(a.modifiedAt ?? ''))" :key="p.slug">
             <RouterLink :to="`/plans/${p.slug}`" class="block px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800">
               <div class="flex items-baseline justify-between gap-3">
                 <span class="text-sm font-semibold">{{ p.title }}</span>
