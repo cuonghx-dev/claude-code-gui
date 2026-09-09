@@ -41,6 +41,7 @@ import type {
   Skill,
   SkillImportSource,
   SkillInput,
+  Team,
   TerminalOpts,
   TerminalSession,
   Workflow,
@@ -111,6 +112,10 @@ export const workflowsCreate = (input: WorkflowInput) =>
 export const workflowsUpdate = (slug: string, input: WorkflowInput) =>
   invoke<Workflow>('workflows_update', { slug, input })
 export const workflowsDelete = (slug: string) => invoke<void>('workflows_delete', { slug })
+
+// Teams
+export const teamsList = () => invoke<Team[]>('teams_list')
+export const teamsGet = (id: string) => invoke<Team>('teams_get', { id })
 
 // Hooks
 export const hooksList = (workingDir?: string) =>

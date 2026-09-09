@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import ChatTerminal from '@/components/ChatTerminal.vue'
+import TeamPanel from '@/components/TeamPanel.vue'
 import { useProject } from '@/composables/useProjects'
 import { useSettings } from '@/composables/useSettings'
 import type { TerminalOpts } from '@/types/ipc'
@@ -60,6 +61,7 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
       <p class="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
         Browse your project history in the left sidebar
       </p>
+      <TeamPanel :session-id="sessionId" class="mt-8 w-full max-w-md" />
     </div>
     <ChatTerminal
       v-if="resuming && terminalOpts"

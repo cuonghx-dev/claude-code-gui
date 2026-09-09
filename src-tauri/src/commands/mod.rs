@@ -14,5 +14,6 @@ pub mod relationships;
 pub mod sessions;
 pub mod settings;
 pub mod skills;
+pub mod teams;
 pub mod terminal;
 pub mod workflows;

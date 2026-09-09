@@ -12,6 +12,7 @@ mod projects;
 mod sessions;
 mod settings;
 mod skills;
+mod teams;
 mod terminal;
 mod workflows;
 
@@ -34,5 +35,6 @@ pub use projects::{FileNode, GitFileStatus, GitStatus, Project, ProjectInfo};
 pub use sessions::{Message, MessageKind, Page, Role, SessionSummary, TokenUsage};
 pub use settings::{AppConfig, DirEntry, SetupPayload, Settings};
 pub use skills::{Skill, SkillContext, SkillFrontmatter, SkillImportSource, SkillInput, SkillSource};
+pub use teams::{Team, TeamMember};
 pub use terminal::{PermissionMode, TerminalOpts, TerminalSession, ToolCall};
 pub use workflows::{Workflow, WorkflowInput};
