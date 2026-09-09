@@ -31,6 +31,11 @@ export const qk = {
     list: () => ['workflows', 'list'] as const,
     get: (slug: string) => ['workflows', 'get', slug] as const,
   },
+  jobs: {
+    all: ['jobs'] as const,
+    list: () => ['jobs', 'list'] as const,
+    get: (id: string) => ['jobs', 'get', id] as const,
+  },
   teams: {
     all: ['teams'] as const,
     list: () => ['teams', 'list'] as const,

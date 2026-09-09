@@ -4,6 +4,7 @@ mod commands;
 mod error;
 mod hooks;
 mod ids;
+mod jobs;
 mod mcp;
 mod output_styles;
 mod plans;
@@ -22,6 +23,7 @@ pub use commands::{Command, CommandFrontmatter, CommandInput};
 pub use error::{AppError, ErrorCode};
 pub use hooks::{HookEntry, HookGroup};
 pub use ids::{ImproveRequest, RequestId, SessionId};
+pub use jobs::{Job, JobDetail, JobLink, TimelineEvent};
 pub use mcp::{
     McpCapabilities, McpImportPayload, McpPrompt, McpResource, McpScope, McpServer,
     McpServerInput, McpTool, McpTransport,

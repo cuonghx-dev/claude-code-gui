@@ -8,6 +8,7 @@ pub mod frontmatter;
 pub mod git;
 pub mod hooks;
 pub mod io;
+pub mod jobs;
 pub mod marketplace;
 pub mod mcp;
 pub mod mcp_probe;

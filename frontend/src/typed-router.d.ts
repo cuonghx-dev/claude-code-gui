@@ -27,6 +27,8 @@ declare module 'vue-router/auto-routes' {
     '/commands/[slug]': RouteRecordInfo<'/commands/[slug]', '/commands/:slug', { slug: ParamValue<true> }, { slug: ParamValue<false> }>,
     '/commands/new': RouteRecordInfo<'/commands/new', '/commands/new', Record<never, never>, Record<never, never>>,
     '/hooks/': RouteRecordInfo<'/hooks/', '/hooks', Record<never, never>, Record<never, never>>,
+    '/jobs/': RouteRecordInfo<'/jobs/', '/jobs', Record<never, never>, Record<never, never>>,
+    '/jobs/[jobId]': RouteRecordInfo<'/jobs/[jobId]', '/jobs/:jobId', { jobId: ParamValue<true> }, { jobId: ParamValue<false> }>,
     '/mcp/': RouteRecordInfo<'/mcp/', '/mcp', Record<never, never>, Record<never, never>>,
     '/mcp/[name]': RouteRecordInfo<'/mcp/[name]', '/mcp/:name', { name: ParamValue<true> }, { name: ParamValue<false> }>,
     '/mcp/new': RouteRecordInfo<'/mcp/new', '/mcp/new', Record<never, never>, Record<never, never>>,

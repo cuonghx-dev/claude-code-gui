@@ -4,6 +4,7 @@ pub mod cmds;
 pub mod debug;
 pub mod files;
 pub mod hooks;
+pub mod jobs;
 pub mod marketplace;
 pub mod mcp;
 pub mod output_styles;

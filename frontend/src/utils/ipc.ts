@@ -13,6 +13,8 @@ import type {
   FileNode,
   GitStatus,
   HookGroup,
+  Job,
+  JobDetail,
   ImproveRequest,
   MarketplaceSource,
   MarketplaceSourceInput,
@@ -112,6 +114,10 @@ export const workflowsCreate = (input: WorkflowInput) =>
 export const workflowsUpdate = (slug: string, input: WorkflowInput) =>
   invoke<Workflow>('workflows_update', { slug, input })
 export const workflowsDelete = (slug: string) => invoke<void>('workflows_delete', { slug })
+
+// Jobs
+export const jobsList = () => invoke<Job[]>('jobs_list')
+export const jobsGet = (jobId: string) => invoke<JobDetail>('jobs_get', { jobId })
 
 // Teams
 export const teamsList = () => invoke<Team[]>('teams_list')

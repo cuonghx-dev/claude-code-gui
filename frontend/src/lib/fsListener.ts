@@ -43,6 +43,7 @@ const RULES: Array<{ test: (path: string) => boolean; invalidate: () => void }> 
   { test: (p) => p.includes('/.claude/workflows/'),    invalidate: () => queryClient.invalidateQueries({ queryKey: qk.workflows.all }) },
   { test: (p) => p.includes('/.claude/output-styles/'),invalidate: () => queryClient.invalidateQueries({ queryKey: qk.outputStyles.all }) },
   { test: (p) => p.includes('/.claude/plugins/'),      invalidate: () => queryClient.invalidateQueries({ queryKey: qk.plugins.all }) },
+  { test: (p) => p.includes('/.claude/jobs/'),         invalidate: () => queryClient.invalidateQueries({ queryKey: qk.jobs.all }) },
   { test: (p) => p.includes('/.claude/teams/'),        invalidate: () => queryClient.invalidateQueries({ queryKey: qk.teams.all }) },
   { test: (p) => p.endsWith('/.mcp.json'),             invalidate: () => queryClient.invalidateQueries({ queryKey: qk.mcp.all }) },
   { test: (p) => p.endsWith('/.claude/settings.json'), invalidate: () => queryClient.invalidateQueries({ queryKey: qk.settings() }) },
