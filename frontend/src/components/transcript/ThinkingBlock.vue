@@ -23,6 +23,8 @@ const expanded = ref(false)
     <p
       v-if="expanded"
       class="whitespace-pre-wrap px-3 pb-3 text-sm italic text-neutral-600 dark:text-neutral-300"
-    >{{ message.thinking }}</p>
+    >
+      {{ message.thinking }}
+    </p>
   </div>
 </template>

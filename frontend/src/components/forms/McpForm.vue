@@ -85,8 +85,8 @@ function fromInitial(): State {
 
 const state = reactive(fromInitial())
 const errors = ref<Record<string, string>>({})
-const initial = JSON.stringify(fromInitial())
-const dirty = computed(() => JSON.stringify(state) !== initial)
+const initialSnapshot = JSON.stringify(fromInitial())
+const dirty = computed(() => JSON.stringify(state) !== initialSnapshot)
 useUnsavedChanges(dirty)
 const draft = useDraftRecovery<State>(props.draftKey, () => ({ ...state }))
 const recovered = draft.load()

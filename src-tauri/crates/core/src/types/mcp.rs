@@ -38,7 +38,7 @@ pub enum McpTransport {
     },
 }
 
-/// Capability probe result. Phase 5 fills in.
+/// Capability probe result.
 #[derive(Serialize, Deserialize, TS, Debug, Clone, Default)]
 #[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
 #[serde(rename_all = "camelCase")]
@@ -46,6 +46,18 @@ pub struct McpCapabilities {
     pub tools: Vec<McpTool>,
     pub resources: Vec<McpResource>,
     pub prompts: Vec<McpPrompt>,
+    /// The server declared `experimental['claude/channel']`, so Claude Code
+    /// registers a notification listener and it can push events into a
+    /// session. Channels have no configuration of their own — they are MCP
+    /// servers, and this is the only thing that marks one.
+    pub is_channel: bool,
+    /// `experimental['claude/channel/permission']` — the channel can receive
+    /// relayed tool-approval prompts, so approving a tool call can happen
+    /// outside this machine. Worth showing prominently.
+    pub relays_permissions: bool,
+    /// The server's own `instructions` string, delivered to Claude as context
+    /// when it connects.
+    pub instructions: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]

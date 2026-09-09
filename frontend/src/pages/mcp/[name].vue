@@ -87,6 +87,23 @@ async function probe() {
             {{ probeError }}
           </p>
           <div v-else-if="caps.data.value" class="mt-2 space-y-3 text-sm">
+            <div
+              v-if="caps.data.value.isChannel"
+              class="rounded-md bg-violet-500/10 p-3 text-xs text-violet-700 dark:text-violet-300"
+            >
+              <p class="font-semibold">This server is a channel</p>
+              <p class="mt-1">
+                It declares <span class="font-mono">claude/channel</span>, so Claude Code registers
+                a notification listener and it can push events into a session.
+              </p>
+              <p v-if="caps.data.value.relaysPermissions" class="mt-1 font-semibold">
+                It also relays permission prompts — tool approvals can be answered from outside
+                this machine.
+              </p>
+              <p v-if="caps.data.value.instructions" class="mt-1 whitespace-pre-wrap opacity-80">
+                {{ caps.data.value.instructions }}
+              </p>
+            </div>
             <div>
               <p class="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                 Tools ({{ caps.data.value.tools.length }})

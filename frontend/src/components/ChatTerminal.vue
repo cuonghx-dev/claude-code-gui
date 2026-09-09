@@ -36,6 +36,7 @@ let term: Terminal | undefined
 let fit: FitAddon | undefined
 let unlistenOutput: UnlistenFn | undefined
 let unlistenExit: UnlistenFn | undefined
+let resizeObserver: ResizeObserver | undefined
 
 async function start() {
   errorMessage.value = ''
@@ -93,10 +94,8 @@ async function start() {
   term.onResize(({ cols, rows }) => debouncedResize(cols, rows))
 
   // Refit on container resize.
-  const ro = new ResizeObserver(() => fit?.fit())
-  if (host.value) ro.observe(host.value)
-  // Stash for cleanup
-  ;(term as any).__ro = ro
+  resizeObserver = new ResizeObserver(() => fit?.fit())
+  if (host.value) resizeObserver.observe(host.value)
 }
 
 async function stop() {
@@ -112,8 +111,8 @@ async function stop() {
     }
   }
   if (term) {
-    const ro = (term as any).__ro as ResizeObserver | undefined
-    ro?.disconnect()
+    resizeObserver?.disconnect()
+    resizeObserver = undefined
     term.dispose()
     term = undefined
     fit = undefined

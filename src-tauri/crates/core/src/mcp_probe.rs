@@ -91,7 +91,10 @@ async fn probe_stdio(
         }
     });
     write_msg(&mut stdin, &init).await?;
-    let _init_resp = read_response(&mut reader, 1).await?;
+    let init_resp = read_response(&mut reader, 1).await?;
+    // The initialize response is where a channel identifies itself; the probe
+    // used to discard it.
+    let (is_channel, relays_permissions, instructions) = parse_init_result(&init_resp);
 
     // 2. notifications/initialized (no response expected)
     let initialized = json!({
@@ -138,6 +141,9 @@ async fn probe_stdio(
         tools,
         resources,
         prompts,
+        is_channel,
+        relays_permissions,
+        instructions,
     })
 }
 
@@ -209,6 +215,35 @@ async fn write_msg(
     Ok(())
 }
 
+/// Pull the channel declaration out of an `initialize` response envelope.
+///
+/// A channel is just an MCP server that declares
+/// `capabilities.experimental['claude/channel']`; there is no channel config
+/// file anywhere, so this response is the only place one can be recognized.
+fn parse_init_result(envelope: &serde_json::Value) -> (bool, bool, Option<String>) {
+    let Some(result) = envelope.get("result") else {
+        return (false, false, None);
+    };
+    let experimental = result
+        .get("capabilities")
+        .and_then(|c| c.get("experimental"));
+    // The docs treat an explicit `false` as opting out, anything else as
+    // declared.
+    let declared = |key: &str| {
+        experimental
+            .and_then(|e| e.get(key))
+            .is_some_and(|v| v != &json!(false))
+    };
+    (
+        declared("claude/channel"),
+        declared("claude/channel/permission"),
+        result
+            .get("instructions")
+            .and_then(|i| i.as_str())
+            .map(str::to_string),
+    )
+}
+
 async fn read_response(
     reader: &mut tokio::io::Lines<BufReader<tokio::process::ChildStdout>>,
     expect_id: u32,
@@ -235,4 +270,56 @@ async fn read_response(
         ErrorCode::Mcp,
         format!("server closed before responding to id {expect_id}"),
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn envelope(experimental: serde_json::Value) -> serde_json::Value {
+        json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": { "tools": {}, "experimental": experimental },
+                "instructions": "Forwards webhooks. Reply with send_message.",
+                "serverInfo": { "name": "webhook", "version": "0.1.0" }
+            }
+        })
+    }
+
+    #[test]
+    fn recognizes_a_channel_from_the_initialize_response() {
+        let (is_channel, relays, instructions) =
+            parse_init_result(&envelope(json!({ "claude/channel": {} })));
+        assert!(is_channel);
+        assert!(!relays);
+        assert!(instructions.unwrap().starts_with("Forwards webhooks"));
+    }
+
+    #[test]
+    fn permission_relay_is_declared_separately() {
+        let (_, relays, _) = parse_init_result(&envelope(
+            json!({ "claude/channel": {}, "claude/channel/permission": {} }),
+        ));
+        assert!(relays, "this channel can approve tool calls remotely");
+
+        // An explicit `false` opts out.
+        let (_, relays, _) = parse_init_result(&envelope(
+            json!({ "claude/channel": {}, "claude/channel/permission": false }),
+        ));
+        assert!(!relays);
+    }
+
+    #[test]
+    fn an_ordinary_mcp_server_is_not_a_channel() {
+        let (is_channel, relays, _) = parse_init_result(&envelope(json!({})));
+        assert!(!is_channel && !relays);
+
+        // No experimental block at all, and a malformed envelope.
+        let bare = json!({"jsonrpc":"2.0","id":1,"result":{"capabilities":{"tools":{}}}});
+        assert_eq!(parse_init_result(&bare), (false, false, None));
+        assert_eq!(parse_init_result(&json!({"error": {}})), (false, false, None));
+    }
 }

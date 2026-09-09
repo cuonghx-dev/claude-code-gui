@@ -4,6 +4,24 @@ import type { McpResource } from "./McpResource";
 import type { McpTool } from "./McpTool";
 
 /**
- * Capability probe result. Phase 5 fills in.
+ * Capability probe result.
  */
-export type McpCapabilities = { tools: Array<McpTool>, resources: Array<McpResource>, prompts: Array<McpPrompt>, };
+export type McpCapabilities = { tools: Array<McpTool>, resources: Array<McpResource>, prompts: Array<McpPrompt>, 
+/**
+ * The server declared `experimental['claude/channel']`, so Claude Code
+ * registers a notification listener and it can push events into a
+ * session. Channels have no configuration of their own — they are MCP
+ * servers, and this is the only thing that marks one.
+ */
+isChannel: boolean, 
+/**
+ * `experimental['claude/channel/permission']` — the channel can receive
+ * relayed tool-approval prompts, so approving a tool call can happen
+ * outside this machine. Worth showing prominently.
+ */
+relaysPermissions: boolean, 
+/**
+ * The server's own `instructions` string, delivered to Claude as context
+ * when it connects.
+ */
+instructions: string | null, };
