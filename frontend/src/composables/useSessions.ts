@@ -1,7 +1,12 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/vue-query'
 import { computed, type MaybeRefOrGetter, toValue } from 'vue'
 import { qk } from '@/lib/queryKeys'
-import { sessionsListForProject, sessionsMessages, sessionsThreads } from '@/utils/ipc'
+import {
+  sessionsListForProject,
+  sessionsMessages,
+  sessionsThreadMessages,
+  sessionsThreads,
+} from '@/utils/ipc'
 
 /** Messages fetched per page. Large enough that scrolling rarely waits. */
 const PAGE_SIZE = 200
@@ -38,4 +43,19 @@ export const useSessionThreads = (
     queryKey: computed(() => qk.sessions.threads(toValue(sessionId))),
     queryFn: () => sessionsThreads(toValue(projectName), toValue(sessionId)),
     enabled: computed(() => !!toValue(sessionId) && !!toValue(projectName)),
+  })
+
+/** A subagent's own transcript, fetched only when its card is opened. */
+export const useThreadMessages = (
+  projectName: MaybeRefOrGetter<string>,
+  sessionId: MaybeRefOrGetter<string>,
+  threadId: MaybeRefOrGetter<string>,
+  enabled: MaybeRefOrGetter<boolean>,
+) =>
+  useQuery({
+    queryKey: computed(() => qk.sessions.threadMessages(toValue(sessionId), toValue(threadId))),
+    queryFn: () =>
+      sessionsThreadMessages(toValue(projectName), toValue(sessionId), toValue(threadId)),
+    enabled: computed(() => toValue(enabled) && !!toValue(threadId)),
+    staleTime: Infinity,
   })

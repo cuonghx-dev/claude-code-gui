@@ -11,6 +11,8 @@ const props = defineProps<{
   isFetchingNextPage: boolean
   /** Hide sidechain messages, which the subagent cards already summarize. */
   hideSidechains: boolean
+  projectName: string
+  sessionId: string
 }>()
 
 const emit = defineEmits<{ loadMore: [] }>()
@@ -67,6 +69,8 @@ watch(rows, (items) => {
       >
         <MessageRow
           :message="visible[row.index]"
+          :project-name="projectName"
+          :session-id="sessionId"
           :thread="
             visible[row.index].toolUseId ? (threadByToolUse.get(visible[row.index].toolUseId!) ?? null) : null
           "

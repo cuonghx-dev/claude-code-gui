@@ -207,6 +207,7 @@ fn run() -> anyhow::Result<()> {
             commands::sessions::sessions_list_for_project,
             commands::sessions::sessions_messages,
             commands::sessions::sessions_threads,
+            commands::sessions::sessions_thread_messages,
             commands::settings::settings_get,
             commands::settings::settings_put,
             commands::settings::config_get,

@@ -42,3 +42,24 @@ pub async fn sessions_threads(
     let claude_dir = state.claude_dir.read().await.clone();
     app_core::sessions::threads(&claude_dir, &project_name, &session_id)
 }
+
+#[tauri::command]
+pub async fn sessions_thread_messages(
+    state: State<'_, AppState>,
+    project_name: String,
+    session_id: String,
+    thread_id: String,
+    after_index: Option<usize>,
+    limit: Option<usize>,
+) -> Result<Page<Message>, AppError> {
+    let claude_dir = state.claude_dir.read().await.clone();
+    app_core::sessions::thread_messages(
+        &claude_dir,
+        &state.transcript_index,
+        &project_name,
+        &session_id,
+        &thread_id,
+        after_index,
+        limit,
+    )
+}

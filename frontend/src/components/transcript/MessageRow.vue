@@ -12,6 +12,8 @@ const props = defineProps<{
   message: Message
   /** The subagent conversation this message's Task call spawned, if any. */
   thread?: Thread | null
+  projectName: string
+  sessionId: string
 }>()
 
 const html = computed(() => (props.message.content ? renderMarkdown(props.message.content) : ''))
@@ -57,7 +59,13 @@ const time = computed(() =>
     />
     <ThinkingBlock v-else-if="message.kind === 'thinking'" :message="message" />
     <template v-else-if="message.kind === 'tool-use'">
-      <SubagentGroup v-if="thread" :thread="thread" :message="message" />
+      <SubagentGroup
+        v-if="thread"
+        :thread="thread"
+        :message="message"
+        :project-name="projectName"
+        :session-id="sessionId"
+      />
       <ToolUseBlock v-else :message="message" />
     </template>
     <ToolResultBlock v-else-if="message.kind === 'tool-result'" :message="message" />

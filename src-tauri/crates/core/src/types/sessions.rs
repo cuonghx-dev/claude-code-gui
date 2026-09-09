@@ -84,20 +84,44 @@ pub struct Message {
 
 /// A subagent (Task tool) conversation, rolled up for the collapsed card that
 /// stands in for it in the main transcript.
+///
+/// Current CLI versions write each subagent to its own file under
+/// `projects/<project>/<session>/subagents/agent-<id>.jsonl`, with a sibling
+/// `.meta.json` naming the agent type and the `tool_use` that spawned it.
+/// Older versions inlined the same records into the main transcript with
+/// `isSidechain: true`; both are read, and `source` says which.
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
 #[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
 #[serde(rename_all = "camelCase")]
 pub struct Thread {
-    pub root_uuid: String,
+    /// Agent id for a subagent file, or the root record's uuid for a legacy
+    /// inline sidechain. Addresses the thread when fetching its messages.
+    pub id: String,
+    pub source: ThreadSource,
     /// The `tool_use` this thread answers, when it could be resolved.
     pub parent_tool_use_id: Option<String>,
+    /// Agent type, e.g. `Plan`, `Explore`.
     pub agent_name: Option<String>,
+    /// The one-line task the parent gave it.
+    pub description: Option<String>,
+    #[ts(type = "number | null")]
+    pub spawn_depth: Option<u32>,
     #[ts(type = "number")]
     pub message_count: usize,
     pub started_at: Option<String>,
     pub ended_at: Option<String>,
     pub usage: TokenUsage,
     pub cost_usd: Option<f64>,
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone, Copy, PartialEq, Eq)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "kebab-case")]
+pub enum ThreadSource {
+    /// `subagents/agent-<id>.jsonl`
+    SubagentFile,
+    /// `isSidechain: true` records inside the main transcript
+    Sidechain,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone, Copy, PartialEq, Eq, Default)]

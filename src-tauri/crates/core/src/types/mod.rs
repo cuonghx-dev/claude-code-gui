@@ -36,7 +36,7 @@ pub use output_styles::{
 pub use plans::{Plan, PlanInput};
 pub use plugins::{AvailablePlugin, MarketplaceSource, MarketplaceSourceInput, Plugin, PluginDetail};
 pub use projects::{FileNode, GitFileStatus, GitStatus, Project, ProjectInfo};
-pub use sessions::{Message, MessageKind, Page, Role, SessionSummary, Thread, TokenUsage};
+pub use sessions::{Message, MessageKind, Page, Role, SessionSummary, Thread, ThreadSource, TokenUsage};
 pub use settings::{AppConfig, DirEntry, SetupPayload, Settings};
 pub use skills::{Skill, SkillContext, SkillFrontmatter, SkillImportSource, SkillInput, SkillSource};
 pub use teams::{Team, TeamMember};

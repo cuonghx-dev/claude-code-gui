@@ -238,6 +238,20 @@ export const projectsClaudeMdPut = (name: string, content: string) =>
 // Sessions
 export const sessionsThreads = (projectName: string, sessionId: string) =>
   invoke<Thread[]>('sessions_threads', { projectName, sessionId })
+export const sessionsThreadMessages = (
+  projectName: string,
+  sessionId: string,
+  threadId: string,
+  afterIndex?: number,
+  limit?: number,
+) =>
+  invoke<Page<Message>>('sessions_thread_messages', {
+    projectName,
+    sessionId,
+    threadId,
+    afterIndex,
+    limit,
+  })
 export const sessionsListForProject = (name: string) =>
   invoke<SessionSummary[]>('sessions_list_for_project', { name })
 export const sessionsMessages = (

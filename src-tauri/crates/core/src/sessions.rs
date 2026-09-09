@@ -18,10 +18,13 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::transcript_scan::{self, IndexCache};
-use crate::types::{Message, MessageKind, Page, Role, SessionSummary, Thread, TokenUsage};
+use crate::types::{
+    Message, MessageKind, Page, Role, SessionSummary, Thread, ThreadSource, TokenUsage,
+};
 use crate::AppError;
 
 const PROJECTS_SUBDIR: &str = "projects";
+const SUBAGENTS_SUBDIR: &str = "subagents";
 
 /// Tool results above this size are truncated before crossing the IPC
 /// boundary. Bash and Read output runs to hundreds of KB and routinely
@@ -57,9 +60,7 @@ pub fn list_for_project(
     Ok(out)
 }
 
-/// One page of messages, located through the cached byte index.
-///
-/// The index maps message offsets to the line that starts them, so a page deep
+/// One page of messages, located through the cached byte index: a page deep
 /// into a large transcript seeks straight there instead of re-parsing
 /// everything before it.
 pub fn messages(
@@ -71,25 +72,31 @@ pub fn messages(
     limit: Option<usize>,
 ) -> Result<Page<Message>, AppError> {
     let path = session_path(claude_dir, project_name, session_id)?;
-    let index = cache.get_or_build(&path, |line| parse_line(line).len())?;
+    page_from(&path, cache, after_index, limit)
+}
+
+/// Page a transcript file through its cached byte index.
+fn page_from(
+    path: &Path,
+    cache: &IndexCache,
+    after_index: Option<usize>,
+    limit: Option<usize>,
+) -> Result<Page<Message>, AppError> {
+    let index = cache.get_or_build(path, |line| parse_line(line).len())?;
     let total = index.total_messages;
     let start = after_index.unwrap_or(0);
     let limit = limit.unwrap_or(total);
 
+    let empty = |total: usize| Page {
+        items: vec![],
+        next_after: None,
+        total: Some(total),
+    };
     if start >= total || limit == 0 {
-        return Ok(Page {
-            items: vec![],
-            next_after: None,
-            total: Some(total),
-        });
+        return Ok(empty(total));
     }
-
     let Some((byte_offset, skip_within_line)) = index.locate(start) else {
-        return Ok(Page {
-            items: vec![],
-            next_after: None,
-            total: Some(total),
-        });
+        return Ok(empty(total));
     };
 
     // Read forward a line at a time until the page is full. A line yields at
@@ -97,8 +104,8 @@ pub fn messages(
     let mut items: Vec<Message> = Vec::with_capacity(limit.min(512));
     let mut offset = byte_offset;
     let mut skip = skip_within_line;
-    loop {
-        let lines = transcript_scan::read_lines_from(&path, offset, 64)?;
+    'outer: loop {
+        let lines = transcript_scan::read_lines_from(path, offset, 64)?;
         if lines.is_empty() {
             break;
         }
@@ -112,17 +119,11 @@ pub fn messages(
                 skip -= drop;
             }
             for m in parsed {
-                if items.len() == limit {
-                    break;
-                }
                 items.push(m);
+                if items.len() == limit {
+                    break 'outer;
+                }
             }
-            if items.len() == limit {
-                break;
-            }
-        }
-        if items.len() == limit {
-            break;
         }
         offset += consumed_bytes;
     }
@@ -137,11 +138,158 @@ pub fn messages(
 
 /// Roll up the subagent (Task tool) conversations in a session.
 ///
-/// Sidechain records carry `isSidechain: true` and chain back through
-/// `parentUuid`. Grouping happens here rather than in the frontend so the main
-/// transcript can render one collapsed card per subagent without walking the
-/// parent chain in JavaScript.
+/// Current CLI versions write each subagent to
+/// `projects/<project>/<session>/subagents/agent-<id>.jsonl` with a sibling
+/// `.meta.json`; that is the primary source. Older versions inlined the same
+/// records into the main transcript with `isSidechain: true`, so that path is
+/// kept as a fallback for old sessions.
 pub fn threads(
+    claude_dir: &Path,
+    project_name: &str,
+    session_id: &str,
+) -> Result<Vec<Thread>, AppError> {
+    let mut out = subagent_threads(claude_dir, project_name, session_id)?;
+    out.extend(inline_sidechain_threads(claude_dir, project_name, session_id)?);
+    out.sort_by(|a, b| a.started_at.cmp(&b.started_at).then(a.id.cmp(&b.id)));
+    Ok(out)
+}
+
+/// One page of a subagent's own conversation.
+pub fn thread_messages(
+    claude_dir: &Path,
+    cache: &IndexCache,
+    project_name: &str,
+    session_id: &str,
+    thread_id: &str,
+    after_index: Option<usize>,
+    limit: Option<usize>,
+) -> Result<Page<Message>, AppError> {
+    let path = subagent_path(claude_dir, project_name, session_id, thread_id)?;
+    page_from(&path, cache, after_index, limit)
+}
+
+fn subagents_dir(claude_dir: &Path, project_name: &str, session_id: &str) -> PathBuf {
+    claude_dir
+        .join(PROJECTS_SUBDIR)
+        .join(project_name)
+        .join(session_id)
+        .join(SUBAGENTS_SUBDIR)
+}
+
+/// Agent ids come from the frontend, so they are validated before being joined
+/// onto a path.
+fn subagent_path(
+    claude_dir: &Path,
+    project_name: &str,
+    session_id: &str,
+    agent_id: &str,
+) -> Result<PathBuf, AppError> {
+    crate::io::validate_slug(agent_id)?;
+    let path = subagents_dir(claude_dir, project_name, session_id).join(format!("{agent_id}.jsonl"));
+    if !path.is_file() {
+        return Err(AppError::not_found(format!(
+            "subagent '{agent_id}' not found"
+        )));
+    }
+    Ok(path)
+}
+
+fn subagent_threads(
+    claude_dir: &Path,
+    project_name: &str,
+    session_id: &str,
+) -> Result<Vec<Thread>, AppError> {
+    let dir = subagents_dir(claude_dir, project_name, session_id);
+    if !dir.is_dir() {
+        return Ok(vec![]);
+    }
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(&dir)?.flatten() {
+        let path = entry.path();
+        if !path.is_file() || path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+            continue;
+        }
+        let id = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default()
+            .to_string();
+        let meta = read_subagent_meta(&path.with_extension("meta.json"));
+
+        let mut t = Thread {
+            id,
+            source: ThreadSource::SubagentFile,
+            parent_tool_use_id: meta.as_ref().and_then(|m| str_field(m, "toolUseId")),
+            agent_name: meta.as_ref().and_then(|m| str_field(m, "agentType")),
+            description: meta.as_ref().and_then(|m| str_field(m, "description")),
+            spawn_depth: meta
+                .as_ref()
+                .and_then(|m| m.get("spawnDepth"))
+                .and_then(|d| d.as_u64())
+                .map(|d| d as u32),
+            message_count: 0,
+            started_at: None,
+            ended_at: None,
+            usage: TokenUsage::default(),
+            cost_usd: None,
+        };
+
+        if let Err(e) = accumulate(&path, &mut t) {
+            tracing::warn!(error = %e, path = %path.display(), "skipping unreadable subagent");
+            continue;
+        }
+        out.push(t);
+    }
+    Ok(out)
+}
+
+fn read_subagent_meta(path: &Path) -> Option<serde_json::Value> {
+    let raw = std::fs::read_to_string(path).ok()?;
+    serde_json::from_str(&raw).ok()
+}
+
+/// Sum a transcript's turns into a thread rollup.
+fn accumulate(path: &Path, t: &mut Thread) -> Result<(), AppError> {
+    transcript_scan::for_each_line(path, |_, line| {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            return true;
+        };
+        let kind = v.get("type").and_then(|k| k.as_str()).unwrap_or("");
+        if kind != "user" && kind != "assistant" {
+            return true;
+        }
+        t.message_count += 1;
+        let (usage, model) = usage_of(&v);
+        t.usage.input += usage.input;
+        t.usage.output += usage.output;
+        t.usage.cache_read += usage.cache_read;
+        t.usage.cache_write += usage.cache_write;
+        if let Some(c) = model.as_deref().and_then(|m| {
+            crate::models::cost_usd(
+                m,
+                usage.input,
+                usage.output,
+                usage.cache_read,
+                usage.cache_write,
+            )
+        }) {
+            t.cost_usd = Some(t.cost_usd.unwrap_or(0.0) + c);
+        }
+        if let Some(ts) = str_field(&v, "timestamp") {
+            if t.started_at.as_ref().is_none_or(|s| &ts < s) {
+                t.started_at = Some(ts.clone());
+            }
+            if t.ended_at.as_ref().is_none_or(|e| &ts > e) {
+                t.ended_at = Some(ts);
+            }
+        }
+        true
+    })
+}
+
+/// Legacy path: subagent records inlined into the main transcript, chained by
+/// `parentUuid`.
+fn inline_sidechain_threads(
     claude_dir: &Path,
     project_name: &str,
     session_id: &str,
@@ -238,9 +386,12 @@ pub fn threads(
     for (uuid, rec) in &recs {
         let root = root_of(uuid);
         let t = grouped.entry(root.clone()).or_insert_with(|| Thread {
-            root_uuid: root.clone(),
+            id: root.clone(),
+            source: ThreadSource::Sidechain,
             parent_tool_use_id: None,
             agent_name: rec.agent_name.clone(),
+            description: None,
+            spawn_depth: None,
             message_count: 0,
             started_at: None,
             ended_at: None,
@@ -267,7 +418,7 @@ pub fn threads(
 
     // A thread's root points at the Task call that spawned it.
     for t in grouped.values_mut() {
-        if let Some(Some(parent)) = parent_of.get(&t.root_uuid) {
+        if let Some(Some(parent)) = parent_of.get(&t.id) {
             if let Some(agent) = task_calls.get(parent) {
                 t.parent_tool_use_id = Some(parent.clone());
                 if !agent.is_empty() {
@@ -277,9 +428,7 @@ pub fn threads(
         }
     }
 
-    let mut out: Vec<Thread> = grouped.into_values().collect();
-    out.sort_by(|a, b| a.started_at.cmp(&b.started_at).then(a.root_uuid.cmp(&b.root_uuid)));
-    Ok(out)
+    Ok(grouped.into_values().collect())
 }
 
 fn session_path(
@@ -783,7 +932,7 @@ mod tests {
 
         let threads = threads(td.path(), "-tmp-th", "s").unwrap();
         assert_eq!(threads.len(), 2);
-        let a = threads.iter().find(|t| t.root_uuid == "a1").unwrap();
+        let a = threads.iter().find(|t| t.id == "a1").unwrap();
         assert_eq!(a.message_count, 2); // a1 + its child a2
         assert_eq!(a.usage.input, 30);
         assert_eq!(a.parent_tool_use_id.as_deref(), Some("task_a"));
@@ -791,6 +940,63 @@ mod tests {
         assert!(a.cost_usd.unwrap() > 0.0);
         assert_eq!(a.started_at.as_deref(), Some("2026-01-01T00:00:01Z"));
         assert_eq!(a.ended_at.as_deref(), Some("2026-01-01T00:00:02Z"));
+    }
+
+    #[test]
+    fn threads_read_the_subagents_directory() {
+        let td = tempfile::tempdir().unwrap();
+        project(td.path(), "-tmp-sa", "sess", r#"{"type":"user","message":{"role":"user","content":"go"}}"#);
+
+        let dir = td
+            .path()
+            .join(PROJECTS_SUBDIR)
+            .join("-tmp-sa")
+            .join("sess")
+            .join(SUBAGENTS_SUBDIR);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("agent-a20a65073d5af6167.meta.json"),
+            r#"{"agentType":"Plan","description":"Design read-side viewers plan","toolUseId":"toolu_017J","spawnDepth":1}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("agent-a20a65073d5af6167.jsonl"),
+            concat!(
+                r#"{"type":"user","timestamp":"2026-01-01T00:00:01Z","isSidechain":true,"message":{"role":"user","content":"task"}}"#,
+                "\n",
+                r#"{"type":"assistant","timestamp":"2026-01-01T00:00:09Z","isSidechain":true,"message":{"role":"assistant","model":"claude-sonnet-4-6","content":[{"type":"text","text":"done"}],"usage":{"input_tokens":40,"output_tokens":9}}}"#,
+            ),
+        )
+        .unwrap();
+
+        let threads = threads(td.path(), "-tmp-sa", "sess").unwrap();
+        assert_eq!(threads.len(), 1);
+        let t = &threads[0];
+        assert_eq!(t.source, ThreadSource::SubagentFile);
+        assert_eq!(t.id, "agent-a20a65073d5af6167");
+        assert_eq!(t.agent_name.as_deref(), Some("Plan"));
+        assert_eq!(t.parent_tool_use_id.as_deref(), Some("toolu_017J"));
+        assert_eq!(t.spawn_depth, Some(1));
+        assert_eq!(t.message_count, 2);
+        assert_eq!(t.usage.output, 9);
+        assert!(t.cost_usd.unwrap() > 0.0);
+        assert_eq!(t.started_at.as_deref(), Some("2026-01-01T00:00:01Z"));
+
+        // The subagent's own conversation is readable on demand.
+        let page = thread_messages(
+            td.path(),
+            &cache(),
+            "-tmp-sa",
+            "sess",
+            "agent-a20a65073d5af6167",
+            None,
+            None,
+        )
+        .unwrap();
+        assert_eq!(page.items.len(), 2);
+        assert_eq!(page.items[1].content.as_deref(), Some("done"));
+
+        assert!(thread_messages(td.path(), &cache(), "-tmp-sa", "sess", "../escape", None, None).is_err());
     }
 
     #[test]

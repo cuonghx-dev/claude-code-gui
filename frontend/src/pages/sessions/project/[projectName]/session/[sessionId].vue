@@ -107,6 +107,8 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
         :has-next-page="!!transcript.hasNextPage.value"
         :is-fetching-next-page="transcript.isFetchingNextPage.value"
         :hide-sidechains="!showSidechains"
+        :project-name="projectName"
+        :session-id="sessionId"
         @load-more="transcript.fetchNextPage()"
       />
       <TeamPanel :session-id="sessionId" class="mx-6 mb-4 shrink-0" />
