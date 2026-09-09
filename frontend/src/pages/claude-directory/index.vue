@@ -59,6 +59,10 @@ const editorRoute = computed(() => {
   if (f.label === 'CLAUDE.md' || f.label === 'CLAUDE.local.md') return '/memory'
   if (f.path.includes('/.claude/rules/') || f.path.includes('/rules/')) return '/memory'
   if (f.label === '.mcp.json') return '/mcp'
+  if (f.label === '.worktreeinclude' && projectPath.value) {
+    const p = projects.data.value?.find((x) => x.workingDir === projectPath.value)
+    if (p) return `/sessions/project/${encodeURIComponent(p.name)}/worktrees`
+  }
   return null
 })
 

@@ -54,3 +54,40 @@ pub struct GitFileStatus {
     pub status: String, // "M", "A", "D", "??", "R", "C", "U"
     pub staged: bool,
 }
+
+/// A git worktree of a project.
+///
+/// libgit2's `worktrees()` lists only *linked* worktrees, so the main checkout
+/// is synthesized and flagged — a list that silently omits the directory you
+/// are standing in would be worse than no list.
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeInfo {
+    pub name: String,
+    pub path: String,
+    pub branch: Option<String>,
+    /// Short commit id at HEAD.
+    pub head: Option<String>,
+    pub is_main: bool,
+    /// The worktree the caller asked about.
+    pub is_current: bool,
+    pub is_locked: bool,
+    pub lock_reason: Option<String>,
+    /// The working directory is gone but the administrative files remain.
+    pub prunable: bool,
+}
+
+/// `.worktreeinclude`: the gitignored files a new worktree should still get.
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeInclude {
+    pub path: String,
+    pub exists: bool,
+    /// Patterns as written, comments and blanks dropped.
+    pub patterns: Vec<String>,
+    /// Files in the project that match, so the effect is visible.
+    pub matched_files: Vec<String>,
+    pub truncated: bool,
+}

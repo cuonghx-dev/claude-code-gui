@@ -239,6 +239,8 @@ fn run() -> anyhow::Result<()> {
             commands::projects::projects_rename,
             commands::projects::projects_delete,
             commands::projects::projects_git_status,
+            commands::projects::projects_worktrees,
+            commands::projects::projects_worktree_include,
             commands::projects::projects_settings_get,
             commands::projects::projects_claude_md_get,
             commands::projects::projects_claude_md_put,

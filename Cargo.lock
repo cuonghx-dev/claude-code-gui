@@ -538,6 +538,7 @@ dependencies = [
  "chrono",
  "git2",
  "glob",
+ "ignore",
  "insta",
  "once_cell",
  "regex",

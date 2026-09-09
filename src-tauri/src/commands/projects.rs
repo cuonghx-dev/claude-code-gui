@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use app_core::types::{FileNode, GitStatus, Project, ProjectInfo, Settings};
+use app_core::types::{FileNode, GitStatus, Project, ProjectInfo, Settings, WorktreeInclude, WorktreeInfo};
 use app_core::AppError;
 use tauri::State;
 
@@ -99,4 +99,24 @@ pub async fn projects_claude_md_put(
 ) -> Result<(), AppError> {
     let claude_dir = state.claude_dir.read().await.clone();
     app_core::projects::claude_md_put(&claude_dir, &name, &content)
+}
+
+#[tauri::command]
+pub async fn projects_worktrees(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<Vec<WorktreeInfo>, AppError> {
+    let claude_dir = state.claude_dir.read().await.clone();
+    let project = app_core::projects::get(&claude_dir, &name)?;
+    app_core::git::worktrees(&PathBuf::from(&project.working_dir))
+}
+
+#[tauri::command]
+pub async fn projects_worktree_include(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<WorktreeInclude, AppError> {
+    let claude_dir = state.claude_dir.read().await.clone();
+    let project = app_core::projects::get(&claude_dir, &name)?;
+    app_core::git::worktree_include(&PathBuf::from(&project.working_dir))
 }

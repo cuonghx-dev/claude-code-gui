@@ -67,6 +67,8 @@ import type {
   SettingsScope,
   StatusLine,
   StatusLinePreview,
+  WorktreeInclude,
+  WorktreeInfo,
   Team,
   Thread,
   UsageQuery,
@@ -282,6 +284,10 @@ export const projectsCreate = (path: string) => invoke<Project>('projects_create
 export const projectsRename = (name: string, newName: string) =>
   invoke<void>('projects_rename', { name, newName })
 export const projectsDelete = (name: string) => invoke<void>('projects_delete', { name })
+export const projectsWorktrees = (name: string) =>
+  invoke<WorktreeInfo[]>('projects_worktrees', { name })
+export const projectsWorktreeInclude = (name: string) =>
+  invoke<WorktreeInclude>('projects_worktree_include', { name })
 export const projectsGitStatus = (name: string) =>
   invoke<GitStatus>('projects_git_status', { name })
 export const projectsSettingsGet = (name: string) =>

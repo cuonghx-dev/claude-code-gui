@@ -9,6 +9,8 @@ import {
   projectsFiles,
   projectsGet,
   projectsGitStatus,
+  projectsWorktreeInclude,
+  projectsWorktrees,
   projectsList,
   projectsRename,
   projectsSettingsGet,
@@ -89,3 +91,17 @@ export const useProjectClaudeMdPut = () => {
       qc.invalidateQueries({ queryKey: qk.projects.claudeMd(name) }),
   })
 }
+
+export const useProjectWorktrees = (name: MaybeRefOrGetter<string>) =>
+  useQuery({
+    queryKey: computed(() => qk.projects.worktrees(toValue(name))),
+    queryFn: () => projectsWorktrees(toValue(name)),
+    enabled: computed(() => !!toValue(name)),
+  })
+
+export const useProjectWorktreeInclude = (name: MaybeRefOrGetter<string>) =>
+  useQuery({
+    queryKey: computed(() => qk.projects.worktreeInclude(toValue(name))),
+    queryFn: () => projectsWorktreeInclude(toValue(name)),
+    enabled: computed(() => !!toValue(name)),
+  })

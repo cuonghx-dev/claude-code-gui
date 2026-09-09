@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
-import { ArrowLeft, Plus, RefreshCcw, Settings } from 'lucide-vue-next'
+import { ArrowLeft, GitBranch, Plus, RefreshCcw, Settings } from 'lucide-vue-next'
 import { useSessionsForProject } from '@/composables/useSessions'
 import { useProject } from '@/composables/useProjects'
 
@@ -58,6 +58,13 @@ function truncate(s: string | null | undefined, max = 60) {
             {{ project.data.value?.workingDir }}
           </div>
         </div>
+        <RouterLink
+          :to="`/sessions/project/${encodeURIComponent(projectName)}/worktrees`"
+          class="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          aria-label="Worktrees"
+        >
+          <GitBranch class="h-4 w-4" />
+        </RouterLink>
         <RouterLink
           :to="`/sessions/project/${encodeURIComponent(projectName)}/settings`"
           class="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"

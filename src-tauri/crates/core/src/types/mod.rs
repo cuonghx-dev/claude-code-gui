@@ -52,7 +52,9 @@ pub use permissions::{
 };
 pub use plans::{Plan, PlanInput};
 pub use plugins::{AvailablePlugin, MarketplaceSource, MarketplaceSourceInput, Plugin, PluginDetail};
-pub use projects::{FileNode, GitFileStatus, GitStatus, Project, ProjectInfo};
+pub use projects::{
+    FileNode, GitFileStatus, GitStatus, Project, ProjectInfo, WorktreeInclude, WorktreeInfo,
+};
 pub use scope::{EffectiveEntry, RawDoc, ScopeInfo, SettingsScope};
 pub use sessions::{Message, MessageKind, Page, Role, SessionSummary, Thread, ThreadSource, TokenUsage};
 pub use settings::{AppConfig, DirEntry, SetupPayload, Settings};

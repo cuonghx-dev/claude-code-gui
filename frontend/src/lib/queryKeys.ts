@@ -96,6 +96,8 @@ export const qk = {
     get: (n: string) => ['projects', 'get', n] as const,
     files: (n: string, sub?: string) => ['projects', 'files', n, sub ?? ''] as const,
     gitStatus: (n: string) => ['projects', 'gitStatus', n] as const,
+    worktrees: (n: string) => ['projects', 'worktrees', n] as const,
+    worktreeInclude: (n: string) => ['projects', 'worktreeInclude', n] as const,
     settings: (n: string) => ['projects', 'settings', n] as const,
     claudeMd: (n: string) => ['projects', 'claudeMd', n] as const,
   },
