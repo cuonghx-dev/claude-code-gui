@@ -2,5 +2,36 @@
 import type { JsonValue } from "../../../../src-tauri/crates/core/bindings/serde_json/JsonValue";
 import type { MessageKind } from "./MessageKind";
 import type { Role } from "./Role";
+import type { TokenUsage } from "./TokenUsage";
 
-export type Message = { id: string, kind: MessageKind, role: Role | null, timestamp: string | null, content: string | null, toolName: string | null, toolInput: JsonValue | null, toolResult: JsonValue | null, thinking: string | null, isError: boolean, };
+export type Message = { id: string, kind: MessageKind, role: Role | null, timestamp: string | null, content: string | null, toolName: string | null, toolInput: JsonValue | null, toolResult: JsonValue | null, thinking: string | null, isError: boolean, 
+/**
+ * Chains a subagent's messages back to the turn that spawned them.
+ */
+parentUuid: string | null, 
+/**
+ * True for messages inside a subagent (Task tool) conversation.
+ */
+isSidechain: boolean, gitBranch: string | null, 
+/**
+ * Raw top-level record `type`, so the UI can label the records that are
+ * not chat turns (`system`, `mode`, `permission-mode`).
+ */
+recordType: string | null, 
+/**
+ * `tool_use.id` on a call, `tool_result.tool_use_id` on its result — the
+ * key the UI pairs them on.
+ */
+toolUseId: string | null, 
+/**
+ * Model and usage belong to the *record*, not the block. One assistant
+ * record can expand into five messages, so they are attached only to the
+ * first — otherwise a five-block turn counts its tokens five times.
+ */
+isTurnHead: boolean, model: string | null, usage: TokenUsage | null, costUsd: number | null, 
+/**
+ * Tool results are capped before they cross the IPC boundary: Bash and
+ * Read output runs to hundreds of KB and routinely contains secrets from
+ * files the agent read. Both a performance and a privacy control.
+ */
+toolResultTruncated: boolean, toolResultBytes: number, };

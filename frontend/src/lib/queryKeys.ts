@@ -88,6 +88,7 @@ export const qk = {
     all: ['sessions'] as const,
     listFor: (n: string) => ['sessions', 'listFor', n] as const,
     messages: (id: string) => ['sessions', 'messages', id] as const,
+    threads: (id: string) => ['sessions', 'threads', id] as const,
   },
   settings: () => ['settings'] as const,
   config: () => ['config'] as const,

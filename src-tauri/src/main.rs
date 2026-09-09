@@ -206,6 +206,7 @@ fn run() -> anyhow::Result<()> {
             commands::projects::projects_claude_md_put,
             commands::sessions::sessions_list_for_project,
             commands::sessions::sessions_messages,
+            commands::sessions::sessions_threads,
             commands::settings::settings_get,
             commands::settings::settings_put,
             commands::settings::config_get,

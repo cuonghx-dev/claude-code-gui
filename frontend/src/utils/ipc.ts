@@ -46,6 +46,7 @@ import type {
   SkillImportSource,
   SkillInput,
   Team,
+  Thread,
   TerminalOpts,
   TerminalSession,
   Workflow,
@@ -235,6 +236,8 @@ export const projectsClaudeMdPut = (name: string, content: string) =>
   invoke<void>('projects_claude_md_put', { name, content })
 
 // Sessions
+export const sessionsThreads = (projectName: string, sessionId: string) =>
+  invoke<Thread[]>('sessions_threads', { projectName, sessionId })
 export const sessionsListForProject = (name: string) =>
   invoke<SessionSummary[]>('sessions_list_for_project', { name })
 export const sessionsMessages = (
