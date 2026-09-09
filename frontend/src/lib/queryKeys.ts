@@ -36,6 +36,11 @@ export const qk = {
     list: () => ['terminals', 'list'] as const,
     get: (id: string) => ['terminals', 'get', id] as const,
   },
+  usage: {
+    all: ['usage'] as const,
+    rollup: (query: string) => ['usage', 'rollup', query] as const,
+    activity: (days: number) => ['usage', 'activity', days] as const,
+  },
   jobs: {
     all: ['jobs'] as const,
     list: () => ['jobs', 'list'] as const,

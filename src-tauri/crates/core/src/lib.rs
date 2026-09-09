@@ -26,6 +26,7 @@ pub mod skills;
 pub mod teams;
 pub mod transcript_scan;
 pub mod types;
+pub mod usage;
 pub mod workflows;
 
 pub use types::{AppError, ErrorCode, RequestId, SessionId};

@@ -17,6 +17,15 @@ interface FsFloodPayload {
 const invalidateRelationships = () =>
   queryClient.invalidateQueries({ queryKey: ['relationships'] })
 
+// A live session appends to its transcript constantly. Usage rollups rescan
+// every changed file, so they get a trailing debounce rather than firing per
+// token flush.
+let usageTimer: ReturnType<typeof setTimeout> | undefined
+const invalidateUsageSoon = () => {
+  if (usageTimer) clearTimeout(usageTimer)
+  usageTimer = setTimeout(() => queryClient.invalidateQueries({ queryKey: qk.usage.all }), 5_000)
+}
+
 const RULES: Array<{ test: (path: string) => boolean; invalidate: () => void }> = [
   {
     test: (p) => p.includes('/.claude/agents/'),
@@ -53,6 +62,7 @@ const RULES: Array<{ test: (path: string) => boolean; invalidate: () => void }> 
     invalidate: () => {
       queryClient.invalidateQueries({ queryKey: qk.projects.all })
       queryClient.invalidateQueries({ queryKey: qk.sessions.all })
+      invalidateUsageSoon()
     },
   },
 ]

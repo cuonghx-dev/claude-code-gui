@@ -16,6 +16,7 @@ mod settings;
 mod skills;
 mod teams;
 mod terminal;
+mod usage;
 mod workflows;
 
 pub use agents::{Agent, AgentFrontmatter, AgentImport, AgentInput, AgentMemory, AgentModel};
@@ -41,4 +42,8 @@ pub use settings::{AppConfig, DirEntry, SetupPayload, Settings};
 pub use skills::{Skill, SkillContext, SkillFrontmatter, SkillImportSource, SkillInput, SkillSource};
 pub use teams::{Team, TeamMember};
 pub use terminal::{PermissionMode, TerminalOpts, TerminalSession, ToolCall};
+pub use usage::{
+    ActivityDay, GroupBy, IndexStats, ModelTotals, UsageBucket, UsageQuery, UsageReport,
+    UsageTotals,
+};
 pub use workflows::{Workflow, WorkflowInput};

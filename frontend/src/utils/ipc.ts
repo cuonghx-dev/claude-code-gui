@@ -45,8 +45,12 @@ import type {
   Skill,
   SkillImportSource,
   SkillInput,
+  ActivityDay,
+  IndexStats,
   Team,
   Thread,
+  UsageQuery,
+  UsageReport,
   TerminalOpts,
   TerminalSession,
   Workflow,
@@ -121,6 +125,11 @@ export const workflowsDelete = (slug: string) => invoke<void>('workflows_delete'
 // Terminals (cli-history)
 export const cliHistoryList = () => invoke<CliHistoryEntry[]>('cli_history_list')
 export const cliHistoryGet = (id: string) => invoke<CliHistoryDetail>('cli_history_get', { id })
+
+// Usage
+export const usageRefresh = () => invoke<IndexStats>('usage_refresh')
+export const usageRollup = (query: UsageQuery) => invoke<UsageReport>('usage_rollup', { query })
+export const usageActivity = (days?: number) => invoke<ActivityDay[]>('usage_activity', { days })
 
 // Jobs
 export const jobsList = () => invoke<Job[]>('jobs_list')

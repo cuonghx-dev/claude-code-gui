@@ -49,6 +49,7 @@ declare module 'vue-router/auto-routes' {
     '/skills/new': RouteRecordInfo<'/skills/new', '/skills/new', Record<never, never>, Record<never, never>>,
     '/terminals/': RouteRecordInfo<'/terminals/', '/terminals', Record<never, never>, Record<never, never>>,
     '/terminals/[id]': RouteRecordInfo<'/terminals/[id]', '/terminals/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/usage/': RouteRecordInfo<'/usage/', '/usage', Record<never, never>, Record<never, never>>,
     '/workflows/': RouteRecordInfo<'/workflows/', '/workflows', Record<never, never>, Record<never, never>>,
     '/workflows/[slug]': RouteRecordInfo<'/workflows/[slug]', '/workflows/:slug', { slug: ParamValue<true> }, { slug: ParamValue<false> }>,
     '/workflows/new': RouteRecordInfo<'/workflows/new', '/workflows/new', Record<never, never>, Record<never, never>>,

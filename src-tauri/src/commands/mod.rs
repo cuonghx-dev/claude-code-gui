@@ -18,4 +18,5 @@ pub mod settings;
 pub mod skills;
 pub mod teams;
 pub mod terminal;
+pub mod usage;
 pub mod workflows;

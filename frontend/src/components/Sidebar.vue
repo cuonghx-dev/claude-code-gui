@@ -13,6 +13,7 @@ import {
   History,
   Activity,
   SquareTerminal,
+  BarChart3,
   Webhook,
   FolderTree,
   Settings,
@@ -64,6 +65,7 @@ const items = computed<NavItem[]>(() => [
   { to: '/sessions',      label: 'Sessions',      icon: History,  count: () => projects.data.value?.length },
   { to: '/jobs',          label: 'Jobs',          icon: Activity, count: () => jobs.data.value?.length },
   { to: '/terminals',     label: 'Terminals',     icon: SquareTerminal, count: () => terminals.data.value?.length },
+  { to: '/usage',         label: 'Usage',         icon: BarChart3, count: () => undefined },
   { to: '/claude-directory', label: '.claude',    icon: FolderTree, count: () => undefined },
 ])
 
