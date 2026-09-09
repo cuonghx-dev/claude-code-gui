@@ -81,16 +81,6 @@ pub async fn projects_settings_get(
     app_core::settings::project_get(&PathBuf::from(&project.working_dir))
 }
 
-#[tauri::command]
-pub async fn projects_settings_put(
-    state: State<'_, AppState>,
-    name: String,
-    settings: Settings,
-) -> Result<(), AppError> {
-    let claude_dir = state.claude_dir.read().await.clone();
-    let project = app_core::projects::get(&claude_dir, &name)?;
-    app_core::settings::project_put(&PathBuf::from(&project.working_dir), &settings)
-}
 
 #[tauri::command]
 pub async fn projects_claude_md_get(

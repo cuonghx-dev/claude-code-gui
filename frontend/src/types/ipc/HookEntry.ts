@@ -4,4 +4,4 @@ export type HookEntry = {
 /**
  * Always "command" today, but kept flexible.
  */
-type: string | null, command: string | null, timeout: bigint | null, statusMessage: string | null, };
+type: string | null, command: string | null, timeout: number | null, statusMessage: string | null, };

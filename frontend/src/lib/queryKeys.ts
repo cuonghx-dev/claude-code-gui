@@ -64,6 +64,8 @@ export const qk = {
   hooks: {
     all: ['hooks'] as const,
     list: (wd?: string) => ['hooks', 'list', wd ?? ''] as const,
+    get: (id: string, wd?: string) => ['hooks', 'get', id, wd ?? ''] as const,
+    raw: (scope: string, wd?: string) => ['hooks', 'raw', scope, wd ?? ''] as const,
   },
   plugins: {
     all: ['plugins'] as const,
@@ -103,7 +105,34 @@ export const qk = {
     threadMessages: (id: string, threadId: string) =>
       ['sessions', 'threadMessages', id, threadId] as const,
   },
-  settings: () => ['settings'] as const,
+  settings: {
+    all: ['settings'] as const,
+    scopes: (wd?: string) => ['settings', 'scopes', wd ?? ''] as const,
+    raw: (scope: string, wd?: string) => ['settings', 'raw', scope, wd ?? ''] as const,
+    effective: (wd?: string) => ['settings', 'effective', wd ?? ''] as const,
+    typed: () => ['settings', 'typed'] as const,
+  },
+  permissions: {
+    all: ['permissions'] as const,
+    get: (scope: string, wd?: string) => ['permissions', 'get', scope, wd ?? ''] as const,
+    effective: (wd?: string) => ['permissions', 'effective', wd ?? ''] as const,
+  },
+  memory: {
+    all: ['memory'] as const,
+    list: (wd?: string) => ['memory', 'list', wd ?? ''] as const,
+    get: (id: string, wd?: string) => ['memory', 'get', id, wd ?? ''] as const,
+    preview: (id: string, wd?: string) => ['memory', 'preview', id, wd ?? ''] as const,
+    agent: (wd?: string) => ['memory', 'agent', wd ?? ''] as const,
+  },
+  statusline: {
+    all: ['statusline'] as const,
+    get: (scope: string, wd?: string) => ['statusline', 'get', scope, wd ?? ''] as const,
+  },
+  keybindings: {
+    all: ['keybindings'] as const,
+    doc: () => ['keybindings', 'doc'] as const,
+    raw: () => ['keybindings', 'raw'] as const,
+  },
   config: () => ['config'] as const,
   debug: {
     claudeCli: () => ['debug', 'claudeCli'] as const,

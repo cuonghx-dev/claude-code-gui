@@ -6,11 +6,12 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { yaml } from '@codemirror/lang-yaml'
 import { javascript } from '@codemirror/lang-javascript'
+import { json } from '@codemirror/lang-json'
 
 const props = withDefaults(
   defineProps<{
     modelValue: string
-    language?: 'markdown' | 'yaml' | 'javascript'
+    language?: 'markdown' | 'yaml' | 'javascript' | 'json'
     minHeight?: string
     placeholder?: string
     fill?: boolean
@@ -26,6 +27,7 @@ const langCompartment = new Compartment()
 function makeLang() {
   if (props.language === 'yaml') return yaml()
   if (props.language === 'javascript') return javascript()
+  if (props.language === 'json') return json()
   return markdown()
 }
 

@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, type MaybeRefOrGetter, toValue } from 'vue'
 import { qk } from '@/lib/queryKeys'
-import type { Settings } from '@/types/ipc'
 import {
   projectsClaudeMdGet,
   projectsClaudeMdPut,
@@ -13,7 +12,6 @@ import {
   projectsList,
   projectsRename,
   projectsSettingsGet,
-  projectsSettingsPut,
 } from '@/utils/ipc'
 
 export const useProjectsList = () =>
@@ -79,16 +77,6 @@ export const useProjectDelete = () => {
   return useMutation({
     mutationFn: (name: string) => projectsDelete(name),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.projects.all }),
-  })
-}
-
-export const useProjectSettingsPut = () => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ name, settings }: { name: string; settings: Settings }) =>
-      projectsSettingsPut(name, settings),
-    onSuccess: (_d, { name }) =>
-      qc.invalidateQueries({ queryKey: qk.projects.settings(name) }),
   })
 }
 

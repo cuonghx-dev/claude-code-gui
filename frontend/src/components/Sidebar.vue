@@ -16,6 +16,7 @@ import {
   BarChart3,
   Webhook,
   FolderTree,
+  BookText,
   Settings,
 } from 'lucide-vue-next'
 import logoUrl from '@/assets/logo.png'
@@ -24,6 +25,7 @@ import { useCommandsList } from '@/composables/useCommands'
 import { useSkillsList } from '@/composables/useSkills'
 import { useTerminalsList } from '@/composables/useCliHistory'
 import { useJobsList } from '@/composables/useJobs'
+import { useMemoryList } from '@/composables/useMemory'
 import { usePlansList } from '@/composables/usePlans'
 import { useWorkflowsList } from '@/composables/useWorkflows'
 import { useMcpList } from '@/composables/useMcp'
@@ -37,6 +39,7 @@ const commands = useCommandsList()
 const skills = useSkillsList()
 const plans = usePlansList()
 const jobs = useJobsList()
+const memory = useMemoryList()
 const terminals = useTerminalsList()
 const workflows = useWorkflowsList()
 const mcp = useMcpList('global')
@@ -66,6 +69,7 @@ const items = computed<NavItem[]>(() => [
   { to: '/jobs',          label: 'Jobs',          icon: Activity, count: () => jobs.data.value?.length },
   { to: '/terminals',     label: 'Terminals',     icon: SquareTerminal, count: () => terminals.data.value?.length },
   { to: '/usage',         label: 'Usage',         icon: BarChart3, count: () => undefined },
+  { to: '/memory',        label: 'Memory',        icon: BookText, count: () => memory.data.value?.length },
   { to: '/claude-directory', label: '.claude',    icon: FolderTree, count: () => undefined },
 ])
 

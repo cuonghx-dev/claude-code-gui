@@ -57,7 +57,22 @@ const RULES: Array<{ test: (path: string) => boolean; invalidate: () => void }> 
   { test: (p) => p.includes('/.claude/jobs/'),         invalidate: () => queryClient.invalidateQueries({ queryKey: qk.jobs.all }) },
   { test: (p) => p.includes('/.claude/teams/'),        invalidate: () => queryClient.invalidateQueries({ queryKey: qk.teams.all }) },
   { test: (p) => p.endsWith('/.mcp.json'),             invalidate: () => queryClient.invalidateQueries({ queryKey: qk.mcp.all }) },
-  { test: (p) => p.endsWith('/.claude/settings.json'), invalidate: () => queryClient.invalidateQueries({ queryKey: qk.settings() }) },
+  {
+    // Any settings file in any scope feeds settings, hooks, permissions and the
+    // status line, so they all invalidate together.
+    test: (p) => /(^|\/)settings(\.local)?\.json$/.test(p),
+    invalidate: () => {
+      queryClient.invalidateQueries({ queryKey: qk.settings.all })
+      queryClient.invalidateQueries({ queryKey: qk.hooks.all })
+      queryClient.invalidateQueries({ queryKey: qk.permissions.all })
+      queryClient.invalidateQueries({ queryKey: qk.statusline.all })
+    },
+  },
+  { test: (p) => p.endsWith('/.claude/keybindings.json'), invalidate: () => queryClient.invalidateQueries({ queryKey: qk.keybindings.all }) },
+  {
+    test: (p) => p.endsWith('/CLAUDE.md') || p.endsWith('/CLAUDE.local.md') || p.includes('/rules/') || p.includes('/agent-memory/'),
+    invalidate: () => queryClient.invalidateQueries({ queryKey: qk.memory.all }),
+  },
   {
     test: (p) => p.includes('/.claude/projects/'),
     invalidate: () => {

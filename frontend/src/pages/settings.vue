@@ -1,221 +1,86 @@
 <script setup lang="ts">
-import { reactive, ref, watchEffect } from 'vue'
-import { Loader2 } from 'lucide-vue-next'
+import { computed, provide, ref } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
-import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
-import FormField from '@/components/forms/FormField.vue'
-import {
-  useClaudeCliInfo,
-  useConfig,
-  useConfigSet,
-  useSettings,
-  useSettingsPut,
-} from '@/composables/useSettings'
-import type { AppConfig, Settings } from '@/types/ipc'
+import ScopePicker from '@/components/settings/ScopePicker.vue'
+import { useSettingsScopes } from '@/composables/useSettings'
+import { useProjectsList } from '@/composables/useProjects'
+import type { SettingsScope } from '@/types/ipc'
+import { SETTINGS_CONTEXT } from '@/composables/settingsContext'
 
-const { isPending, isError, error, data: settings } = useSettings()
-const { data: cli } = useClaudeCliInfo()
-const { data: config } = useConfig()
-const settingsMut = useSettingsPut()
-const configMut = useConfigSet()
+const route = useRoute()
 
-const sLocal = reactive({
-  defaultModel: '' as string,
-  defaultPermissionMode: '' as string,
-})
-const cLocal = reactive({
-  theme: '' as string,
-  claudeDirOverride: '' as string,
-  updaterChannel: 'stable' as string,
-})
-const lastSaved = ref('')
-const errorMessage = ref('')
-const checkingUpdate = ref(false)
+// Scope and project are shared by every child tab: switching tabs should not
+// lose which file you were editing.
+const scope = ref<SettingsScope>('user')
+const workingDir = ref<string | undefined>(undefined)
 
-watchEffect(() => {
-  const s = settings.value
-  if (s) {
-    sLocal.defaultModel = s.defaultModel ?? ''
-    sLocal.defaultPermissionMode = s.defaultPermissionMode ?? ''
-  }
-  const c = config.value
-  if (c) {
-    cLocal.theme = c.theme ?? ''
-    cLocal.claudeDirOverride = c.claudeDirOverride ?? ''
-    cLocal.updaterChannel = c.updaterChannel ?? 'stable'
-  }
-})
+const projects = useProjectsList()
+const scopes = useSettingsScopes(workingDir)
 
-async function saveSettings() {
-  errorMessage.value = ''
-  const next: Settings = {
-    ...(settings.value ?? { extra: {} }),
-    defaultModel: sLocal.defaultModel || null,
-    defaultPermissionMode: sLocal.defaultPermissionMode || null,
-  } as Settings
-  try {
-    await settingsMut.mutateAsync(next)
-    lastSaved.value = 'settings.json updated'
-  } catch (e) {
-    errorMessage.value = (e as { message?: string })?.message ?? String(e)
-  }
-}
+provide(SETTINGS_CONTEXT, { scope, workingDir })
 
-async function saveConfig() {
-  errorMessage.value = ''
-  const next: AppConfig = {
-    ...(config.value ?? { experimentalHooksMetrics: false }),
-    theme: cLocal.theme || null,
-    claudeDirOverride: cLocal.claudeDirOverride || null,
-    updaterChannel: cLocal.updaterChannel || null,
-  } as AppConfig
-  try {
-    await configMut.mutateAsync(next)
-    lastSaved.value = 'app config updated'
-  } catch (e) {
-    errorMessage.value = (e as { message?: string })?.message ?? String(e)
-  }
-}
+const TABS = [
+  { to: '/settings', label: 'General', exact: true },
+  { to: '/settings/permissions', label: 'Permissions' },
+  { to: '/settings/hooks', label: 'Hooks' },
+  { to: '/settings/statusline', label: 'Status line' },
+  { to: '/settings/keybindings', label: 'Keybindings' },
+  { to: '/settings/effective', label: 'Effective' },
+  { to: '/settings/raw', label: 'Raw JSON' },
+]
 
-async function checkForUpdates() {
-  errorMessage.value = ''
-  checkingUpdate.value = true
-  try {
-    const { check } = await import('@tauri-apps/plugin-updater')
-    const update = await check()
-    if (update?.available) {
-      lastSaved.value = `update available: ${update.version}`
-    } else {
-      lastSaved.value = 'already up to date'
-    }
-  } catch (e) {
-    errorMessage.value = (e as { message?: string })?.message ?? String(e)
-  } finally {
-    checkingUpdate.value = false
-  }
-}
+const isActive = (tab: { to: string; exact?: boolean }) =>
+  tab.exact ? route.path === tab.to : route.path.startsWith(tab.to)
 
-async function redoOnboarding() {
-  errorMessage.value = ''
-  const next: Settings = {
-    ...(settings.value ?? { extra: {} }),
-    onboardingCompleted: false,
-  } as Settings
-  try {
-    await settingsMut.mutateAsync(next)
-    lastSaved.value = 'onboarding will replay on next reload'
-  } catch (e) {
-    errorMessage.value = (e as { message?: string })?.message ?? String(e)
-  }
-}
+const currentScopeInfo = computed(() =>
+  scopes.data.value?.find((s) => s.scope === scope.value),
+)
 </script>
 
 <template>
-  <PageHeader title="Settings" subtitle="Edit ~/.claude/settings.json and app preferences" />
+  <PageHeader title="Settings" subtitle="Claude Code settings files and app preferences" />
+
+  <div class="flex flex-wrap items-end gap-4 border-b border-neutral-200 px-6 pb-3 dark:border-neutral-800">
+    <ScopePicker
+      v-model="scope"
+      :scopes="scopes.data.value ?? []"
+      :has-working-dir="!!workingDir"
+    />
+    <label class="flex flex-col gap-1 text-xs text-neutral-500 dark:text-neutral-400">
+      Project
+      <select v-model="workingDir" class="ccg-input w-64">
+        <option :value="undefined">— none —</option>
+        <option v-for="p in projects.data.value ?? []" :key="p.name" :value="p.workingDir">
+          {{ p.workingDir }}
+        </option>
+      </select>
+    </label>
+  </div>
+
+  <nav class="flex gap-1 overflow-x-auto border-b border-neutral-200 px-6 dark:border-neutral-800">
+    <RouterLink
+      v-for="t in TABS"
+      :key="t.to"
+      :to="t.to"
+      class="shrink-0 border-b-2 px-3 py-2 text-sm"
+      :class="
+        isActive(t)
+          ? 'border-neutral-900 font-medium dark:border-neutral-100'
+          : 'border-transparent text-neutral-500 dark:text-neutral-400'
+      "
+    >
+      {{ t.label }}
+    </RouterLink>
+  </nav>
+
   <p
-    v-if="errorMessage"
-    class="mx-6 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+    v-if="currentScopeInfo && !currentScopeInfo.writable"
+    class="mx-6 mt-4 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300"
   >
-    {{ errorMessage }}
+    Managed settings are deployed by your organization and override everything else. This app reads
+    them but never writes them.
   </p>
-  <p
-    v-if="lastSaved"
-    class="mx-6 mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
-  >
-    {{ lastSaved }}
-  </p>
-  <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="settings">
-    <template #default>
-      <section class="p-6 space-y-6">
-        <div class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Claude CLI</h3>
-          <dl class="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
-            <dt class="text-neutral-500">Path</dt>
-            <dd class="col-span-2 break-all font-mono text-xs">{{ cli?.path ?? 'not found' }}</dd>
-            <dt class="text-neutral-500">Version</dt>
-            <dd class="col-span-2">{{ cli?.version ?? '—' }}</dd>
-          </dl>
-        </div>
 
-        <div class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">~/.claude/settings.json</h3>
-          <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <FormField label="Default model">
-              <select v-model="sLocal.defaultModel" class="ccg-input">
-                <option value="">— inherit —</option>
-                <option value="opus">opus</option>
-                <option value="sonnet">sonnet</option>
-                <option value="haiku">haiku</option>
-              </select>
-            </FormField>
-            <FormField label="Default permission mode">
-              <select v-model="sLocal.defaultPermissionMode" class="ccg-input">
-                <option value="">— inherit —</option>
-                <option value="default">default</option>
-                <option value="acceptEdits">acceptEdits</option>
-                <option value="bypassPermissions">bypassPermissions</option>
-                <option value="plan">plan</option>
-              </select>
-            </FormField>
-          </div>
-          <div class="mt-3 flex items-center gap-2">
-            <button type="button" class="ccg-btn-primary inline-flex items-center gap-1.5" :disabled="settingsMut.isPending.value" @click="saveSettings">
-              <Loader2 v-if="settingsMut.isPending.value" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-              {{ settingsMut.isPending.value ? 'Saving…' : 'Save settings.json' }}
-            </button>
-            <button type="button" class="ccg-btn-ghost" @click="redoOnboarding">
-              Replay onboarding
-            </button>
-          </div>
-        </div>
-
-        <div class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">App preferences</h3>
-          <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <FormField label="Theme">
-              <select v-model="cLocal.theme" class="ccg-input">
-                <option value="">match system</option>
-                <option value="light">light</option>
-                <option value="dark">dark</option>
-              </select>
-            </FormField>
-            <FormField label="Claude directory override" hint="Default: ~/.claude">
-              <input v-model="cLocal.claudeDirOverride" type="text" class="ccg-input" />
-            </FormField>
-          </div>
-          <button type="button" class="mt-3 ccg-btn-primary inline-flex items-center gap-1.5" :disabled="configMut.isPending.value" @click="saveConfig">
-            <Loader2 v-if="configMut.isPending.value" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-            {{ configMut.isPending.value ? 'Saving…' : 'Save preferences' }}
-          </button>
-        </div>
-
-        <div class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Updater</h3>
-          <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <FormField label="Channel">
-              <select v-model="cLocal.updaterChannel" class="ccg-input">
-                <option value="stable">stable</option>
-                <option value="beta">beta</option>
-              </select>
-            </FormField>
-          </div>
-          <div class="mt-3 flex items-center gap-2">
-            <button type="button" class="ccg-btn-primary inline-flex items-center gap-1.5" :disabled="configMut.isPending.value" @click="saveConfig">
-              <Loader2 v-if="configMut.isPending.value" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-              Save channel
-            </button>
-            <button
-              type="button"
-              class="ccg-btn-ghost inline-flex items-center gap-1.5"
-              :disabled="checkingUpdate"
-              @click="checkForUpdates"
-            >
-              <Loader2 v-if="checkingUpdate" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-              {{ checkingUpdate ? 'Checking…' : 'Check for updates' }}
-            </button>
-          </div>
-        </div>
-      </section>
-    </template>
-  </QueryStateBoundary>
+  <RouterView />
 </template>

@@ -13,9 +13,8 @@ import {
   useProjectDelete,
   useProjectRename,
   useProjectSettings,
-  useProjectSettingsPut,
 } from '@/composables/useProjects'
-import type { Settings } from '@/types/ipc'
+import { useSettingsPatch } from '@/composables/useSettings'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,7 +23,7 @@ const projectName = computed(() => (route.params as { projectName: string }).pro
 const project = useProject(projectName)
 const settings = useProjectSettings(projectName)
 const claudeMd = useProjectClaudeMd(projectName)
-const settingsPut = useProjectSettingsPut()
+const settingsPatch = useSettingsPatch()
 const claudeMdPut = useProjectClaudeMdPut()
 const rename = useProjectRename()
 const remove = useProjectDelete()
@@ -52,13 +51,17 @@ watchEffect(() => {
 
 async function saveSettings() {
   errorMessage.value = ''
-  const next: Settings = {
-    ...(settings.data.value ?? { extra: {} }),
-    defaultModel: sLocal.value.defaultModel || null,
-    defaultPermissionMode: sLocal.value.defaultPermissionMode || null,
-  } as Settings
+  // Only the two keys this form owns; the rest of the project's settings file
+  // is left untouched.
   try {
-    await settingsPut.mutateAsync({ name: projectName.value, settings: next })
+    await settingsPatch.mutateAsync({
+      scope: 'project',
+      workingDir: project.data.value?.workingDir,
+      patch: {
+        defaultModel: sLocal.value.defaultModel || null,
+        defaultPermissionMode: sLocal.value.defaultPermissionMode || null,
+      },
+    })
     status.value = 'project settings.json updated'
   } catch (e) {
     errorMessage.value = (e as { message?: string })?.message ?? String(e)
@@ -172,10 +175,10 @@ async function doDelete() {
           <button
             type="button"
             class="mt-3 ccg-btn-primary"
-            :disabled="settingsPut.isPending.value"
+            :disabled="settingsPatch.isPending.value"
             @click="saveSettings"
           >
-            {{ settingsPut.isPending.value ? 'Saving…' : 'Save settings' }}
+            {{ settingsPatch.isPending.value ? 'Saving…' : 'Save settings' }}
           </button>
         </div>
 

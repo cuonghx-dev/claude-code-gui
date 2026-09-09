@@ -10,8 +10,11 @@
 
 use std::path::Path;
 
+use serde_json::{json, Map, Value};
+
 use crate::settings;
-use crate::types::{AppConfig, SetupPayload, Settings};
+use crate::settings_scope;
+use crate::types::{AppConfig, SettingsScope, SetupPayload, Settings};
 use crate::AppError;
 
 /// Apply a `SetupPayload`. Always marks `onboardingCompleted = true` so the
@@ -22,15 +25,24 @@ pub fn finalize(
     config: AppConfig,
     payload: SetupPayload,
 ) -> Result<(AppConfig, Settings), AppError> {
-    let mut s = settings::get(claude_dir)?;
+    // Write only the keys the wizard owns. Round-tripping the whole file
+    // through a typed struct would drop any key this app does not model.
+    let mut patch = Map::new();
     if let Some(m) = payload.default_model {
-        s.default_model = Some(m);
+        patch.insert("defaultModel".into(), json!(m));
     }
     if let Some(p) = payload.default_permission_mode {
-        s.default_permission_mode = Some(p);
+        patch.insert("defaultPermissionMode".into(), json!(p));
     }
-    s.onboarding_completed = Some(true);
-    settings::put(claude_dir, &s)?;
+    patch.insert("onboardingCompleted".into(), json!(true));
+    settings_scope::patch(
+        claude_dir,
+        SettingsScope::User,
+        None,
+        &Value::Object(patch),
+        None,
+    )?;
+    let s = settings::get(claude_dir)?;
 
     let mut c = config;
     if let Some(t) = payload.theme {

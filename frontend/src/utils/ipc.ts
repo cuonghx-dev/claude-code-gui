@@ -6,7 +6,10 @@ import type {
   AppConfig,
   AvailablePlugin,
   Checkpoint,
+  ChordValidation,
   ClaudeCliInfo,
+  EffectiveEntry,
+  EffectivePermissions,
   CliHistoryDetail,
   CliHistoryEntry,
   ClaudeDirTree,
@@ -50,6 +53,19 @@ import type {
   IndexStats,
   DiffResult,
   DiffSide,
+  HookInput,
+  Keybinding,
+  KeybindingsDoc,
+  MemoryDoc,
+  MemoryFile,
+  MemoryPreview,
+  Permissions,
+  RawDoc,
+  RuleIssue,
+  ScopeInfo,
+  SettingsScope,
+  StatusLine,
+  StatusLinePreview,
   Team,
   Thread,
   UsageQuery,
@@ -159,6 +175,21 @@ export const teamsGet = (id: string) => invoke<Team>('teams_get', { id })
 // Hooks
 export const hooksList = (workingDir?: string) =>
   invoke<HookGroup[]>('hooks_list', { workingDir })
+export const hooksGet = (id: string, workingDir?: string) =>
+  invoke<HookGroup>('hooks_get', { id, workingDir })
+export const hooksCreate = (input: HookInput) => invoke<HookGroup>('hooks_create', { input })
+export const hooksUpdate = (id: string, input: HookInput) =>
+  invoke<HookGroup>('hooks_update', { id, input })
+export const hooksDelete = (id: string, workingDir?: string) =>
+  invoke<void>('hooks_delete', { id, workingDir })
+export const hooksRawGet = (scope: SettingsScope, workingDir?: string) =>
+  invoke<string>('hooks_raw_get', { scope, workingDir })
+export const hooksRawPut = (
+  scope: SettingsScope,
+  content: string,
+  workingDir?: string,
+  expectedMtimeMs?: number,
+) => invoke<number>('hooks_raw_put', { scope, workingDir, content, expectedMtimeMs })
 
 // Output styles
 export const outputStylesList = (workingDir?: string) =>
@@ -254,8 +285,6 @@ export const projectsGitStatus = (name: string) =>
   invoke<GitStatus>('projects_git_status', { name })
 export const projectsSettingsGet = (name: string) =>
   invoke<Settings>('projects_settings_get', { name })
-export const projectsSettingsPut = (name: string, settings: Settings) =>
-  invoke<void>('projects_settings_put', { name, settings })
 export const projectsClaudeMdGet = (name: string) =>
   invoke<string>('projects_claude_md_get', { name })
 export const projectsClaudeMdPut = (name: string, content: string) =>
@@ -295,7 +324,82 @@ export const sessionsMessages = (
 
 // Settings / config / setup
 export const settingsGet = () => invoke<Settings>('settings_get')
-export const settingsPut = (settings: Settings) => invoke<void>('settings_put', { settings })
+export const settingsScopes = (workingDir?: string) =>
+  invoke<ScopeInfo[]>('settings_scopes', { workingDir })
+export const settingsRawGet = (scope: SettingsScope, workingDir?: string) =>
+  invoke<RawDoc>('settings_raw_get', { scope, workingDir })
+export const settingsRawPut = (
+  scope: SettingsScope,
+  content: string,
+  workingDir?: string,
+  expectedMtimeMs?: number,
+) => invoke<number>('settings_raw_put', { scope, workingDir, content, expectedMtimeMs })
+/** Send only the keys you own: unknown keys in the file are never touched. */
+export const settingsPatch = (
+  scope: SettingsScope,
+  patch: Record<string, unknown>,
+  workingDir?: string,
+  expectedMtimeMs?: number,
+) => invoke<number>('settings_patch', { scope, workingDir, patch, expectedMtimeMs })
+export const settingsEffective = (workingDir?: string) =>
+  invoke<EffectiveEntry[]>('settings_effective', { workingDir })
+
+// Permissions
+export const permissionsGet = (scope: SettingsScope, workingDir?: string) =>
+  invoke<Permissions>('permissions_get', { scope, workingDir })
+export const permissionsPut = (
+  scope: SettingsScope,
+  permissions: Permissions,
+  workingDir?: string,
+  expectedMtimeMs?: number,
+) => invoke<number>('permissions_put', { scope, workingDir, permissions, expectedMtimeMs })
+export const permissionsEffective = (workingDir?: string) =>
+  invoke<EffectivePermissions>('permissions_effective', { workingDir })
+export const permissionsValidate = (permissions: Permissions) =>
+  invoke<RuleIssue[]>('permissions_validate', { permissions })
+
+// Memory (CLAUDE.md and rules)
+export const memoryList = (workingDir?: string) =>
+  invoke<MemoryFile[]>('memory_list', { workingDir })
+export const memoryAgentList = (workingDir?: string) =>
+  invoke<MemoryFile[]>('memory_agent_list', { workingDir })
+export const memoryGet = (id: string, workingDir?: string) =>
+  invoke<MemoryDoc>('memory_get', { id, workingDir })
+export const memoryPut = (
+  id: string,
+  content: string,
+  workingDir?: string,
+  expectedMtimeMs?: number,
+) => invoke<MemoryDoc>('memory_put', { id, workingDir, content, expectedMtimeMs })
+export const memoryDelete = (id: string, workingDir?: string) =>
+  invoke<void>('memory_delete', { id, workingDir })
+export const memoryPreview = (id: string, workingDir?: string) =>
+  invoke<MemoryPreview>('memory_preview', { id, workingDir })
+
+// Status line
+export const statuslineGet = (scope: SettingsScope, workingDir?: string) =>
+  invoke<StatusLine>('statusline_get', { scope, workingDir })
+export const statuslinePut = (
+  scope: SettingsScope,
+  statusLine: StatusLine,
+  workingDir?: string,
+  expectedMtimeMs?: number,
+) => invoke<number>('statusline_put', { scope, workingDir, statusLine, expectedMtimeMs })
+export const statuslineDelete = (scope: SettingsScope, workingDir?: string) =>
+  invoke<number>('statusline_delete', { scope, workingDir })
+export const statuslinePreview = (statusLine: StatusLine, workingDir?: string) =>
+  invoke<StatusLinePreview>('statusline_preview', { statusLine, workingDir })
+
+// Keybindings
+export const keybindingsGet = () => invoke<KeybindingsDoc>('keybindings_get')
+export const keybindingsPut = (bindings: Keybinding[], expectedMtimeMs?: number) =>
+  invoke<KeybindingsDoc>('keybindings_put', { bindings, expectedMtimeMs })
+export const keybindingsCreate = () => invoke<KeybindingsDoc>('keybindings_create')
+export const keybindingsRawGet = () => invoke<string>('keybindings_raw_get')
+export const keybindingsRawPut = (content: string, expectedMtimeMs?: number) =>
+  invoke<number>('keybindings_raw_put', { content, expectedMtimeMs })
+export const keybindingsValidate = (chord: string) =>
+  invoke<ChordValidation>('keybindings_validate', { chord })
 export const configGet = () => invoke<AppConfig>('config_get')
 export const configSet = (config: AppConfig) => invoke<void>('config_set', { config })
 export const setupFinalize = (payload: SetupPayload) =>

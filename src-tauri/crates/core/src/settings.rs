@@ -1,8 +1,11 @@
-//! Read+write logic for `~/.claude/settings.json`. Tolerant.
+//! Reading `settings.json` as a typed projection.
+//!
+//! Writes live in `settings_scope` and go through RFC 7386 merge patches:
+//! serializing this struct back would drop every key it does not model, and
+//! real settings files carry plenty it does not.
 
 use std::path::Path;
 
-use crate::io;
 use crate::types::Settings;
 use crate::AppError;
 
@@ -15,12 +18,6 @@ pub fn get(claude_dir: &Path) -> Result<Settings, AppError> {
     Ok(serde_json::from_str(&raw)?)
 }
 
-pub fn put(claude_dir: &Path, settings: &Settings) -> Result<(), AppError> {
-    let path = claude_dir.join("settings.json");
-    let serialized = serde_json::to_string_pretty(settings)?;
-    io::atomic_write(&path, serialized.as_bytes())
-}
-
 /// Project-scoped settings under `<wd>/.claude/settings.json`.
 pub fn project_get(working_dir: &Path) -> Result<Settings, AppError> {
     let path = working_dir.join(".claude").join("settings.json");
@@ -29,12 +26,6 @@ pub fn project_get(working_dir: &Path) -> Result<Settings, AppError> {
     }
     let raw = std::fs::read_to_string(&path)?;
     Ok(serde_json::from_str(&raw)?)
-}
-
-pub fn project_put(working_dir: &Path, settings: &Settings) -> Result<(), AppError> {
-    let path = working_dir.join(".claude").join("settings.json");
-    let serialized = serde_json::to_string_pretty(settings)?;
-    io::atomic_write(&path, serialized.as_bytes())
 }
 
 #[cfg(test)]
@@ -46,19 +37,6 @@ mod tests {
         let td = tempfile::tempdir().unwrap();
         let s = get(td.path()).unwrap();
         assert!(s.default_model.is_none());
-    }
-
-    #[test]
-    fn put_round_trip_preserves_extras() {
-        let td = tempfile::tempdir().unwrap();
-        let mut s = Settings::default();
-        s.default_model = Some("sonnet".into());
-        s.extra
-            .insert("custom".into(), serde_json::json!({"x": 1}));
-        put(td.path(), &s).unwrap();
-        let got = get(td.path()).unwrap();
-        assert_eq!(got.default_model.as_deref(), Some("sonnet"));
-        assert!(got.extra.contains_key("custom"));
     }
 
     #[test]

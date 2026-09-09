@@ -12,14 +12,6 @@ pub async fn settings_get(state: State<'_, AppState>) -> Result<Settings, AppErr
     app_core::settings::get(&claude_dir)
 }
 
-#[tauri::command]
-pub async fn settings_put(
-    state: State<'_, AppState>,
-    settings: Settings,
-) -> Result<(), AppError> {
-    let claude_dir = state.claude_dir.read().await.clone();
-    app_core::settings::put(&claude_dir, &settings)
-}
 
 #[tauri::command]
 pub async fn config_get(state: State<'_, AppState>) -> Result<AppConfig, AppError> {
