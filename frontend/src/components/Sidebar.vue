@@ -12,6 +12,7 @@ import {
   Package,
   History,
   Webhook,
+  FolderTree,
   Settings,
 } from 'lucide-vue-next'
 import logoUrl from '@/assets/logo.png'
@@ -55,6 +56,7 @@ const items = computed<NavItem[]>(() => [
   { to: '/hooks',         label: 'Hooks',         icon: Webhook,  count: () => hooks.data.value?.length },
   { to: '/plugins',       label: 'Plugins',       icon: Package,  count: () => plugins.data.value?.length },
   { to: '/sessions',      label: 'Sessions',      icon: History,  count: () => projects.data.value?.length },
+  { to: '/claude-directory', label: '.claude',    icon: FolderTree, count: () => undefined },
 ])
 
 const bottomItems = computed<NavItem[]>(() => [

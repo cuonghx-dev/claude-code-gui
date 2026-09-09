@@ -1,4 +1,5 @@
 pub mod agents;
+pub mod claude_directory;
 pub mod cmds;
 pub mod debug;
 pub mod files;

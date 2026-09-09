@@ -22,6 +22,7 @@ declare module 'vue-router/auto-routes' {
     '/agents/': RouteRecordInfo<'/agents/', '/agents', Record<never, never>, Record<never, never>>,
     '/agents/[slug]': RouteRecordInfo<'/agents/[slug]', '/agents/:slug', { slug: ParamValue<true> }, { slug: ParamValue<false> }>,
     '/agents/new': RouteRecordInfo<'/agents/new', '/agents/new', Record<never, never>, Record<never, never>>,
+    '/claude-directory/': RouteRecordInfo<'/claude-directory/', '/claude-directory', Record<never, never>, Record<never, never>>,
     '/commands/': RouteRecordInfo<'/commands/', '/commands', Record<never, never>, Record<never, never>>,
     '/commands/[slug]': RouteRecordInfo<'/commands/[slug]', '/commands/:slug', { slug: ParamValue<true> }, { slug: ParamValue<false> }>,
     '/commands/new': RouteRecordInfo<'/commands/new', '/commands/new', Record<never, never>, Record<never, never>>,

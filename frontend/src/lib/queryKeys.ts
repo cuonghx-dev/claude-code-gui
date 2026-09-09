@@ -56,6 +56,10 @@ export const qk = {
     capabilities: (name: string, scope: string, wd?: string) =>
       ['mcp', 'capabilities', name, scope, wd ?? ''] as const,
   },
+  claudeDirectory: {
+    all: ['claudeDirectory'] as const,
+    tree: (projectPath?: string) => ['claudeDirectory', 'tree', projectPath ?? ''] as const,
+  },
   projects: {
     all: ['projects'] as const,
     list: () => ['projects', 'list'] as const,

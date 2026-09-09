@@ -1,6 +1,7 @@
 pub mod agents;
 pub mod claude_cli;
 pub mod claude_dir;
+pub mod claude_directory;
 pub mod commands;
 pub mod files;
 pub mod frontmatter;

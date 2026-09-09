@@ -121,6 +121,7 @@ fn run() -> anyhow::Result<()> {
             commands::agents::agents_export,
             commands::agents::agents_import,
             commands::agents::agents_improve_instructions,
+            commands::claude_directory::claude_directory_tree,
             commands::cmds::commands_list,
             commands::cmds::commands_get,
             commands::cmds::commands_create,

@@ -6,6 +6,7 @@ import type {
   AppConfig,
   AvailablePlugin,
   ClaudeCliInfo,
+  ClaudeDirTree,
   Command,
   CommandInput,
   DirEntry,
@@ -239,6 +240,10 @@ export const configGet = () => invoke<AppConfig>('config_get')
 export const configSet = (config: AppConfig) => invoke<void>('config_set', { config })
 export const setupFinalize = (payload: SetupPayload) =>
   invoke<void>('setup_finalize', { payload })
+
+// Claude directory explorer
+export const claudeDirectoryTree = (projectPath?: string) =>
+  invoke<ClaudeDirTree[]>('claude_directory_tree', { projectPath })
 
 // Filesystem utilities
 export const directoriesList = (parent: string) =>

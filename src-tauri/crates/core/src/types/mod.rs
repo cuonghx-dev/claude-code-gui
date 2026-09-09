@@ -1,4 +1,5 @@
 mod agents;
+mod claude_directory;
 mod commands;
 mod error;
 mod hooks;
@@ -15,6 +16,7 @@ mod terminal;
 mod workflows;
 
 pub use agents::{Agent, AgentFrontmatter, AgentImport, AgentInput, AgentMemory, AgentModel};
+pub use claude_directory::{ClaudeDirEntry, ClaudeDirKind, ClaudeDirScope, ClaudeDirTree};
 pub use commands::{Command, CommandFrontmatter, CommandInput};
 pub use error::{AppError, ErrorCode};
 pub use hooks::{HookEntry, HookGroup};
