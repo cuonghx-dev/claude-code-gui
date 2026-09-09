@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import ChatTerminal from '@/components/ChatTerminal.vue'
 import TeamPanel from '@/components/TeamPanel.vue'
 import MessageList from '@/components/transcript/MessageList.vue'
+import CheckpointsPanel from '@/components/CheckpointsPanel.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { useProject } from '@/composables/useProjects'
 import { useSessionMessages, useSessionThreads } from '@/composables/useSessions'
@@ -26,6 +27,10 @@ const total = computed(() => transcript.data.value?.pages[0]?.total ?? 0)
 // Subagent turns are summarized by their card; showing them inline as well
 // doubles the transcript. Off by default, one toggle away.
 const showSidechains = ref(false)
+
+// Checkpoints belong to the session, so they live beside the transcript rather
+// than on a route of their own.
+const showCheckpoints = ref(false)
 
 const resuming = ref(false)
 
@@ -67,6 +72,9 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
           <input v-model="showSidechains" type="checkbox" />
           Subagent messages
         </label>
+        <button type="button" class="ccg-btn-ghost" @click="showCheckpoints = !showCheckpoints">
+          {{ showCheckpoints ? 'Hide checkpoints' : 'Checkpoints' }}
+        </button>
         <button
           v-if="!resuming"
           type="button"
@@ -100,17 +108,26 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
         title="No messages"
         hint="This session's transcript holds no renderable turns."
       />
-      <MessageList
-        v-else
-        :messages="messages"
-        :threads="threads.data.value ?? []"
-        :has-next-page="!!transcript.hasNextPage.value"
-        :is-fetching-next-page="transcript.isFetchingNextPage.value"
-        :hide-sidechains="!showSidechains"
-        :project-name="projectName"
-        :session-id="sessionId"
-        @load-more="transcript.fetchNextPage()"
-      />
+      <div v-else class="flex min-h-0 flex-1">
+        <MessageList
+          class="min-w-0 flex-1"
+          :messages="messages"
+          :threads="threads.data.value ?? []"
+          :has-next-page="!!transcript.hasNextPage.value"
+          :is-fetching-next-page="transcript.isFetchingNextPage.value"
+          :hide-sidechains="!showSidechains"
+          :project-name="projectName"
+          :session-id="sessionId"
+          @load-more="transcript.fetchNextPage()"
+        />
+        <aside
+          v-if="showCheckpoints"
+          class="w-[28rem] shrink-0 overflow-y-auto border-l border-neutral-200 p-4 dark:border-neutral-800"
+        >
+          <h3 class="mb-3 text-sm font-semibold">Checkpoints</h3>
+          <CheckpointsPanel :project-name="projectName" :session-id="sessionId" />
+        </aside>
+      </div>
       <TeamPanel :session-id="sessionId" class="mx-6 mb-4 shrink-0" />
     </template>
   </section>

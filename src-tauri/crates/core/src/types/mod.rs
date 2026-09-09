@@ -3,6 +3,7 @@ mod claude_directory;
 mod cli_history;
 mod commands;
 mod error;
+mod file_history;
 mod hooks;
 mod ids;
 mod jobs;
@@ -24,6 +25,9 @@ pub use claude_directory::{ClaudeDirEntry, ClaudeDirKind, ClaudeDirScope, Claude
 pub use cli_history::{CliHistoryDetail, CliHistoryEntry};
 pub use commands::{Command, CommandFrontmatter, CommandInput};
 pub use error::{AppError, ErrorCode};
+pub use file_history::{
+    Checkpoint, CheckpointFile, DiffHunk, DiffLine, DiffResult, DiffSide, DiffTag,
+};
 pub use hooks::{HookEntry, HookGroup};
 pub use ids::{ImproveRequest, RequestId, SessionId};
 pub use jobs::{Job, JobDetail, JobLink, TimelineEvent};

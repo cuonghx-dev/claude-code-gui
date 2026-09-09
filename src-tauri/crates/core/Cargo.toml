@@ -21,6 +21,7 @@ anyhow        = { workspace = true }
 tracing       = { workspace = true }
 walkdir       = { workspace = true }
 glob          = { workspace = true }
+similar       = { workspace = true }
 sha2          = { workspace = true }
 uuid          = { workspace = true }
 chrono        = { workspace = true }

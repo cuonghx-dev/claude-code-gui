@@ -4,6 +4,7 @@ pub mod claude_dir;
 pub mod claude_directory;
 pub mod cli_history;
 pub mod commands;
+pub mod file_history;
 pub mod files;
 pub mod frontmatter;
 pub mod git;

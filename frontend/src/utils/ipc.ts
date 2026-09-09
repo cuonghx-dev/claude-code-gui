@@ -5,6 +5,7 @@ import type {
   AgentInput,
   AppConfig,
   AvailablePlugin,
+  Checkpoint,
   ClaudeCliInfo,
   CliHistoryDetail,
   CliHistoryEntry,
@@ -47,6 +48,8 @@ import type {
   SkillInput,
   ActivityDay,
   IndexStats,
+  DiffResult,
+  DiffSide,
   Team,
   Thread,
   UsageQuery,
@@ -125,6 +128,20 @@ export const workflowsDelete = (slug: string) => invoke<void>('workflows_delete'
 // Terminals (cli-history)
 export const cliHistoryList = () => invoke<CliHistoryEntry[]>('cli_history_list')
 export const cliHistoryGet = (id: string) => invoke<CliHistoryDetail>('cli_history_get', { id })
+
+// Checkpoints (file history)
+export const fileHistoryCheckpoints = (projectName: string, sessionId: string) =>
+  invoke<Checkpoint[]>('file_history_checkpoints', { projectName, sessionId })
+export const fileHistoryDiff = (sessionId: string, left: DiffSide, right: DiffSide) =>
+  invoke<DiffResult>('file_history_diff', { sessionId, left, right })
+export const fileHistoryBlob = (sessionId: string, backupFileName: string) =>
+  invoke<string>('file_history_blob', { sessionId, backupFileName })
+export const fileHistoryRestore = (
+  projectName: string,
+  sessionId: string,
+  backupFileName: string,
+  dest: string,
+) => invoke<void>('file_history_restore', { projectName, sessionId, backupFileName, dest })
 
 // Usage
 export const usageRefresh = () => invoke<IndexStats>('usage_refresh')

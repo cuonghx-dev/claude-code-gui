@@ -3,6 +3,7 @@ pub mod claude_directory;
 pub mod cli_history;
 pub mod cmds;
 pub mod debug;
+pub mod file_history;
 pub mod files;
 pub mod hooks;
 pub mod jobs;

@@ -36,6 +36,12 @@ export const qk = {
     list: () => ['terminals', 'list'] as const,
     get: (id: string) => ['terminals', 'get', id] as const,
   },
+  checkpoints: {
+    all: ['checkpoints'] as const,
+    list: (sessionId: string) => ['checkpoints', 'list', sessionId] as const,
+    diff: (sessionId: string, left: string, right: string) =>
+      ['checkpoints', 'diff', sessionId, left, right] as const,
+  },
   usage: {
     all: ['usage'] as const,
     rollup: (query: string) => ['usage', 'rollup', query] as const,
