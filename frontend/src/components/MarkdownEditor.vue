@@ -5,11 +5,12 @@ import { EditorView, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { yaml } from '@codemirror/lang-yaml'
+import { javascript } from '@codemirror/lang-javascript'
 
 const props = withDefaults(
   defineProps<{
     modelValue: string
-    language?: 'markdown' | 'yaml'
+    language?: 'markdown' | 'yaml' | 'javascript'
     minHeight?: string
     placeholder?: string
     fill?: boolean
@@ -23,7 +24,9 @@ let view: EditorView | undefined
 const langCompartment = new Compartment()
 
 function makeLang() {
-  return props.language === 'yaml' ? yaml() : markdown()
+  if (props.language === 'yaml') return yaml()
+  if (props.language === 'javascript') return javascript()
+  return markdown()
 }
 
 onMounted(() => {

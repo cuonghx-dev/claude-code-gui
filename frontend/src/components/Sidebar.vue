@@ -6,6 +6,7 @@ import {
   Slash,
   Sparkles,
   Map,
+  Workflow,
   Server,
   Palette,
   Package,
@@ -18,6 +19,7 @@ import { useAgentsList } from '@/composables/useAgents'
 import { useCommandsList } from '@/composables/useCommands'
 import { useSkillsList } from '@/composables/useSkills'
 import { usePlansList } from '@/composables/usePlans'
+import { useWorkflowsList } from '@/composables/useWorkflows'
 import { useMcpList } from '@/composables/useMcp'
 import { useOutputStylesList } from '@/composables/useOutputStyles'
 import { useHooksList } from '@/composables/useHooks'
@@ -28,6 +30,7 @@ const agents = useAgentsList()
 const commands = useCommandsList()
 const skills = useSkillsList()
 const plans = usePlansList()
+const workflows = useWorkflowsList()
 const mcp = useMcpList('global')
 const outputStyles = useOutputStylesList()
 const hooks = useHooksList()
@@ -46,6 +49,7 @@ const items = computed<NavItem[]>(() => [
   { to: '/commands',      label: 'Commands',      icon: Slash,    count: () => commands.data.value?.length },
   { to: '/skills',        label: 'Skills',        icon: Sparkles, count: () => skills.data.value?.length },
   { to: '/plans',         label: 'Plans',         icon: Map,      count: () => plans.data.value?.length },
+  { to: '/workflows',     label: 'Workflows',     icon: Workflow, count: () => workflows.data.value?.length },
   { to: '/mcp',           label: 'MCP',           icon: Server,   count: () => mcp.data.value?.length },
   { to: '/output-styles', label: 'Output styles', icon: Palette,  count: () => outputStyles.data.value?.length },
   { to: '/hooks',         label: 'Hooks',         icon: Webhook,  count: () => hooks.data.value?.length },

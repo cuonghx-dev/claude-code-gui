@@ -11,6 +11,7 @@
     "build:ipc-barrel": "bun scripts/build-ipc-barrel.ts"
   },
   "dependencies": {
+    "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/lang-markdown": "^6.3.0",
     "@codemirror/lang-yaml": "^6.1.1",
     "@fontsource/inter": "^5.2.8",

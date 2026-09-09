@@ -40,6 +40,7 @@ const RULES: Array<{ test: (path: string) => boolean; invalidate: () => void }> 
     },
   },
   { test: (p) => p.includes('/.claude/plans/'),        invalidate: () => queryClient.invalidateQueries({ queryKey: qk.plans.all }) },
+  { test: (p) => p.includes('/.claude/workflows/'),    invalidate: () => queryClient.invalidateQueries({ queryKey: qk.workflows.all }) },
   { test: (p) => p.includes('/.claude/output-styles/'),invalidate: () => queryClient.invalidateQueries({ queryKey: qk.outputStyles.all }) },
   { test: (p) => p.includes('/.claude/plugins/'),      invalidate: () => queryClient.invalidateQueries({ queryKey: qk.plugins.all }) },
   { test: (p) => p.endsWith('/.mcp.json'),             invalidate: () => queryClient.invalidateQueries({ queryKey: qk.mcp.all }) },

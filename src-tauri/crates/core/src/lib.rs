@@ -21,6 +21,7 @@ pub mod settings;
 pub mod setup;
 pub mod skills;
 pub mod types;
+pub mod workflows;
 
 pub use types::{AppError, ErrorCode, RequestId, SessionId};
 
