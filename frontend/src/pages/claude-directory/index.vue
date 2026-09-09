@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { ChevronRight, ExternalLink, Folder, FileText, X } from 'lucide-vue-next'
+import { ExternalLink, X } from 'lucide-vue-next'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
+import ClaudeDirNode from '@/components/ClaudeDirNode.vue'
 import { useClaudeDirectoryTree } from '@/composables/useClaudeDirectory'
 import { useProjectsList } from '@/composables/useProjects'
 import { filesRead } from '@/utils/ipc'
@@ -13,24 +15,13 @@ const projects = useProjectsList()
 const projectPath = ref<string>('')
 const { isPending, isError, error, data } = useClaudeDirectoryTree(projectPath)
 
-const expanded = ref<Set<string>>(new Set())
-const toggle = (id: string) => {
-  const next = new Set(expanded.value)
-  if (!next.delete(id)) next.add(id)
-  expanded.value = next
-}
-
 const selected = ref<ClaudeDirEntry | null>(null)
 const preview = ref<string>('')
 const previewError = ref<string>('')
 const previewLoading = ref(false)
 
 async function select(entry: ClaudeDirEntry) {
-  if (entry.kind === 'dir') {
-    toggle(entry.id)
-    return
-  }
-  if (!entry.exists) return
+  if (entry.kind === 'dir' || !entry.exists) return
   selected.value = entry
   preview.value = ''
   previewError.value = ''
@@ -58,20 +49,18 @@ const presentCount = (t: ClaudeDirTree) => t.entries.filter((e: ClaudeDirEntry) 
 const relPath = (t: ClaudeDirTree, e: ClaudeDirEntry) =>
   e.path.startsWith(`${t.root}/`) ? e.path.slice(t.root.length + 1) : e.path
 
-function formatSize(bytes: bigint | null): string {
-  if (bytes === null) return ''
-  const n = Number(bytes)
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`
-}
-
-const badgeClass = (badge: string | null) =>
-  badge === 'gitignored'
-    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
-    : badge === 'local'
-      ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200'
-      : 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200'
+// Files this app has a dedicated editor for get a jump link rather than only a
+// read-only preview.
+const editorRoute = computed(() => {
+  const f = selected.value
+  if (!f) return null
+  if (f.label === 'settings.json' || f.label === 'settings.local.json') return '/settings/raw'
+  if (f.label === 'keybindings.json') return '/settings/keybindings'
+  if (f.label === 'CLAUDE.md' || f.label === 'CLAUDE.local.md') return '/memory'
+  if (f.path.includes('/.claude/rules/') || f.path.includes('/rules/')) return '/memory'
+  if (f.label === '.mcp.json') return '/mcp'
+  return null
+})
 
 const subtitle = computed(() =>
   projectPath.value
@@ -118,70 +107,14 @@ const subtitle = computed(() =>
             </div>
 
             <ul class="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
-              <li v-for="entry in tree.entries" :key="entry.id">
-                <button
-                  type="button"
-                  class="flex w-full items-start gap-2 px-4 py-3 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                  :class="entry.exists ? '' : 'opacity-50'"
-                  :aria-expanded="entry.kind === 'dir' ? expanded.has(entry.id) : undefined"
-                  @click="select(entry)"
-                >
-                  <component
-                    :is="entry.kind === 'dir' ? Folder : FileText"
-                    class="mt-0.5 h-4 w-4 shrink-0 text-neutral-500 dark:text-neutral-400"
-                  />
-                  <span class="min-w-0 flex-1">
-                    <span class="flex flex-wrap items-baseline gap-2">
-                      <span class="font-mono text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                        {{ relPath(tree, entry) }}
-                      </span>
-                      <span
-                        v-if="entry.badge"
-                        class="rounded px-1.5 py-0.5 text-[10px] font-medium"
-                        :class="badgeClass(entry.badge)"
-                      >{{ entry.badge }}</span>
-                      <span v-if="!entry.exists" class="text-[11px] text-neutral-500 dark:text-neutral-400">not present</span>
-                      <span v-else-if="entry.kind === 'dir'" class="text-[11px] text-neutral-500 dark:text-neutral-400">
-                        {{ entry.childCount }} item{{ entry.childCount === 1 ? '' : 's' }}
-                      </span>
-                      <span v-else class="text-[11px] text-neutral-500 dark:text-neutral-400">
-                        {{ formatSize(entry.sizeBytes) }}
-                      </span>
-                    </span>
-                    <span class="mt-0.5 block text-xs text-neutral-500 dark:text-neutral-400">{{ entry.oneLiner }}</span>
-                  </span>
-                  <ChevronRight
-                    v-if="entry.kind === 'dir' && entry.exists"
-                    class="mt-0.5 h-4 w-4 shrink-0 text-neutral-400 transition-transform"
-                    :class="expanded.has(entry.id) ? 'rotate-90' : ''"
-                  />
-                </button>
-
-                <ul
-                  v-if="entry.kind === 'dir' && expanded.has(entry.id) && entry.children.length"
-                  class="border-t border-neutral-100 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950"
-                >
-                  <li v-for="child in entry.children" :key="child.id">
-                    <button
-                      type="button"
-                      class="flex w-full items-center gap-2 py-1.5 pl-12 pr-4 text-left disabled:cursor-default hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                      :disabled="child.kind === 'dir'"
-                      @click="select(child)"
-                    >
-                      <component
-                        :is="child.kind === 'dir' ? Folder : FileText"
-                        class="h-3.5 w-3.5 shrink-0 text-neutral-400"
-                      />
-                      <span class="min-w-0 flex-1 truncate font-mono text-xs text-neutral-700 dark:text-neutral-300">
-                        {{ child.label }}
-                      </span>
-                      <span class="shrink-0 text-[11px] text-neutral-500 dark:text-neutral-400">
-                        {{ child.kind === 'dir' ? `${child.childCount} items` : formatSize(child.sizeBytes) }}
-                      </span>
-                    </button>
-                  </li>
-                </ul>
-              </li>
+              <ClaudeDirNode
+                v-for="entry in tree.entries"
+                :key="entry.id"
+                :entry="entry"
+                :label="relPath(tree, entry)"
+                :project-path="projectPath || undefined"
+                @select="select"
+              />
             </ul>
           </div>
         </div>
@@ -195,6 +128,13 @@ const subtitle = computed(() =>
               <p class="truncate font-mono text-sm font-medium text-neutral-900 dark:text-neutral-100">{{ selected.label }}</p>
               <p class="truncate font-mono text-[11px] text-neutral-500 dark:text-neutral-400">{{ selected.path }}</p>
             </div>
+            <RouterLink
+              v-if="editorRoute"
+              :to="editorRoute"
+              class="ccg-btn-ghost whitespace-nowrap"
+            >
+              Edit
+            </RouterLink>
             <button
               v-if="selected.docsUrl"
               class="ccg-btn-ghost inline-flex items-center gap-1"

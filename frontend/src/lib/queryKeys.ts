@@ -87,6 +87,8 @@ export const qk = {
   claudeDirectory: {
     all: ['claudeDirectory'] as const,
     tree: (projectPath?: string) => ['claudeDirectory', 'tree', projectPath ?? ''] as const,
+    children: (path: string, projectPath?: string) =>
+      ['claudeDirectory', 'children', path, projectPath ?? ''] as const,
   },
   projects: {
     all: ['projects'] as const,

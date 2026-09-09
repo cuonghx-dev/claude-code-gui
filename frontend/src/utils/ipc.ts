@@ -8,6 +8,7 @@ import type {
   Checkpoint,
   ChordValidation,
   ClaudeCliInfo,
+  ClaudeDirEntry,
   EffectiveEntry,
   EffectivePermissions,
   CliHistoryDetail,
@@ -408,6 +409,8 @@ export const setupFinalize = (payload: SetupPayload) =>
 // Claude directory explorer
 export const claudeDirectoryTree = (projectPath?: string) =>
   invoke<ClaudeDirTree[]>('claude_directory_tree', { projectPath })
+export const claudeDirectoryChildren = (path: string, projectPath?: string) =>
+  invoke<ClaudeDirEntry[]>('claude_directory_children', { path, projectPath })
 
 // Filesystem utilities
 export const directoriesList = (parent: string) =>

@@ -45,7 +45,15 @@ pub struct ClaudeDirEntry {
     /// `committed`, `gitignored` or `local` — how the file is usually tracked.
     pub badge: Option<String>,
     pub docs_url: Option<String>,
-    /// Immediate children, listed from disk for directories.
+    /// Whether this directory has anything in it, so the UI knows to offer an
+    /// expander without listing the contents first.
+    pub has_children: bool,
+    /// Set on the last child when a listing hit the cap.
+    pub truncated: bool,
+    /// Symlinks are shown but never descended.
+    pub is_symlink: bool,
+    /// Always empty: children are fetched on demand through
+    /// `claude_directory_children`.
     pub children: Vec<ClaudeDirEntry>,
 }
 

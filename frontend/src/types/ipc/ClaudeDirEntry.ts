@@ -29,6 +29,20 @@ oneLiner: string,
  */
 badge: string | null, docsUrl: string | null, 
 /**
- * Immediate children, listed from disk for directories.
+ * Whether this directory has anything in it, so the UI knows to offer an
+ * expander without listing the contents first.
+ */
+hasChildren: boolean, 
+/**
+ * Set on the last child when a listing hit the cap.
+ */
+truncated: boolean, 
+/**
+ * Symlinks are shown but never descended.
+ */
+isSymlink: boolean, 
+/**
+ * Always empty: children are fetched on demand through
+ * `claude_directory_children`.
  */
 children: Array<ClaudeDirEntry>, };
