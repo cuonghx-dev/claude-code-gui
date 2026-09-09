@@ -24,6 +24,9 @@ pub enum ErrorCode {
     Network,
     ResourceLimit,
     PermissionDenied,
+    /// Optimistic-concurrency failure: the file changed on disk since it was
+    /// read. The frontend maps this to a "reload before saving" prompt.
+    Conflict,
     Internal,
 }
 

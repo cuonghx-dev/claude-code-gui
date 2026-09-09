@@ -21,6 +21,8 @@ pub mod sessions;
 pub mod settings;
 pub mod setup;
 pub mod skills;
+pub mod teams;
+pub mod transcript_scan;
 pub mod types;
 pub mod workflows;
 

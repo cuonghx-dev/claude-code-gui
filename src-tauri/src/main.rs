@@ -99,12 +99,24 @@ fn run() -> anyhow::Result<()> {
                 });
             }
 
+            // Derived indexes live in the OS cache dir, never in ~/.claude.
+            let cache_dir = app
+                .path()
+                .app_cache_dir()
+                .map(|d| d.join("index"))
+                .unwrap_or_else(|_| std::env::temp_dir().join("claude-code-gui-index"));
+            if let Err(e) = std::fs::create_dir_all(&cache_dir) {
+                tracing::warn!(error = %e, dir = %cache_dir.display(), "cache dir unavailable");
+            }
+
             app.manage(AppState {
                 claude_dir: Arc::new(RwLock::new(claude_dir)),
                 claude_cli: Arc::new(RwLock::new(claude_cli)),
                 config: Arc::new(RwLock::new(config)),
                 watcher: Arc::new(watcher_handle),
                 pty: pty_for_shutdown,
+                cache_dir: Arc::new(cache_dir),
+                transcript_index: Arc::new(app_core::transcript_scan::IndexCache::new()),
             });
 
             tracing::info!("claude-code-gui ready");
@@ -145,6 +157,8 @@ fn run() -> anyhow::Result<()> {
             commands::plans::plans_create,
             commands::plans::plans_update,
             commands::plans::plans_delete,
+            commands::teams::teams_list,
+            commands::teams::teams_get,
             commands::workflows::workflows_list,
             commands::workflows::workflows_get,
             commands::workflows::workflows_create,

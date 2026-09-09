@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use app_core::claude_cli::ClaudeCliInfo;
+use app_core::transcript_scan::IndexCache;
 use app_core::types::AppConfig;
 use app_core::AppError;
 
@@ -17,6 +18,12 @@ pub struct AppState {
     pub config: Arc<RwLock<AppConfig>>,
     pub watcher: Arc<watcher::WatcherHandle>,
     pub pty: Arc<pty::PtyManager>,
+    /// App-owned scratch space for derived indexes. Deliberately *not* under
+    /// `~/.claude`: the watcher subscribes there recursively, so a cache write
+    /// would emit `fs:change` -> invalidate -> refetch -> rewrite, forever.
+    pub cache_dir: Arc<PathBuf>,
+    /// Transcript line indexes, reused across invocations.
+    pub transcript_index: Arc<IndexCache>,
 }
 
 const CONFIG_FILE: &str = ".app-config.json";
