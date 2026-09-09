@@ -14,3 +14,4 @@ pub mod sessions;
 pub mod settings;
 pub mod skills;
 pub mod terminal;
+pub mod workflows;

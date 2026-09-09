@@ -42,6 +42,8 @@ import type {
   SkillInput,
   TerminalOpts,
   TerminalSession,
+  Workflow,
+  WorkflowInput,
 } from '@/types/ipc'
 
 export { invoke } from '@tauri-apps/api/core'
@@ -99,6 +101,15 @@ export const plansCreate = (input: PlanInput) => invoke<Plan>('plans_create', { 
 export const plansUpdate = (slug: string, input: PlanInput) =>
   invoke<Plan>('plans_update', { slug, input })
 export const plansDelete = (slug: string) => invoke<void>('plans_delete', { slug })
+
+// Workflows
+export const workflowsList = () => invoke<Workflow[]>('workflows_list')
+export const workflowsGet = (slug: string) => invoke<Workflow>('workflows_get', { slug })
+export const workflowsCreate = (input: WorkflowInput) =>
+  invoke<Workflow>('workflows_create', { input })
+export const workflowsUpdate = (slug: string, input: WorkflowInput) =>
+  invoke<Workflow>('workflows_update', { slug, input })
+export const workflowsDelete = (slug: string) => invoke<void>('workflows_delete', { slug })
 
 // Hooks
 export const hooksList = (workingDir?: string) =>
