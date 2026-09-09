@@ -157,6 +157,8 @@ fn run() -> anyhow::Result<()> {
             commands::plans::plans_create,
             commands::plans::plans_update,
             commands::plans::plans_delete,
+            commands::cli_history::cli_history_list,
+            commands::cli_history::cli_history_get,
             commands::jobs::jobs_list,
             commands::jobs::jobs_get,
             commands::teams::teams_list,

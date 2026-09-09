@@ -6,6 +6,8 @@ import type {
   AppConfig,
   AvailablePlugin,
   ClaudeCliInfo,
+  CliHistoryDetail,
+  CliHistoryEntry,
   ClaudeDirTree,
   Command,
   CommandInput,
@@ -114,6 +116,10 @@ export const workflowsCreate = (input: WorkflowInput) =>
 export const workflowsUpdate = (slug: string, input: WorkflowInput) =>
   invoke<Workflow>('workflows_update', { slug, input })
 export const workflowsDelete = (slug: string) => invoke<void>('workflows_delete', { slug })
+
+// Terminals (cli-history)
+export const cliHistoryList = () => invoke<CliHistoryEntry[]>('cli_history_list')
+export const cliHistoryGet = (id: string) => invoke<CliHistoryDetail>('cli_history_get', { id })
 
 // Jobs
 export const jobsList = () => invoke<Job[]>('jobs_list')

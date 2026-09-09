@@ -12,6 +12,7 @@ import {
   Package,
   History,
   Activity,
+  SquareTerminal,
   Webhook,
   FolderTree,
   Settings,
@@ -20,6 +21,7 @@ import logoUrl from '@/assets/logo.png'
 import { useAgentsList } from '@/composables/useAgents'
 import { useCommandsList } from '@/composables/useCommands'
 import { useSkillsList } from '@/composables/useSkills'
+import { useTerminalsList } from '@/composables/useCliHistory'
 import { useJobsList } from '@/composables/useJobs'
 import { usePlansList } from '@/composables/usePlans'
 import { useWorkflowsList } from '@/composables/useWorkflows'
@@ -34,6 +36,7 @@ const commands = useCommandsList()
 const skills = useSkillsList()
 const plans = usePlansList()
 const jobs = useJobsList()
+const terminals = useTerminalsList()
 const workflows = useWorkflowsList()
 const mcp = useMcpList('global')
 const outputStyles = useOutputStylesList()
@@ -60,6 +63,7 @@ const items = computed<NavItem[]>(() => [
   { to: '/plugins',       label: 'Plugins',       icon: Package,  count: () => plugins.data.value?.length },
   { to: '/sessions',      label: 'Sessions',      icon: History,  count: () => projects.data.value?.length },
   { to: '/jobs',          label: 'Jobs',          icon: Activity, count: () => jobs.data.value?.length },
+  { to: '/terminals',     label: 'Terminals',     icon: SquareTerminal, count: () => terminals.data.value?.length },
   { to: '/claude-directory', label: '.claude',    icon: FolderTree, count: () => undefined },
 ])
 

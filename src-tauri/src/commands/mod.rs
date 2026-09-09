@@ -1,5 +1,6 @@
 pub mod agents;
 pub mod claude_directory;
+pub mod cli_history;
 pub mod cmds;
 pub mod debug;
 pub mod files;
