@@ -48,15 +48,18 @@ fn run() -> anyhow::Result<()> {
             // Must run before any binary lookup.
             app_core::claude_cli::inherit_login_path();
 
-            // Resolve claude_dir (env > default ~/.claude) and ensure it exists.
-            let claude_dir = app_core::claude_dir::resolve(None)?;
+            // Persisted AppConfig (theme, override, …) lives in the OS
+            // app-config dir so the override can pick claude_dir. Best-effort.
+            let config_path = state::config_path(&app.path().app_config_dir()?);
+            let default_claude_dir = app_core::claude_dir::resolve(None).ok();
+            let config = state::load_config(&config_path, default_claude_dir.as_deref());
+
+            // Resolve claude_dir (env > override > ~/.claude) and ensure it exists.
+            let claude_dir = state::claude_dir_for(&config)?;
             app_core::claude_dir::ensure(&claude_dir)?;
 
             // Best-effort probe; None just surfaces a setup banner in the UI.
             let claude_cli = app_core::claude_cli::probe();
-
-            // Persisted AppConfig (theme, override, …). Best-effort load.
-            let config = state::load_config(&claude_dir);
 
             // Real watcher: emit callback bridges into Tauri events.
             let app_for_emit = app.handle().clone();
@@ -68,9 +71,13 @@ fn run() -> anyhow::Result<()> {
             let watcher_handle = watcher::start_global(emit)?;
             // Subscribe to ~/.claude/** unconditionally; project subs are
             // added on demand via `watch_project_dir`.
-            if let Err(e) = watcher_handle.watch_claude_dir(&claude_dir) {
-                tracing::warn!(error = %e, "watcher could not subscribe to claude_dir");
-            }
+            let claude_dir_watch = match watcher_handle.watch_claude_dir(&claude_dir) {
+                Ok(id) => Some(id),
+                Err(e) => {
+                    tracing::warn!(error = %e, "watcher could not subscribe to claude_dir");
+                    None
+                }
+            };
 
             // PTY manager: shares the emit-callback pattern. cli-history
             // dir lives under claude_dir.
@@ -117,6 +124,8 @@ fn run() -> anyhow::Result<()> {
                 pty: pty_for_shutdown,
                 cache_dir: Arc::new(cache_dir),
                 transcript_index: Arc::new(app_core::transcript_scan::IndexCache::new()),
+                config_path: Arc::new(config_path),
+                claude_dir_watch: Arc::new(std::sync::Mutex::new(claude_dir_watch)),
             });
 
             tracing::info!("claude-code-gui ready");

@@ -44,3 +44,6 @@ tauri-plugin-opener            = { workspace = true }
 tauri-plugin-updater           = { workspace = true }
 tauri-plugin-single-instance   = { workspace = true }
 tauri-plugin-deep-link         = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

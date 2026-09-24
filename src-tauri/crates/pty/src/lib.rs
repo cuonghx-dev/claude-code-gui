@@ -112,7 +112,7 @@ impl PtyManager {
             })
             .map_err(|e| AppError::new(ErrorCode::Internal, format!("openpty: {e}")))?;
 
-        let mut child = pair
+        let child = pair
             .slave
             .spawn_command(cmd)
             .map_err(|e| AppError::new(ErrorCode::Internal, format!("spawn: {e}")))?;
