@@ -314,6 +314,10 @@ export const sessionsThreadMessages = (
     afterIndex,
     limit,
   })
+export const sessionsRename = (projectName: string, sessionId: string, newName: string) =>
+  invoke<void>('sessions_rename', { projectName, sessionId, newName })
+export const sessionsDelete = (projectName: string, sessionId: string) =>
+  invoke<void>('sessions_delete', { projectName, sessionId })
 export const sessionsListForProject = (name: string) =>
   invoke<SessionSummary[]>('sessions_list_for_project', { name })
 export const sessionsMessages = (
@@ -328,6 +332,8 @@ export const sessionsMessages = (
     afterIndex,
     limit,
   })
+
+export const revealInFinder = (path: string) => invoke<void>('reveal_in_finder', { path })
 
 // Settings / config / setup
 export const settingsGet = () => invoke<Settings>('settings_get')

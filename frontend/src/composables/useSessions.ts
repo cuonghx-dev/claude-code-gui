@@ -1,9 +1,11 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/vue-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, type MaybeRefOrGetter, toValue } from 'vue'
 import { qk } from '@/lib/queryKeys'
 import {
+  sessionsDelete,
   sessionsListForProject,
   sessionsMessages,
+  sessionsRename,
   sessionsThreadMessages,
   sessionsThreads,
 } from '@/utils/ipc'
@@ -59,3 +61,25 @@ export const useThreadMessages = (
     enabled: computed(() => toValue(enabled) && !!toValue(threadId)),
     staleTime: Infinity,
   })
+
+export const useSessionRename = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { projectName: string; sessionId: string; newName: string }) =>
+      sessionsRename(v.projectName, v.sessionId, v.newName),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: qk.sessions.listFor(v.projectName) }),
+  })
+}
+
+export const useSessionDelete = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { projectName: string; sessionId: string }) =>
+      sessionsDelete(v.projectName, v.sessionId),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: qk.sessions.listFor(v.projectName) })
+      qc.removeQueries({ queryKey: qk.sessions.messages(v.sessionId) })
+      qc.invalidateQueries({ queryKey: qk.projects.all })
+    },
+  })
+}

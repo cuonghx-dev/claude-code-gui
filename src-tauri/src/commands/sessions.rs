@@ -63,3 +63,24 @@ pub async fn sessions_thread_messages(
         limit,
     )
 }
+
+#[tauri::command]
+pub async fn sessions_rename(
+    state: State<'_, AppState>,
+    project_name: String,
+    session_id: String,
+    new_name: String,
+) -> Result<(), AppError> {
+    let claude_dir = state.claude_dir.read().await.clone();
+    app_core::sessions::rename(&claude_dir, &project_name, &session_id, &new_name)
+}
+
+#[tauri::command]
+pub async fn sessions_delete(
+    state: State<'_, AppState>,
+    project_name: String,
+    session_id: String,
+) -> Result<(), AppError> {
+    let claude_dir = state.claude_dir.read().await.clone();
+    app_core::sessions::delete(&claude_dir, &project_name, &session_id)
+}

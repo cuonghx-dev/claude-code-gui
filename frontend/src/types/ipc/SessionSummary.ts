@@ -4,4 +4,9 @@ export type SessionSummary = { sessionId: string, projectName: string, filePath:
 /**
  * First user message content, truncated. For list display.
  */
-preview: string | null, };
+preview: string | null, 
+/**
+ * Display name: the latest `custom-title` (user rename), else the CLI's
+ * latest `ai-title`.
+ */
+title: string | null, };

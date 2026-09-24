@@ -45,3 +45,14 @@ pub async fn unwatch_path(state: State<'_, AppState>, id: String) -> Result<(), 
         .map_err(|e| AppError::invalid(format!("invalid subscription id: {e}")))?;
     state.watcher.unwatch(uuid)
 }
+
+/// Show `path` selected in Finder / Explorer / the Linux file manager.
+#[tauri::command]
+pub async fn reveal_in_finder(path: String) -> Result<(), AppError> {
+    let p = PathBuf::from(app_core::files::expand_tilde(&path));
+    if !p.exists() {
+        return Err(AppError::not_found(format!("'{}' does not exist", p.display())));
+    }
+    tauri_plugin_opener::reveal_item_in_dir(&p)
+        .map_err(|e| AppError::internal(format!("reveal failed: {e}")))
+}

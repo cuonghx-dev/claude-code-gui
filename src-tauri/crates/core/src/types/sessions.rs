@@ -14,6 +14,10 @@ pub struct SessionSummary {
     pub size_bytes: u64,
     /// First user message content, truncated. For list display.
     pub preview: Option<String>,
+    /// Display name: the latest `custom-title` (user rename), else the CLI's
+    /// latest `ai-title`.
+    #[serde(default)]
+    pub title: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]

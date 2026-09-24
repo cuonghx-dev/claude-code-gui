@@ -436,6 +436,8 @@ fn session_path(
     project_name: &str,
     session_id: &str,
 ) -> Result<PathBuf, AppError> {
+    single_component(project_name, "project name")?;
+    single_component(session_id, "session id")?;
     let path = claude_dir
         .join(PROJECTS_SUBDIR)
         .join(project_name)
@@ -446,6 +448,67 @@ fn session_path(
         )));
     }
     Ok(path)
+}
+
+/// Reject anything but one plain path segment, so an IPC caller cannot walk
+/// out of `projects/` with `..` or a separator.
+fn single_component(value: &str, what: &str) -> Result<(), AppError> {
+    let ok = !value.is_empty()
+        && value != "."
+        && value != ".."
+        && !value.contains(['/', '\\', '\0']);
+    if ok {
+        Ok(())
+    } else {
+        Err(AppError::invalid(format!("invalid {what}: '{value}'")))
+    }
+}
+
+/// Set the session's display name the way the CLI's `/rename` does: append a
+/// `custom-title` record. The latest one wins, so renaming never rewrites the
+/// transcript.
+pub fn rename(
+    claude_dir: &Path,
+    project_name: &str,
+    session_id: &str,
+    new_name: &str,
+) -> Result<(), AppError> {
+    use std::io::Write;
+
+    let name = new_name.trim();
+    if name.is_empty() {
+        return Err(AppError::invalid("session name must not be empty"));
+    }
+    let path = session_path(claude_dir, project_name, session_id)?;
+    let record = serde_json::json!({
+        "type": "custom-title",
+        "customTitle": name,
+        "sessionId": session_id,
+    });
+
+    let mut file = std::fs::OpenOptions::new().append(true).open(&path)?;
+    // A transcript may end without a newline mid-write; never glue records.
+    let needs_newline = std::fs::read(&path)
+        .map(|b| b.last().is_some_and(|c| *c != b'\n'))
+        .unwrap_or(false);
+    if needs_newline {
+        file.write_all(b"\n")?;
+    }
+    writeln!(file, "{record}")?;
+    file.sync_all()?;
+    Ok(())
+}
+
+/// Delete a session transcript and its sibling `<id>/` directory
+/// (subagent transcripts, spilled tool results).
+pub fn delete(claude_dir: &Path, project_name: &str, session_id: &str) -> Result<(), AppError> {
+    let path = session_path(claude_dir, project_name, session_id)?;
+    let sidecar = path.with_extension("");
+    std::fs::remove_file(&path)?;
+    if sidecar.is_dir() && !sidecar.is_symlink() {
+        std::fs::remove_dir_all(&sidecar)?;
+    }
+    Ok(())
 }
 
 fn summarize(path: &Path, project_name: &str) -> Result<SessionSummary, AppError> {
@@ -459,12 +522,30 @@ fn summarize(path: &Path, project_name: &str) -> Result<SessionSummary, AppError
     let mut last_message_at: Option<String> = None;
     let mut first_user_text: Option<String> = None;
     let mut summary_text: Option<String> = None;
+    let mut custom_title: Option<String> = None;
+    let mut ai_title: Option<String> = None;
 
     transcript_scan::for_each_line(path, |_, line| {
         let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
             return true;
         };
         let kind = v.get("type").and_then(|t| t.as_str()).unwrap_or("");
+
+        // Titles: the latest record of each kind wins; a user rename beats
+        // the CLI's generated title.
+        let title_field = match kind {
+            "custom-title" => Some(("customTitle", &mut custom_title)),
+            "ai-title" => Some(("aiTitle", &mut ai_title)),
+            _ => None,
+        };
+        if let Some((field, slot)) = title_field {
+            if let Some(t) = v.get(field).and_then(|t| t.as_str()) {
+                if !t.trim().is_empty() {
+                    *slot = Some(truncate(t.trim(), 120));
+                }
+            }
+            return true;
+        }
 
         if kind == "summary" {
             if summary_text.is_none() {
@@ -503,6 +584,7 @@ fn summarize(path: &Path, project_name: &str) -> Result<SessionSummary, AppError
         message_count: count,
         size_bytes: meta.len(),
         preview,
+        title: custom_title.or(ai_title),
     })
 }
 
@@ -806,6 +888,54 @@ mod tests {
         assert_eq!(page.items.len(), 2);
         assert_eq!(page.items[0].content.as_deref(), Some("hi 2"));
         assert_eq!(page.next_after, Some(4));
+    }
+
+    #[test]
+    fn rename_appends_custom_title_that_beats_ai_title() {
+        let td = tempfile::tempdir().unwrap();
+        // No trailing newline: rename must not glue its record onto this line.
+        let body = concat!(
+            r#"{"type":"user","timestamp":"2026-01-01T00:00:00Z","message":{"role":"user","content":"hi"}}"#,
+            "\n",
+            r#"{"type":"ai-title","aiTitle":"Generated","sessionId":"s1"}"#,
+        );
+        project(td.path(), "-p", "s1", body);
+        assert_eq!(list_for_project(td.path(), "-p").unwrap()[0].title.as_deref(), Some("Generated"));
+
+        rename(td.path(), "-p", "s1", "  Mine  ").unwrap();
+        let s = &list_for_project(td.path(), "-p").unwrap()[0];
+        assert_eq!(s.title.as_deref(), Some("Mine"));
+        assert_eq!(s.message_count, 1);
+        let raw = std::fs::read_to_string(td.path().join("projects/-p/s1.jsonl")).unwrap();
+        assert!(raw.lines().all(|l| serde_json::from_str::<serde_json::Value>(l).is_ok()));
+
+        assert!(rename(td.path(), "-p", "s1", "   ").is_err());
+    }
+
+    #[test]
+    fn delete_removes_transcript_and_sidecar_dir() {
+        let td = tempfile::tempdir().unwrap();
+        project(td.path(), "-p", "s1", "{}\n");
+        project(td.path(), "-p", "s2", "{}\n");
+        let sidecar = td.path().join("projects/-p/s1/subagents");
+        std::fs::create_dir_all(&sidecar).unwrap();
+
+        delete(td.path(), "-p", "s1").unwrap();
+        assert!(!td.path().join("projects/-p/s1.jsonl").exists());
+        assert!(!td.path().join("projects/-p/s1").exists());
+        assert!(td.path().join("projects/-p/s2.jsonl").exists());
+        assert!(delete(td.path(), "-p", "s1").is_err());
+    }
+
+    #[test]
+    fn path_components_cannot_escape_projects() {
+        let td = tempfile::tempdir().unwrap();
+        std::fs::write(td.path().join("victim.jsonl"), "{}").unwrap();
+        project(td.path(), "-p", "s1", "{}\n");
+        for (p, s) in [("..", "victim"), ("-p/../..", "victim"), ("-p", "../s1"), ("", "s1")] {
+            assert!(delete(td.path(), p, s).is_err(), "{p}/{s} accepted");
+        }
+        assert!(td.path().join("victim.jsonl").exists());
     }
 
     #[test]
