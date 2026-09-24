@@ -68,6 +68,10 @@ impl PermissionMode {
 #[serde(rename_all = "camelCase")]
 pub struct TerminalSession {
     pub id: String,
+    /// The Claude Code session id this PTY runs: the resumed id, or `id`
+    /// itself for a fresh launch (passed as `--session-id`). Keys the JSONL
+    /// transcript under `~/.claude/projects/`.
+    pub claude_session_id: String,
     pub agent_slug: Option<String>,
     pub working_dir: Option<String>,
     pub cols: u16,

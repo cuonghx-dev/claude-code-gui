@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import ChatTerminal from '@/components/ChatTerminal.vue'
 import ContextPanel from '@/components/ContextPanel.vue'
 import TeamPanel from '@/components/TeamPanel.vue'
@@ -14,6 +14,7 @@ import {
   useSessionThreads,
 } from '@/composables/useSessions'
 import { useSettings } from '@/composables/useSettings'
+import { useTerminalReplaysForSession } from '@/composables/useCliHistory'
 import { asPermissionMode, PERMISSION_MODES } from '@/lib/permissionModes'
 import type { PermissionMode, TerminalOpts } from '@/types/ipc'
 
@@ -30,6 +31,8 @@ const title = computed(
 )
 
 const transcript = useSessionMessages(projectName, sessionId)
+// PTY snapshots recorded when this session ran inside the app.
+const replays = useTerminalReplaysForSession(sessionId)
 const threads = useSessionThreads(projectName, sessionId)
 
 const messages = computed(() => transcript.data.value?.pages.flatMap((p) => p.items) ?? [])
@@ -44,6 +47,15 @@ const showSidechains = ref(false)
 const showCheckpoints = ref(false)
 
 const resuming = ref(false)
+const showReplays = ref(false)
+watch(sessionId, () => {
+  showReplays.value = false
+})
+
+const fmtReplay = (iso: string | null) =>
+  iso
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso))
+    : '—'
 // PTY session id, set once the terminal spawns; keys the live context events.
 const ptyId = ref('')
 
@@ -105,6 +117,38 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
         <button type="button" class="ccg-btn-ghost" @click="showCheckpoints = !showCheckpoints">
           {{ showCheckpoints ? 'Hide checkpoints' : 'Checkpoints' }}
         </button>
+        <template v-if="replays.data.value?.length">
+          <RouterLink
+            v-if="replays.data.value.length === 1"
+            :to="`/terminals/${replays.data.value[0].id}`"
+            class="ccg-btn-ghost"
+            title="Replay the terminal output recorded when this session ran here"
+          >
+            Terminal replay
+          </RouterLink>
+          <div v-else class="relative">
+            <button type="button" class="ccg-btn-ghost" @click="showReplays = !showReplays">
+              Terminal replays ({{ replays.data.value.length }})
+            </button>
+            <ul
+              v-if="showReplays"
+              class="absolute right-0 z-20 mt-1 w-64 rounded-md border border-neutral-200 bg-white py-1 text-xs shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+            >
+              <li v-for="r in replays.data.value" :key="r.id">
+                <RouterLink
+                  :to="`/terminals/${r.id}`"
+                  class="flex items-center justify-between gap-2 px-3 py-1.5 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                  @click="showReplays = false"
+                >
+                  <span>{{ fmtReplay(r.endedAt) }}</span>
+                  <span class="text-neutral-400">
+                    {{ r.lineCount.toLocaleString() }} lines<template v-if="r.exitCode"> · exit {{ r.exitCode }}</template>
+                  </span>
+                </RouterLink>
+              </li>
+            </ul>
+          </div>
+        </template>
         <select
           v-if="!resuming"
           v-model="permissionMode"

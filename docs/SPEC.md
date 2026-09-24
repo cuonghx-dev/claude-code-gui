@@ -987,7 +987,8 @@ If a user wants a generic terminal (git, build commands, etc.) they should use t
 
 - Idle for 30 min → killed (configurable).
 - Output buffered in memory (last 10K lines).
-- On exit: metadata + buffer snapshotted to `~/.claude/cli-history/<id>.json`.
+- Fresh launches pass `--session-id <pty id>` so the CLI's JSONL transcript and the snapshot share one id; resumes record the resumed id in `meta.claudeSessionId`.
+- On exit: metadata + buffer snapshotted to `~/.claude/cli-history/<id>.json`. Replays are reached from the session page (`/sessions/project/:name/session/:id`), not a tab of their own.
 - App quit → all PTYs killed cleanly via `app.on_window_event(CloseRequested, ...)`.
 
 ### Permission prompts

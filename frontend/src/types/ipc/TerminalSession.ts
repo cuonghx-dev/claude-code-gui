@@ -3,7 +3,13 @@
 /**
  * Metadata surfaced to the UI for the sidebar / sessions list.
  */
-export type TerminalSession = { id: string, agentSlug: string | null, workingDir: string | null, cols: number, rows: number, model: string | null, 
+export type TerminalSession = { id: string, 
+/**
+ * The Claude Code session id this PTY runs: the resumed id, or `id`
+ * itself for a fresh launch (passed as `--session-id`). Keys the JSONL
+ * transcript under `~/.claude/projects/`.
+ */
+claudeSessionId: string, agentSlug: string | null, workingDir: string | null, cols: number, rows: number, model: string | null, 
 /**
  * ISO 8601 of session creation.
  */

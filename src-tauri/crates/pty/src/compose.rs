@@ -16,8 +16,15 @@ use portable_pty::CommandBuilder;
 use app_core::types::TerminalOpts;
 use app_core::{AppError, ErrorCode};
 
-pub fn compose(claude_dir: &Path, opts: &TerminalOpts) -> Result<CommandBuilder, AppError> {
-    let argv = args(claude_dir, opts)?;
+/// `session_id` is the PTY id. A fresh launch passes it to claude as
+/// `--session-id` so the JSONL transcript under `~/.claude/projects/` and
+/// the `cli-history/` snapshot share one id; a resume keeps the CLI's id.
+pub fn compose(
+    claude_dir: &Path,
+    opts: &TerminalOpts,
+    session_id: &str,
+) -> Result<CommandBuilder, AppError> {
+    let argv = args(claude_dir, opts, session_id)?;
     let claude_path = app_core::claude_cli::path()?;
     let mut cmd = CommandBuilder::new(&claude_path);
     cmd.args(&argv);
@@ -34,7 +41,7 @@ pub fn compose(claude_dir: &Path, opts: &TerminalOpts) -> Result<CommandBuilder,
 }
 
 /// The `claude` argv (without the binary) for `opts`.
-fn args(claude_dir: &Path, opts: &TerminalOpts) -> Result<Vec<String>, AppError> {
+fn args(claude_dir: &Path, opts: &TerminalOpts, session_id: &str) -> Result<Vec<String>, AppError> {
     let mut argv: Vec<String> = Vec::new();
     let mut launched = false;
 
@@ -71,10 +78,16 @@ fn args(claude_dir: &Path, opts: &TerminalOpts) -> Result<Vec<String>, AppError>
         argv.push(serde_json::json!({ "outputStyle": style }).to_string());
     }
 
-    if let Some(resume) = &opts.resume_session_id {
-        argv.push("--resume".into());
-        argv.push(resume.clone());
-        launched = true;
+    match &opts.resume_session_id {
+        Some(resume) => {
+            argv.push("--resume".into());
+            argv.push(resume.clone());
+            launched = true;
+        }
+        None => {
+            argv.push("--session-id".into());
+            argv.push(session_id.to_string());
+        }
     }
 
     // The initial prompt is the CLI's positional argument. It goes last,
@@ -107,7 +120,7 @@ mod tests {
         let mut o = opts();
         o.command_template = Some("/review the diff".into());
         o.output_style_id = Some("Explanatory".into());
-        let argv = args(Path::new("/nonexistent"), &o).unwrap();
+        let argv = args(Path::new("/nonexistent"), &o, "pty-1").unwrap();
         assert!(!argv.iter().any(|a| a == "--prompt" || a == "--output-style"));
         assert_eq!(argv[argv.len() - 2..], ["--", "/review the diff"]);
         let i = argv.iter().position(|a| a == "--settings").unwrap();
@@ -116,7 +129,27 @@ mod tests {
 
     #[test]
     fn requires_a_launch_target() {
-        let err = args(Path::new("/nonexistent"), &opts()).unwrap_err();
+        let err = args(Path::new("/nonexistent"), &opts(), "pty-1").unwrap_err();
         assert_eq!(err.code, ErrorCode::InvalidInput);
+    }
+
+    #[test]
+    fn fresh_launch_pins_session_id_to_pty_id() {
+        let mut o = opts();
+        o.command_template = Some("hi".into());
+        let argv = args(Path::new("/nonexistent"), &o, "pty-1").unwrap();
+        let i = argv.iter().position(|a| a == "--session-id").unwrap();
+        assert_eq!(argv[i + 1], "pty-1");
+        assert!(!argv.iter().any(|a| a == "--resume"));
+    }
+
+    #[test]
+    fn resume_keeps_cli_session_id() {
+        let mut o = opts();
+        o.resume_session_id = Some("old".into());
+        let argv = args(Path::new("/nonexistent"), &o, "pty-1").unwrap();
+        assert!(!argv.iter().any(|a| a == "--session-id"));
+        let i = argv.iter().position(|a| a == "--resume").unwrap();
+        assert_eq!(argv[i + 1], "old");
     }
 }

@@ -6,6 +6,16 @@ import { cliHistoryGet, cliHistoryList } from '@/utils/ipc'
 export const useTerminalsList = () =>
   useQuery({ queryKey: qk.terminals.list(), queryFn: cliHistoryList })
 
+/// Snapshots of terminals that ran a given Claude Code session, newest first.
+/// Fresh launches pin `--session-id` to the PTY id and resumes record the
+/// resumed id, so a session may have several replays.
+export const useTerminalReplaysForSession = (sessionId: MaybeRefOrGetter<string>) =>
+  useQuery({
+    queryKey: qk.terminals.list(),
+    queryFn: cliHistoryList,
+    select: (items) => items.filter((t) => t.claudeSessionId === toValue(sessionId)),
+  })
+
 export const useTerminalReplay = (id: MaybeRefOrGetter<string>) =>
   useQuery({
     queryKey: computed(() => qk.terminals.get(toValue(id))),

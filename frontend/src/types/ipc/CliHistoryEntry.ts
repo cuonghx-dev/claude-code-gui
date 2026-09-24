@@ -7,7 +7,12 @@
  * The list view carries metadata only — `lastLines` can hold 10k lines of raw
  * terminal output per session and is loaded on demand.
  */
-export type CliHistoryEntry = { id: string, agentSlug: string | null, model: string | null, workingDir: string | null, startedAt: string | null, endedAt: string | null, lastActivity: string | null, exitCode: number | null, cols: number | null, rows: number | null, lineCount: number, 
+export type CliHistoryEntry = { id: string, 
+/**
+ * Claude Code session id (see `TerminalSession::claude_session_id`).
+ * `None` for snapshots written before it was recorded.
+ */
+claudeSessionId: string | null, agentSlug: string | null, model: string | null, workingDir: string | null, startedAt: string | null, endedAt: string | null, lastActivity: string | null, exitCode: number | null, cols: number | null, rows: number | null, lineCount: number, 
 /**
  * First non-empty output line with ANSI escapes stripped, truncated.
  */

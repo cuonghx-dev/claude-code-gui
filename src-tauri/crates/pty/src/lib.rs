@@ -87,11 +87,15 @@ impl PtyManager {
                 ));
             }
         }
-        let cmd = compose(claude_dir, &opts)?;
         let id = Uuid::new_v4();
+        let cmd = compose(claude_dir, &opts, &id.to_string())?;
         let now_iso = Utc::now().to_rfc3339();
         let meta = TerminalSession {
             id: id.to_string(),
+            claude_session_id: opts
+                .resume_session_id
+                .clone()
+                .unwrap_or_else(|| id.to_string()),
             agent_slug: opts.agent_slug.clone(),
             working_dir: opts.working_dir.clone(),
             cols: opts.cols,

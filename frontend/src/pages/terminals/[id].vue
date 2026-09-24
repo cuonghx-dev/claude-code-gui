@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import TerminalReplay from '@/components/TerminalReplay.vue'
 import { useTerminalReplay } from '@/composables/useCliHistory'
 
 const route = useRoute()
+const router = useRouter()
 const id = computed(() => (route.params as { id: string }).id)
 
 const { isPending, isError, error, data } = useTerminalReplay(id)
@@ -31,7 +32,7 @@ const fmt = (iso: string | null) =>
       <button type="button" class="ccg-btn-ghost" @click="plainText = !plainText">
         {{ plainText ? 'Show colors' : 'Plain text' }}
       </button>
-      <RouterLink to="/terminals" class="ccg-btn-ghost">Back</RouterLink>
+      <button type="button" class="ccg-btn-ghost" @click="router.back()">Back</button>
     </template>
   </PageHeader>
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">

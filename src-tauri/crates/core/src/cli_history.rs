@@ -92,6 +92,7 @@ fn parse_entry(path: &Path, v: &serde_json::Value) -> Result<CliHistoryEntry, Ap
 
     Ok(CliHistoryEntry {
         id,
+        claude_session_id: str_field(&meta, "claudeSessionId"),
         agent_slug: str_field(&meta, "agentSlug"),
         model: str_field(&meta, "model"),
         working_dir: str_field(&meta, "workingDir"),
@@ -172,9 +173,25 @@ mod tests {
         "model": null,
         "startedAt": "2026-05-12T02:00:00Z",
         "lastActivity": "2026-05-12T02:04:52Z",
-        "workingDir": "/Users/x/proj"
+        "workingDir": "/Users/x/proj",
+        "claudeSessionId": "9b2c0000-0000-4000-8000-000000000001"
       }
     }"#;
+
+    #[test]
+    fn claude_session_id_is_read_from_meta_and_optional() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "a", SNAPSHOT);
+        write(dir.path(), "b", r#"{"id":"b","lastLines":[],"meta":{}}"#);
+        let items = list(dir.path()).unwrap();
+        let a = items.iter().find(|e| e.id != "b").unwrap();
+        assert_eq!(
+            a.claude_session_id.as_deref(),
+            Some("9b2c0000-0000-4000-8000-000000000001")
+        );
+        let b = items.iter().find(|e| e.id == "b").unwrap();
+        assert_eq!(b.claude_session_id, None);
+    }
 
     #[test]
     fn preview_strips_ansi_and_skips_blank_lines() {

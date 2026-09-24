@@ -11,6 +11,9 @@ use ts_rs::TS;
 #[serde(rename_all = "camelCase")]
 pub struct CliHistoryEntry {
     pub id: String,
+    /// Claude Code session id (see `TerminalSession::claude_session_id`).
+    /// `None` for snapshots written before it was recorded.
+    pub claude_session_id: Option<String>,
     pub agent_slug: Option<String>,
     pub model: Option<String>,
     pub working_dir: Option<String>,

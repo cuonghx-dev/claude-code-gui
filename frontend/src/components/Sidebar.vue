@@ -12,7 +12,6 @@ import {
   Package,
   History,
   Activity,
-  SquareTerminal,
   BarChart3,
   Webhook,
   FolderTree,
@@ -24,7 +23,6 @@ import GlobalSearch from '@/components/GlobalSearch.vue'
 import { useAgentsList } from '@/composables/useAgents'
 import { useCommandsList } from '@/composables/useCommands'
 import { useSkillsList } from '@/composables/useSkills'
-import { useTerminalsList } from '@/composables/useCliHistory'
 import { useJobsList } from '@/composables/useJobs'
 import { useMemoryList } from '@/composables/useMemory'
 import { usePlansList } from '@/composables/usePlans'
@@ -41,7 +39,6 @@ const skills = useSkillsList()
 const plans = usePlansList()
 const jobs = useJobsList()
 const memory = useMemoryList()
-const terminals = useTerminalsList()
 const workflows = useWorkflowsList()
 const mcp = useMcpList('global')
 const outputStyles = useOutputStylesList()
@@ -68,7 +65,6 @@ const items = computed<NavItem[]>(() => [
   { to: '/plugins',       label: 'Plugins',       icon: Package,  count: () => plugins.data.value?.length },
   { to: '/sessions',      label: 'Sessions',      icon: History,  count: () => projects.data.value?.length },
   { to: '/jobs',          label: 'Jobs',          icon: Activity, count: () => jobs.data.value?.length },
-  { to: '/terminals',     label: 'Terminals',     icon: SquareTerminal, count: () => terminals.data.value?.length },
   { to: '/usage',         label: 'Usage',         icon: BarChart3, count: () => undefined },
   { to: '/memory',        label: 'Memory',        icon: BookText, count: () => memory.data.value?.length },
   { to: '/claude-directory', label: '.claude',    icon: FolderTree, count: () => undefined },
