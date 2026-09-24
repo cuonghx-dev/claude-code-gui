@@ -240,6 +240,10 @@ enum HttpFail {
 impl From<HttpFail> for AppError {
     fn from(f: HttpFail) -> Self {
         match f {
+            // This app never holds MCP OAuth tokens; the CLI owns that flow.
+            HttpFail::Rejected(status @ (401 | 403)) => mcp_err(format!(
+                "server requires sign-in (HTTP {status}); authenticate it with /mcp in claude"
+            )),
             HttpFail::Rejected(status) => mcp_err(format!("server answered HTTP {status}")),
             HttpFail::Other(e) => e,
         }
