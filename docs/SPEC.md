@@ -1381,63 +1381,66 @@ To add e.g. `Snippets` stored under `~/.claude/snippets/<slug>.md`:
 
 Phased delivery. Each phase is independently shippable as a private build.
 
+Status as of 2026-09-24. `[x]` done, `[ ]` open; *italics* note where the
+build deliberately differs from the plan above.
+
 ### Phase 0 — Scaffolding (1 week)
 
-- [ ] `cargo new` workspace + Tauri 2 init (`bun create tauri-app`)
-- [ ] Vue 3 + Vite + vue-router + Tailwind in `frontend/`
-- [ ] `ts-rs` export pipeline; first generated types committed
-- [ ] CI matrix: macOS / Windows / Linux on `cargo tauri build --debug`
-- [ ] No-op WebView showing the SPA
-- [ ] App shell, sidebar, empty pages for every route
+- [x] `cargo new` workspace + Tauri 2 init (`bun create tauri-app`)
+- [x] Vue 3 + Vite + vue-router + Tailwind in `frontend/`
+- [x] `ts-rs` export pipeline; first generated types committed
+- [ ] CI matrix: macOS / Windows / Linux on `cargo tauri build --debug` — *workflows removed in `82da7d3`; restore from `82da7d3^` when CI is wanted*
+- [x] No-op WebView showing the SPA
+- [x] App shell, sidebar, empty pages for every route, `GlobalSearch` (⌘K)
 
 ### Phase 1 — Read-only CRUD (2 weeks)
 
-- [ ] `claude_dir` resolution + `tauri-plugin-store` for override persistence
-- [ ] `frontmatter` parser + round-trip tests
-- [ ] List/get for: agents, commands, skills, plans, output-styles, mcp, plugins, projects, sessions
-- [ ] Settings + config + debug_claude_cli
-- [ ] Acceptance: every list page renders correctly against an existing `~/.claude/`.
+- [x] `claude_dir` resolution + override persistence — *`AppConfig` is JSON in the OS app-config dir rather than `tauri-plugin-store`; the override is applied at boot*
+- [x] `frontmatter` parser + round-trip tests
+- [x] List/get for: agents, commands, skills, plans, output-styles, mcp, plugins, projects, sessions
+- [x] Settings + config + debug_claude_cli — *settings writes are RFC 7386 merge patches per scope (ADR 0017) instead of `settings_put`*
+- [x] Acceptance: every list page renders correctly against an existing `~/.claude/`
 
 ### Phase 2 — Write CRUD (2 weeks)
 
-- [ ] Create/update/delete for all CRUD entities
-- [ ] Import/export for agents, skills
-- [ ] `setup_finalize` (first-run wizard)
-- [ ] `directories_list`, `files_read`, `reveal_in_finder`, `pick_folder`
-- [ ] Project create/rename/delete + git status
+- [x] Create/update/delete for all CRUD entities — *sessions: `sessions_rename` (appends a `custom-title` record, like `/rename`) and `sessions_delete`*
+- [x] Import/export for agents, skills — *skills import from a local folder or a GitHub directory URL*
+- [x] `setup_finalize` (first-run wizard)
+- [x] `directories_list`, `files_read`, `reveal_in_finder`, `pick_folder` — *`pick_folder` is the dialog plugin called from the frontend*
+- [x] Project create/rename/delete + git status (branch, ahead/behind, dirty count in the project rail)
 
 ### Phase 3 — Async surfaces (1 week)
 
-- [ ] `claude_cli::improve_instructions` + `claude:improve:{id}` events
-- [ ] `marketplace_install` progress events
-- [ ] File watcher + `fs:change` events
-- [ ] Marketplace source CRUD + plugin install/uninstall
+- [x] `claude_cli::improve_instructions` + `claude:improve:{id}` events — *backend only; the "Improve" button was removed from the UI in `67ed262`*
+- [x] `marketplace_install` progress events
+- [x] File watcher + `fs:change` events — *`~/.claude` always, plus the open project's working dir*
+- [x] Marketplace source CRUD + plugin install/uninstall
 
 ### Phase 4 — Terminal (2 weeks)
 
-- [ ] `pty` crate + `portable-pty` integration
-- [ ] `terminal_*` commands and `pty:output:{id}` / `pty:exit:{id}` events
-- [ ] Context monitor: `context:tokens:{id}` / `context:tool:{id}` events
-- [ ] `ChatTerminal.vue` component
-- [ ] Embed in agent detail right pane
-- [ ] Embed in session viewer (Resume mode)
-- [ ] Permission mode flag wiring
+- [x] `pty` crate + `portable-pty` integration
+- [x] `terminal_*` commands and `pty:output:{id}` / `pty:exit:{id}` events
+- [x] Context monitor: `context:tokens:{id}` / `context:tool:{id}` events, shown in `ContextPanel` beside the resumed terminal
+- [x] `ChatTerminal.vue` component
+- [ ] Embed in agent detail right pane — *removed in `9120c8c` when the agent page became a raw-markdown editor*
+- [x] Embed in session viewer (Resume mode)
+- [x] Permission mode flag wiring — *picker on resume; modes follow the CLI (`default`, `acceptEdits`, `plan`, `auto`, `dontAsk`, `manual`, `bypassPermissions`)*
 
 ### Phase 5 — MCP + relationships (1 week)
 
-- [ ] `rmcp` integration for capability probing
-- [ ] MCP CRUD pages + capability detail page
-- [ ] Relationship extractor (agent ↔ skill, agent ↔ command)
+- [x] Capability probing — *a small in-tree JSON-RPC client (`mcp_probe.rs`) for stdio, Streamable HTTP and legacy HTTP+SSE instead of `rmcp`*
+- [x] MCP CRUD pages + capability detail page, for user and project scope
+- [x] Relationship extractor (agent ↔ skill, agent ↔ command), shown as a panel on detail pages
 
 ### Phase 6 — Distribution (2 weeks)
 
-- [ ] Code-signing certificates (Apple Developer ID, Windows authenticode)
-- [ ] CI build + sign + notarize per platform
-- [ ] Auto-updater manifest pipeline
-- [ ] Deep-link handler (`claude-code-gui://install/...`)
-- [ ] Single-instance plugin
-- [ ] Release notes template + version bump scripts
-- [ ] Public beta release
+- [ ] Code-signing certificates (Apple Developer ID, Windows authenticode) — *needs purchased certificates (ADR 0011)*
+- [ ] CI build + sign + notarize per platform — *needs the certificates and restored workflows; `scripts/notarize.sh` is ready*
+- [x] Auto-updater manifest pipeline — *`generate-updater-manifest.ts`, `{{channel}}` endpoints, check + install + relaunch in Settings. Still needs a real host and signing key pair (see `docs/RELEASE.md`)*
+- [x] Deep-link handler (`claude-code-gui://install/...`), including links that cold-start the app
+- [x] Single-instance plugin (focuses the running window)
+- [x] Release notes template + version bump scripts (`docs/release-notes-template.md`, `scripts/bump-version.ts`)
+- [ ] Public beta release — *after signing and a hosted updater endpoint*
 
 ### Acceptance gates
 

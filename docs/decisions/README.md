@@ -20,6 +20,7 @@ ADRs documenting locked design choices. Numbered chronologically; status starts 
 | [0014](0014-form-validation.md) | Form validation: vee-validate + zod | Accepted |
 | [0015](0015-toast-vue-sonner.md) | Toast layer: vue-sonner | Accepted |
 | [0016](0016-license-mit.md) | License: MIT | Accepted |
+| [0017](0017-settings-merge-patch.md) | Settings writes are per-scope merge patches | Accepted |
 
 ## Adding an ADR
 
