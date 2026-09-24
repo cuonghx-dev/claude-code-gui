@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PERMISSION_MODES } from '@/lib/permissionModes'
 import { reactive, ref, computed } from 'vue'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { useSetupFinalize } from '@/composables/useSettings'
@@ -94,10 +95,7 @@ async function complete() {
             Applied when launching a new terminal.
           </p>
           <select v-model="state.defaultPermissionMode" class="ccg-input">
-            <option value="default">default</option>
-            <option value="acceptEdits">acceptEdits</option>
-            <option value="bypassPermissions">bypassPermissions</option>
-            <option value="plan">plan</option>
+            <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
           </select>
           <h3 class="mt-4 text-sm font-semibold">Theme</h3>
           <select v-model="state.theme" class="ccg-input">

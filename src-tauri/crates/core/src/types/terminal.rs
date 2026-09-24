@@ -40,6 +40,12 @@ pub enum PermissionMode {
     BypassPermissions,
     #[serde(rename = "plan")]
     Plan,
+    #[serde(rename = "auto")]
+    Auto,
+    #[serde(rename = "dontAsk")]
+    DontAsk,
+    #[serde(rename = "manual")]
+    Manual,
 }
 
 impl PermissionMode {
@@ -49,6 +55,9 @@ impl PermissionMode {
             PermissionMode::AcceptEdits => "acceptEdits",
             PermissionMode::BypassPermissions => "bypassPermissions",
             PermissionMode::Plan => "plan",
+            PermissionMode::Auto => "auto",
+            PermissionMode::DontAsk => "dontAsk",
+            PermissionMode::Manual => "manual",
         }
     }
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PERMISSION_MODES } from '@/lib/permissionModes'
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
@@ -165,10 +166,7 @@ async function doDelete() {
             <FormField label="Default permission mode">
               <select v-model="sLocal.defaultPermissionMode" class="ccg-input">
                 <option value="">— inherit —</option>
-                <option value="default">default</option>
-                <option value="acceptEdits">acceptEdits</option>
-                <option value="bypassPermissions">bypassPermissions</option>
-                <option value="plan">plan</option>
+                <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
               </select>
             </FormField>
           </div>

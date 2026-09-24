@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PERMISSION_MODES } from '@/lib/permissionModes'
 import { inject, reactive, ref, watchEffect } from 'vue'
 import { Loader2 } from 'lucide-vue-next'
 import FormField from '@/components/forms/FormField.vue'
@@ -134,12 +135,7 @@ async function redoOnboarding() {
         <FormField label="Default permission mode">
           <select v-model="sLocal.defaultPermissionMode" class="ccg-input">
             <option value="">— inherit —</option>
-            <option value="default">default</option>
-            <option value="acceptEdits">acceptEdits</option>
-            <option value="plan">plan</option>
-            <option value="auto">auto</option>
-            <option value="dontAsk">dontAsk</option>
-            <option value="bypassPermissions">bypassPermissions</option>
+            <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
           </select>
         </FormField>
       </div>

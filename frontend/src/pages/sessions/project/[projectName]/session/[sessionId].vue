@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ChatTerminal from '@/components/ChatTerminal.vue'
+import ContextPanel from '@/components/ContextPanel.vue'
 import TeamPanel from '@/components/TeamPanel.vue'
 import MessageList from '@/components/transcript/MessageList.vue'
 import CheckpointsPanel from '@/components/CheckpointsPanel.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { useProject } from '@/composables/useProjects'
-import { useSessionMessages, useSessionThreads } from '@/composables/useSessions'
+import {
+  useSessionMessages,
+  useSessionsForProject,
+  useSessionThreads,
+} from '@/composables/useSessions'
 import { useSettings } from '@/composables/useSettings'
-import type { TerminalOpts } from '@/types/ipc'
+import { asPermissionMode, PERMISSION_MODES } from '@/lib/permissionModes'
+import type { PermissionMode, TerminalOpts } from '@/types/ipc'
 
 const route = useRoute()
 const projectName = computed(() => (route.params as { projectName: string }).projectName)
@@ -17,6 +23,11 @@ const sessionId = computed(() => (route.params as { sessionId: string }).session
 
 const project = useProject(projectName)
 const settings = useSettings()
+
+const sessions = useSessionsForProject(projectName)
+const title = computed(
+  () => sessions.data.value?.find((s) => s.sessionId === sessionId.value)?.title ?? null,
+)
 
 const transcript = useSessionMessages(projectName, sessionId)
 const threads = useSessionThreads(projectName, sessionId)
@@ -33,6 +44,25 @@ const showSidechains = ref(false)
 const showCheckpoints = ref(false)
 
 const resuming = ref(false)
+// PTY session id, set once the terminal spawns; keys the live context events.
+const ptyId = ref('')
+
+// '' = let the CLI apply its own settings. Seeded from the user's default so
+// the picker shows what will actually happen.
+const permissionMode = ref<PermissionMode | ''>('')
+watch(
+  () => settings.data.value?.defaultPermissionMode,
+  (v) => {
+    if (!resuming.value) permissionMode.value = asPermissionMode(v) ?? ''
+  },
+  { immediate: true },
+)
+watch(resuming, (on) => {
+  if (!on) ptyId.value = ''
+})
+watch(sessionId, () => {
+  resuming.value = false
+})
 
 const terminalOpts = computed<TerminalOpts | null>(() => {
   if (!resuming.value || !project.data.value) return null
@@ -42,8 +72,7 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
     rows: 32,
     workingDir: project.data.value.workingDir,
     model: null,
-    permissionMode:
-      (settings.data.value?.defaultPermissionMode as TerminalOpts['permissionMode']) ?? null,
+    permissionMode: permissionMode.value || null,
     outputStyleId: null,
     resumeSessionId: sessionId.value,
     commandTemplate: null,
@@ -57,8 +86,9 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
       class="flex shrink-0 items-center gap-3 border-b border-neutral-200 px-6 py-3 dark:border-neutral-800"
     >
       <div class="min-w-0">
-        <h2 class="truncate text-sm font-semibold">
-          Session <span class="font-mono">{{ sessionId.slice(0, 8) }}…</span>
+        <h2 class="truncate text-sm font-semibold" :title="title ?? sessionId">
+          <template v-if="title">{{ title }}</template>
+          <template v-else>Session <span class="font-mono">{{ sessionId.slice(0, 8) }}…</span></template>
         </h2>
         <p class="text-xs text-neutral-500 dark:text-neutral-400">
           {{ total.toLocaleString() }} messages
@@ -75,6 +105,16 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
         <button type="button" class="ccg-btn-ghost" @click="showCheckpoints = !showCheckpoints">
           {{ showCheckpoints ? 'Hide checkpoints' : 'Checkpoints' }}
         </button>
+        <select
+          v-if="!resuming"
+          v-model="permissionMode"
+          class="ccg-input py-1 text-xs"
+          aria-label="Permission mode for the resumed session"
+          title="Permission mode"
+        >
+          <option value="">CLI default</option>
+          <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
+        </select>
         <button
           v-if="!resuming"
           type="button"
@@ -90,11 +130,17 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
       </div>
     </header>
 
-    <ChatTerminal
-      v-if="resuming && terminalOpts"
-      :opts="terminalOpts"
-      class="min-h-0 flex-1"
-    />
+    <div v-if="resuming && terminalOpts" class="flex min-h-0 flex-1">
+      <ChatTerminal
+        :opts="terminalOpts"
+        class="min-h-0 min-w-0 flex-1"
+        @ready="(id) => (ptyId = id)"
+      />
+      <ContextPanel
+        :session-id="ptyId || undefined"
+        class="w-72 shrink-0 overflow-y-auto border-l border-neutral-200 p-3 dark:border-neutral-800"
+      />
+    </div>
 
     <template v-else>
       <p v-if="transcript.isPending.value" class="px-6 py-4 text-sm text-neutral-500">
