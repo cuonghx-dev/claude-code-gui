@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import RelationshipGraph from '@/components/RelationshipGraph.vue'
+import { useRelatedCount } from '@/composables/useRelationships'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
@@ -16,6 +18,8 @@ import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 const route = useRoute()
 const router = useRouter()
 const slug = computed(() => (route.params as { slug: string }).slug)
+const relatedCount = useRelatedCount('command', slug)
+const showRelated = ref(false)
 
 const { isPending, isError, error, data } = useCommand(slug)
 const update = useCommandUpdateRaw()
@@ -70,6 +74,15 @@ async function onDelete() {
 <template>
   <PageHeader :title="`/${slug}`" :subtitle="data?.frontmatter?.description ?? undefined">
     <template #actions>
+      <button
+        v-if="relatedCount > 0"
+        type="button"
+        class="ccg-btn-ghost"
+        :aria-pressed="showRelated"
+        @click="showRelated = !showRelated"
+      >
+        Relationships ({{ relatedCount }})
+      </button>
       <button type="button" class="ccg-btn-danger" @click="confirmingDelete = true">Delete</button>
       <button
         type="button"
@@ -90,7 +103,16 @@ async function onDelete() {
         >
           {{ errorMessage }}
         </p>
-        <MarkdownEditor v-model="content" fill class="min-h-0 flex-1" />
+        <div class="flex min-h-0 flex-1 gap-4">
+          <MarkdownEditor v-model="content" fill class="min-h-0 min-w-0 flex-1" />
+          <aside
+            v-if="showRelated && relatedCount > 0"
+            class="w-80 shrink-0 overflow-y-auto rounded-lg border border-neutral-200 p-3 dark:border-neutral-800"
+            aria-label="Relationships"
+          >
+            <RelationshipGraph :command-slug="slug" />
+          </aside>
+        </div>
       </section>
     </template>
   </QueryStateBoundary>
