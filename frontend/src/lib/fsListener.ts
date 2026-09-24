@@ -74,6 +74,11 @@ const RULES: Array<{ test: (path: string) => boolean; invalidate: () => void }> 
     invalidate: () => queryClient.invalidateQueries({ queryKey: qk.memory.all }),
   },
   {
+    // Anything outside ~/.claude comes from a watched project working dir.
+    test: (p) => !p.includes('/.claude/') || p.includes('/.git/'),
+    invalidate: () => queryClient.invalidateQueries({ queryKey: qk.projects.gitStatusAll }),
+  },
+  {
     test: (p) => p.includes('/.claude/projects/'),
     invalidate: () => {
       queryClient.invalidateQueries({ queryKey: qk.projects.all })

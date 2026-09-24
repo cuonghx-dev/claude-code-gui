@@ -18,6 +18,7 @@ import {
   useSessionsForProject,
 } from '@/composables/useSessions'
 import { useProject, useProjectGitStatus } from '@/composables/useProjects'
+import { useProjectWatcher } from '@/composables/useProjectWatcher'
 import { revealInFinder } from '@/utils/ipc'
 import type { SessionSummary } from '@/types/ipc'
 
@@ -27,6 +28,9 @@ const projectName = computed(() => (route.params as { projectName: string }).pro
 const project = useProject(projectName)
 const sessions = useSessionsForProject(projectName)
 const git = useProjectGitStatus(projectName)
+// Live-refresh project-scoped settings, .mcp.json, CLAUDE.md and git status
+// while this project is open.
+useProjectWatcher(() => project.data.value?.workingDir ?? undefined)
 const renameSession = useSessionRename()
 const deleteSession = useSessionDelete()
 
