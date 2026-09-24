@@ -17,15 +17,31 @@ use app_core::types::TerminalOpts;
 use app_core::{AppError, ErrorCode};
 
 pub fn compose(claude_dir: &Path, opts: &TerminalOpts) -> Result<CommandBuilder, AppError> {
+    let argv = args(claude_dir, opts)?;
     let claude_path = app_core::claude_cli::path()?;
     let mut cmd = CommandBuilder::new(&claude_path);
+    cmd.args(&argv);
 
+    if let Some(wd) = &opts.working_dir {
+        cmd.cwd(wd);
+    }
+
+    // Inherit a minimal env. portable-pty inherits the parent env by
+    // default, which we want — the user's $PATH must be available so
+    // claude can find git, etc.
+    cmd.env("CLAUDE_CODE_GUI", "1");
+    Ok(cmd)
+}
+
+/// The `claude` argv (without the binary) for `opts`.
+fn args(claude_dir: &Path, opts: &TerminalOpts) -> Result<Vec<String>, AppError> {
+    let mut argv: Vec<String> = Vec::new();
     let mut launched = false;
 
     if let Some(slug) = &opts.agent_slug {
         let agent = app_core::agents::get(claude_dir, slug)?;
-        cmd.arg("--append-system-prompt");
-        cmd.arg(agent.body);
+        argv.push("--append-system-prompt".into());
+        argv.push(agent.body);
         let model = opts.model.clone().or_else(|| {
             agent
                 .frontmatter
@@ -37,38 +53,36 @@ pub fn compose(claude_dir: &Path, opts: &TerminalOpts) -> Result<CommandBuilder,
                 })
         });
         if let Some(m) = model {
-            cmd.arg("--model");
-            cmd.arg(m);
+            argv.push("--model".into());
+            argv.push(m);
         }
         launched = true;
     }
 
-    if let Some(template) = &opts.command_template {
-        // The CLI consumes `--prompt` as the initial input. Phase 4 keeps
-        // the command body opaque from the watcher's perspective.
-        cmd.arg("--prompt");
-        cmd.arg(template);
-        launched = true;
-    }
-
     if let Some(mode) = &opts.permission_mode {
-        cmd.arg("--permission-mode");
-        cmd.arg(mode.as_cli_flag());
+        argv.push("--permission-mode".into());
+        argv.push(mode.as_cli_flag().into());
     }
 
+    // The CLI has no `--output-style` flag; the style is a setting, so pass
+    // it as an inline settings layer for this session only.
     if let Some(style) = &opts.output_style_id {
-        cmd.arg("--output-style");
-        cmd.arg(style);
+        argv.push("--settings".into());
+        argv.push(serde_json::json!({ "outputStyle": style }).to_string());
     }
 
     if let Some(resume) = &opts.resume_session_id {
-        cmd.arg("--resume");
-        cmd.arg(resume);
+        argv.push("--resume".into());
+        argv.push(resume.clone());
         launched = true;
     }
 
-    if let Some(wd) = &opts.working_dir {
-        cmd.cwd(wd);
+    // The initial prompt is the CLI's positional argument. It goes last,
+    // after `--`, so a template starting with `-` is never read as a flag.
+    if let Some(template) = &opts.command_template {
+        argv.push("--".into());
+        argv.push(template.clone());
+        launched = true;
     }
 
     if !launched {
@@ -77,10 +91,32 @@ pub fn compose(claude_dir: &Path, opts: &TerminalOpts) -> Result<CommandBuilder,
             "terminal requires an agent slug, resume session id, or command template",
         ));
     }
+    Ok(argv)
+}
 
-    // Inherit a minimal env. portable-pty inherits the parent env by
-    // default, which we want — the user's $PATH must be available so
-    // claude can find git, etc.
-    cmd.env("CLAUDE_CODE_GUI", "1");
-    Ok(cmd)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn opts() -> TerminalOpts {
+        serde_json::from_value(serde_json::json!({ "cols": 80, "rows": 24 })).unwrap()
+    }
+
+    #[test]
+    fn template_is_trailing_positional() {
+        let mut o = opts();
+        o.command_template = Some("/review the diff".into());
+        o.output_style_id = Some("Explanatory".into());
+        let argv = args(Path::new("/nonexistent"), &o).unwrap();
+        assert!(!argv.iter().any(|a| a == "--prompt" || a == "--output-style"));
+        assert_eq!(argv[argv.len() - 2..], ["--", "/review the diff"]);
+        let i = argv.iter().position(|a| a == "--settings").unwrap();
+        assert_eq!(argv[i + 1], r#"{"outputStyle":"Explanatory"}"#);
+    }
+
+    #[test]
+    fn requires_a_launch_target() {
+        let err = args(Path::new("/nonexistent"), &opts()).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InvalidInput);
+    }
 }
