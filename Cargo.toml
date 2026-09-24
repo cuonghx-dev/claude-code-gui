@@ -50,8 +50,6 @@ git2          = { version = "0.19", features = ["vendored-libgit2"], default-fea
 # Async runtime
 tokio         = { version = "1",   features = ["fs", "process", "sync", "macros", "rt-multi-thread", "io-util", "signal", "time"] }
 
-# MCP
-rmcp          = "0.1"
 
 # Regex / lazy
 regex         = "1"

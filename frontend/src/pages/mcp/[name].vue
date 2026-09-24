@@ -4,19 +4,20 @@ import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import { useMcpCapabilities, useMcpDelete, useMcpServer } from '@/composables/useMcp'
+import { useMcpCapabilities, useMcpDelete, useMcpScope, useMcpServer } from '@/composables/useMcp'
 
 const route = useRoute()
 const router = useRouter()
 const name = computed(() => (route.params as { name: string }).name)
-const server = useMcpServer(name, 'global')
+const { scope, workingDir, ready, query, fileLabel } = useMcpScope()
+const server = useMcpServer(name, scope, workingDir, ready)
 
 const remove = useMcpDelete()
 const confirmingDelete = ref(false)
 const errorMessage = ref('')
 
 const probeEnabled = ref(false)
-const caps = useMcpCapabilities(name, 'global', undefined, probeEnabled)
+const caps = useMcpCapabilities(name, scope, workingDir, () => probeEnabled.value && ready.value)
 
 const probeError = computed(() => {
   const e = caps.error.value as { message?: string } | undefined
@@ -26,8 +27,8 @@ const probeError = computed(() => {
 async function onDelete() {
   errorMessage.value = ''
   try {
-    await remove.mutateAsync({ name: name.value, scope: 'global' })
-    router.push('/mcp')
+    await remove.mutateAsync({ name: name.value, scope: scope.value, workingDir: workingDir.value })
+    router.push({ path: '/mcp', query: query.value })
   } catch (e) {
     errorMessage.value = (e as { message?: string })?.message ?? String(e)
   }
@@ -40,7 +41,7 @@ async function probe() {
 </script>
 
 <template>
-  <PageHeader :title="name" subtitle="MCP server detail">
+  <PageHeader :title="name" :subtitle="`MCP server · ${fileLabel}`">
     <template #actions>
       <button
         type="button"
@@ -78,7 +79,7 @@ async function probe() {
             v-if="!probeEnabled"
             class="mt-2 text-xs text-neutral-500 dark:text-neutral-400"
           >
-            Click "Probe capabilities" to spawn the server and run the MCP handshake.
+            Click "Probe capabilities" to connect (stdio servers are spawned) and run the MCP handshake.
           </p>
           <p
             v-else-if="probeError"
@@ -145,7 +146,7 @@ async function probe() {
   <ConfirmDialog
     v-model:open="confirmingDelete"
     title="Delete MCP server?"
-    :message="`This removes '${name}' from .mcp.json.`"
+    :message="`This removes '${name}' from ${fileLabel}.`"
     confirm-label="Delete"
     danger
     @confirm="onDelete"
