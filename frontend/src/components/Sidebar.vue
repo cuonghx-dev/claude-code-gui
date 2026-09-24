@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
 import {
   Bot,
   Slash,
@@ -20,6 +19,8 @@ import {
 } from 'lucide-vue-next'
 import logoUrl from '@/assets/logo.png'
 import GlobalSearch from '@/components/GlobalSearch.vue'
+import SidebarLink from '@/components/SidebarLink.vue'
+import type { NavItem } from '@/components/SidebarLink.vue'
 import { useAgentsList } from '@/composables/useAgents'
 import { useCommandsList } from '@/composables/useCommands'
 import { useSkillsList } from '@/composables/useSkills'
@@ -46,28 +47,46 @@ const hooks = useHooksList()
 const plugins = usePluginsList()
 const projects = useProjectsList()
 
-interface NavItem {
-  to: string
+interface NavSection {
   label: string
-  icon: typeof Bot
-  count: () => number | undefined
+  items: NavItem[]
 }
 
-const items = computed<NavItem[]>(() => [
-  { to: '/agents',        label: 'Agents',        icon: Bot,      count: () => agents.data.value?.length },
-  { to: '/commands',      label: 'Commands',      icon: Slash,    count: () => commands.data.value?.length },
-  { to: '/skills',        label: 'Skills',        icon: Sparkles, count: () => skills.data.value?.length },
-  { to: '/plans',         label: 'Plans',         icon: Map,      count: () => plans.data.value?.length },
-  { to: '/workflows',     label: 'Workflows',     icon: Workflow, count: () => workflows.data.value?.length },
-  { to: '/mcp',           label: 'MCP',           icon: Server,   count: () => mcp.data.value?.length },
-  { to: '/output-styles', label: 'Output styles', icon: Palette,  count: () => outputStyles.data.value?.length },
-  { to: '/hooks',         label: 'Hooks',         icon: Webhook,  count: () => hooks.data.value?.length },
-  { to: '/plugins',       label: 'Plugins',       icon: Package,  count: () => plugins.data.value?.length },
-  { to: '/sessions',      label: 'Sessions',      icon: History,  count: () => projects.data.value?.length },
-  { to: '/jobs',          label: 'Jobs',          icon: Activity, count: () => jobs.data.value?.length },
-  { to: '/usage',         label: 'Usage',         icon: BarChart3, count: () => undefined },
-  { to: '/memory',        label: 'Memory',        icon: BookText, count: () => memory.data.value?.length },
-  { to: '/claude-directory', label: '.claude',    icon: FolderTree, count: () => undefined },
+const sections = computed<NavSection[]>(() => [
+  {
+    label: 'Authoring',
+    items: [
+      { to: '/agents',        label: 'Agents',        icon: Bot,      count: () => agents.data.value?.length },
+      { to: '/commands',      label: 'Commands',      icon: Slash,    count: () => commands.data.value?.length },
+      { to: '/skills',        label: 'Skills',        icon: Sparkles, count: () => skills.data.value?.length },
+      { to: '/plans',         label: 'Plans',         icon: Map,      count: () => plans.data.value?.length },
+      { to: '/workflows',     label: 'Workflows',     icon: Workflow, count: () => workflows.data.value?.length },
+      { to: '/output-styles', label: 'Output styles', icon: Palette,  count: () => outputStyles.data.value?.length },
+    ],
+  },
+  {
+    label: 'Extend',
+    items: [
+      { to: '/mcp',           label: 'MCP',           icon: Server,   count: () => mcp.data.value?.length },
+      { to: '/hooks',         label: 'Hooks',         icon: Webhook,  count: () => hooks.data.value?.length },
+      { to: '/plugins',       label: 'Plugins',       icon: Package,  count: () => plugins.data.value?.length },
+    ],
+  },
+  {
+    label: 'Activity',
+    items: [
+      { to: '/sessions',      label: 'Sessions',      icon: History,  count: () => projects.data.value?.length },
+      { to: '/jobs',          label: 'Jobs',          icon: Activity, count: () => jobs.data.value?.length },
+      { to: '/usage',         label: 'Usage',         icon: BarChart3, count: () => undefined },
+    ],
+  },
+  {
+    label: 'Config',
+    items: [
+      { to: '/memory',        label: 'Memory',        icon: BookText, count: () => memory.data.value?.length },
+      { to: '/claude-directory', label: '.claude',    icon: FolderTree, count: () => undefined },
+    ],
+  },
 ])
 
 const bottomItems = computed<NavItem[]>(() => [
@@ -97,41 +116,21 @@ const bottomItems = computed<NavItem[]>(() => [
       </h1>
     </div>
     <GlobalSearch />
-    <RouterLink
-      v-for="item in items"
-      :key="item.to"
-      :to="item.to"
-      class="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-      active-class="bg-neutral-100 font-medium text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
+    <div
+      v-for="(section, i) in sections"
+      :key="section.label"
+      role="group"
+      :aria-label="section.label"
+      class="flex flex-col gap-1"
+      :class="i === 0 ? '' : 'mt-3'"
     >
-      <component :is="item.icon" class="h-4 w-4" />
-      <span class="flex-1">{{ item.label }}</span>
-      <span
-        v-if="item.count() !== undefined"
-        class="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] tabular-nums text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100"
-        :aria-label="`${item.count()} ${item.label.toLowerCase()}`"
-      >
-        {{ item.count() }}
-      </span>
-    </RouterLink>
+      <h2 class="mb-0.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+        {{ section.label }}
+      </h2>
+      <SidebarLink v-for="item in section.items" :key="item.to" :item="item" />
+    </div>
     <div class="mt-auto flex flex-col gap-1 border-t border-neutral-200 pt-2 dark:border-neutral-800">
-      <RouterLink
-        v-for="item in bottomItems"
-        :key="item.to"
-        :to="item.to"
-        class="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-        active-class="bg-neutral-100 font-medium text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
-      >
-        <component :is="item.icon" class="h-4 w-4" />
-        <span class="flex-1">{{ item.label }}</span>
-        <span
-          v-if="item.count() !== undefined"
-          class="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] tabular-nums text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100"
-          :aria-label="`${item.count()} ${item.label.toLowerCase()}`"
-        >
-          {{ item.count() }}
-        </span>
-      </RouterLink>
+      <SidebarLink v-for="item in bottomItems" :key="item.to" :item="item" />
     </div>
   </nav>
 </template>

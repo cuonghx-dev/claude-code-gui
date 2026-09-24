@@ -730,29 +730,59 @@ The `shell` plugin is **not** allowed for arbitrary commands. PTY and `claude -p
 
 File-based router under `frontend/src/pages/`. Default landing page: `/agents`.
 
+### Sidebar
+
+`components/Sidebar.vue` groups nav links into titled sections, in this order. Settings is pinned to the bottom below a divider.
+
+| Section | Links |
+|---------|-------|
+| Authoring | Agents, Commands, Skills, Plans, Workflows, Output styles |
+| Extend | MCP, Hooks, Plugins |
+| Activity | Sessions, Jobs, Usage |
+| Config | Memory, .claude |
+| (bottom) | Settings |
+
 ### Route table
 
 | Path | File | Purpose |
 |------|------|---------|
 | `/` | (redirect) | → `/agents` |
 | `/agents` | `pages/agents/index.vue` | List + create agents |
+| `/agents/new` | `pages/agents/new.vue` | New agent |
 | `/agents/:slug` | `pages/agents/[slug].vue` | Edit agent + embedded test terminal |
 | `/commands` | `pages/commands/index.vue` | Slash command list |
+| `/commands/new` | `pages/commands/new.vue` | New command |
 | `/commands/:slug` | `pages/commands/[slug].vue` | Edit command |
 | `/skills` | `pages/skills/index.vue` | Skill list (local + plugin) |
+| `/skills/new` | `pages/skills/new.vue` | New skill |
 | `/skills/:slug` | `pages/skills/[slug].vue` | Edit skill |
 | `/plans` | `pages/plans/index.vue` | Plan list |
+| `/plans/new` | `pages/plans/new.vue` | New plan |
 | `/plans/:slug` | `pages/plans/[slug].vue` | Plan editor |
-| `/mcp` | `pages/mcp/index.vue` | MCP server list |
-| `/mcp/:name` | `pages/mcp/[name].vue` | MCP detail + capabilities probe |
+| `/workflows` | `pages/workflows/index.vue` | Workflow list |
+| `/workflows/new` | `pages/workflows/new.vue` | New workflow |
+| `/workflows/:slug` | `pages/workflows/[slug].vue` | Workflow editor |
 | `/output-styles` | `pages/output-styles/index.vue` | Output style manager |
+| `/mcp` | `pages/mcp/index.vue` | MCP server list |
+| `/mcp/new` | `pages/mcp/new.vue` | Add MCP server |
+| `/mcp/:name` | `pages/mcp/[name].vue` | MCP detail + capabilities probe |
+| `/hooks` | `pages/hooks/index.vue` | Hooks overview |
 | `/plugins` | `pages/plugins/index.vue` | Installed + Discover tabs |
 | `/plugins/:id` | `pages/plugins/[id].vue` | Plugin detail |
 | `/sessions` | `pages/sessions/index.vue` | Project picker |
 | `/sessions/project/:projectName` | `pages/sessions/project/[projectName]/index.vue` | Project view: session list + git status |
 | `/sessions/project/:projectName/session/:sessionId` | `…/session/[sessionId].vue` | Session viewer + Resume terminal |
 | `/sessions/project/:projectName/settings` | `…/settings.vue` | Project settings + CLAUDE.md editor |
-| `/settings` | `pages/settings.vue` | Global settings |
+| `/sessions/project/:projectName/worktrees` | `…/worktrees.vue` | Project worktrees |
+| `/terminals/:id` | `pages/terminals/[id].vue` | Terminal detail (no sidebar entry) |
+| `/jobs` | `pages/jobs/index.vue` | Background job list |
+| `/jobs/:jobId` | `pages/jobs/[jobId].vue` | Job detail |
+| `/usage` | `pages/usage/index.vue` | Usage stats |
+| `/memory` | `pages/memory/index.vue` | Memory file list |
+| `/memory/:id` | `pages/memory/[id].vue` | Memory file editor |
+| `/claude-directory` | `pages/claude-directory/index.vue` | `~/.claude` browser |
+| `/settings` | `pages/settings/index.vue` | Global settings |
+| `/settings/{effective,hooks,keybindings,permissions,raw,statusline}` | `pages/settings/*.vue` | Settings sub-pages |
 
 ### Cross-page components
 
