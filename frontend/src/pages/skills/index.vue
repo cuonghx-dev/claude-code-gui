@@ -12,6 +12,8 @@ const { isPending, isError, error, data } = useSkillsList()
 const importMut = useSkillImport()
 const router = useRouter()
 const importError = ref('')
+const githubOpen = ref(false)
+const githubUrl = ref('')
 
 async function importLocal() {
   importError.value = ''
@@ -24,15 +26,49 @@ async function importLocal() {
     importError.value = (e as { message?: string })?.message ?? String(e)
   }
 }
+
+async function importGithub() {
+  const url = githubUrl.value.trim()
+  if (!url) return
+  importError.value = ''
+  try {
+    const skills = await importMut.mutateAsync({ kind: 'github', url })
+    githubOpen.value = false
+    githubUrl.value = ''
+    if (skills[0]) router.push(`/skills/${encodeURIComponent(skills[0].slug)}`)
+  } catch (e) {
+    importError.value = (e as { message?: string })?.message ?? String(e)
+  }
+}
 </script>
 
 <template>
   <PageHeader title="Skills" :subtitle="`${data?.length ?? 0} skills (local + plugin)`">
     <template #actions>
       <button type="button" class="ccg-btn-ghost" @click="importLocal">Import folder</button>
+      <button type="button" class="ccg-btn-ghost" :aria-expanded="githubOpen" @click="githubOpen = !githubOpen">
+        Import from GitHub
+      </button>
       <RouterLink to="/skills/new" class="ccg-btn-primary">+ New</RouterLink>
     </template>
   </PageHeader>
+  <form
+    v-if="githubOpen"
+    class="mx-6 mt-4 flex items-center gap-2 rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900"
+    @submit.prevent="importGithub"
+  >
+    <input
+      v-model="githubUrl"
+      type="url"
+      required
+      class="ccg-input flex-1 font-mono text-xs"
+      placeholder="https://github.com/owner/repo/tree/main/path/to/skill"
+      aria-label="GitHub URL of the skill directory"
+    />
+    <button type="submit" class="ccg-btn-primary" :disabled="importMut.isPending.value">
+      {{ importMut.isPending.value ? 'Importing…' : 'Import' }}
+    </button>
+  </form>
   <p
     v-if="importError"
     class="mx-6 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"

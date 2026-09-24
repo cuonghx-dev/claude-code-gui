@@ -79,5 +79,8 @@ pub async fn skills_import(
     source: SkillImportSource,
 ) -> Result<Vec<Skill>, AppError> {
     let claude_dir = state.claude_dir.read().await.clone();
-    app_core::skills::import(&claude_dir, source)
+    match source {
+        SkillImportSource::Github { url } => app_core::skills_github::import(&claude_dir, &url).await,
+        local => app_core::skills::import(&claude_dir, local),
+    }
 }

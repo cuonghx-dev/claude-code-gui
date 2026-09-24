@@ -49,7 +49,7 @@ pub async fn unwatch_path(state: State<'_, AppState>, id: String) -> Result<(), 
 /// Show `path` selected in Finder / Explorer / the Linux file manager.
 #[tauri::command]
 pub async fn reveal_in_finder(path: String) -> Result<(), AppError> {
-    let p = PathBuf::from(app_core::files::expand_tilde(&path));
+    let p = app_core::files::expand_tilde(&path);
     if !p.exists() {
         return Err(AppError::not_found(format!("'{}' does not exist", p.display())));
     }

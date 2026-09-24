@@ -217,7 +217,7 @@ async fn probe_http(
 
     let init = match session.request(&rpc(1, "initialize", init_params())).await {
         Ok(v) => v,
-        Err(HttpFail::Rejected(status)) if matches!(status, 400 | 404 | 405) => {
+        Err(HttpFail::Rejected(400 | 404 | 405)) => {
             return probe_legacy_sse(session).await;
         }
         Err(e) => return Err(e.into()),

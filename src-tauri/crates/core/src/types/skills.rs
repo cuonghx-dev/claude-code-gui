@@ -61,9 +61,8 @@ pub struct SkillInput {
     pub body: String,
 }
 
-/// Import a skill from external source. Phase 2: only `Local { path }`
-/// (a directory containing SKILL.md) is supported. `Github { url }` lands
-/// in Phase 3.
+/// Import a skill from an external source: `Local { path }` (a directory
+/// containing SKILL.md) or `Github { url }` (a repo directory URL).
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
 #[ts(export, export_to = "../../../../frontend/src/types/ipc/")]
 #[serde(tag = "kind", rename_all = "camelCase")]

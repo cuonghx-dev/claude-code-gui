@@ -68,7 +68,7 @@ pub fn claude_dir_for(config: &AppConfig) -> Result<PathBuf, AppError> {
         .claude_dir_override
         .as_deref()
         .filter(|p| !p.trim().is_empty())
-        .map(|p| PathBuf::from(app_core::files::expand_tilde(p)));
+        .map(app_core::files::expand_tilde);
     app_core::claude_dir::resolve(override_dir.as_deref())
 }
 

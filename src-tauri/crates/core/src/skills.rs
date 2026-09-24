@@ -48,7 +48,8 @@ fn list_into(root: &Path, source: SkillSource, out: &mut Vec<Skill>) -> Result<(
     }
     for entry in std::fs::read_dir(root)?.flatten() {
         let dir = entry.path();
-        if !dir.is_dir() {
+        // Hidden dirs include in-flight GitHub imports (`.ccg-import-*`).
+        if !dir.is_dir() || entry.file_name().to_string_lossy().starts_with('.') {
             continue;
         }
         let skill_md = dir.join("SKILL.md");
@@ -171,8 +172,8 @@ pub fn export(claude_dir: &Path, slug: &str) -> Result<Vec<u8>, AppError> {
     })
 }
 
-/// Phase 2 implements `Local { path }`; `Github { url }` returns `Internal`
-/// and lands in Phase 3 (network fetch + extract).
+/// Synchronous import. `Github { url }` needs the network and goes through
+/// `skills_github::import` instead; the IPC command routes it there.
 pub fn import(claude_dir: &Path, source: SkillImportSource) -> Result<Vec<Skill>, AppError> {
     match source {
         SkillImportSource::Local { path } => {
@@ -203,9 +204,8 @@ pub fn import(claude_dir: &Path, source: SkillImportSource) -> Result<Vec<Skill>
             copy_dir_recursive(&src, &dest_dir)?;
             Ok(vec![get(claude_dir, &slug)?])
         }
-        SkillImportSource::Github { .. } => Err(AppError::new(
-            ErrorCode::Internal,
-            "github skill import lands in Phase 3",
+        SkillImportSource::Github { .. } => Err(AppError::invalid(
+            "github imports are async; use skills_github::import",
         )),
     }
 }

@@ -30,6 +30,7 @@ pub mod settings_scope;
 pub mod statusline;
 pub mod setup;
 pub mod skills;
+pub mod skills_github;
 pub mod teams;
 pub mod transcript_scan;
 pub mod types;
