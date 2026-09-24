@@ -20,6 +20,7 @@ import {
   Settings,
 } from 'lucide-vue-next'
 import logoUrl from '@/assets/logo.png'
+import GlobalSearch from '@/components/GlobalSearch.vue'
 import { useAgentsList } from '@/composables/useAgents'
 import { useCommandsList } from '@/composables/useCommands'
 import { useSkillsList } from '@/composables/useSkills'
@@ -99,6 +100,7 @@ const bottomItems = computed<NavItem[]>(() => [
         >GUI</span>
       </h1>
     </div>
+    <GlobalSearch />
     <RouterLink
       v-for="item in items"
       :key="item.to"
