@@ -24,5 +24,6 @@ pub mod skills;
 pub mod statusline;
 pub mod teams;
 pub mod terminal;
+pub mod updater;
 pub mod usage;
 pub mod workflows;

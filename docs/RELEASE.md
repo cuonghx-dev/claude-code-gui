@@ -1,5 +1,10 @@
 # Release pipeline
 
+> **Status:** the GitHub Actions workflows (`ci.yml`, `release.yml`) were
+> removed in `82da7d3`. Until they are restored (`git show 82da7d3^:.github/workflows/release.yml`),
+> releases are built locally with the commands in [Building a release locally](#building-a-release-locally).
+> The rest of this document describes the pipeline those workflows ran.
+
 ## Overview
 
 `.github/workflows/release.yml` is triggered by pushing a `v*.*.*` tag. It
@@ -40,6 +45,35 @@ git commit -am "chore: release 0.2.0"
 git tag -a v0.2.0 -m "release 0.2.0"
 git push --tags
 ```
+
+## Building a release locally
+
+```bash
+bun install --cwd frontend
+# Updater artifacts (.app.tar.gz/.msi.zip + .sig) need the signing key, so
+# they are switched on per build rather than in tauri.conf.json — a plain
+# `cargo tauri build` must keep working without the key.
+export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/claude-code-gui.key)"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=...
+cargo tauri build --config '{"bundle":{"createUpdaterArtifacts":true}}'
+bun scripts/generate-updater-manifest.ts target/release/bundle 0.2.0
+```
+
+Generate the key pair once with `cargo tauri signer generate -w ~/.tauri/claude-code-gui.key`
+and put the public key in `plugins.updater.pubkey` (it is still the
+`REPLACE_WITH_TAURI_SIGNER_PUBKEY` placeholder).
+
+Write the notes from [`release-notes-template.md`](release-notes-template.md);
+the manifest's `notes` field is what Settings shows above the install button.
+
+## Updater channels
+
+`plugins.updater.endpoints` may contain `{{channel}}`. The app substitutes
+the channel saved in Settings (`stable` or `beta`) before checking
+(`updater_check` in `src-tauri/src/commands/updater.rs`), then Tauri fills
+in `{{target}}` / `{{current_version}}`. Host one manifest per channel, e.g.
+`/stable/darwin-aarch64/0.1.0` and `/beta/darwin-aarch64/0.1.0`.
+`updates.example.com` is a placeholder until a real host is chosen.
 
 ## Updater manifest format
 
@@ -101,16 +135,19 @@ After a release ships, smoke-test the updater on at least one platform:
 
 1. Install the previous version.
 2. Tag the new version, run the release job.
-3. Confirm the updater plugin shows the new version in
-   `Settings → Check for updates`.
-4. Apply the update and verify the binary launches.
+3. Confirm `Settings → Check for updates` shows the new version.
+4. Click **Install … and restart** and verify the relaunched binary reports
+   the new version.
 
 ## Single-instance + deep links
 
 `tauri-plugin-single-instance` is registered in `main.rs`; the second
-invocation re-routes its argv to the running window via
-`app:single_instance`. `tauri-plugin-deep-link` registers the
-`claude-code-gui://` scheme on first launch. Allowed verbs (locked from
+invocation focuses the running window and re-routes its argv via
+`app:single_instance`. The `claude-code-gui://` scheme is registered from
+the bundle's Info.plist on macOS and at startup (`register_all`) on Linux
+and Windows. A link that launches the app from cold is read with
+`getCurrent()` once the frontend is up; a URL arriving on several paths is
+handled once. Allowed verbs (locked from
 SPEC §8): `install`, `open-agent`. Anything else is logged and dropped
 in `frontend/src/lib/deepLink.ts`.
 

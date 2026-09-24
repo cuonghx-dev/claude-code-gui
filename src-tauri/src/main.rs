@@ -30,7 +30,13 @@ fn run() -> anyhow::Result<()> {
     tauri::Builder::default()
         // Single-instance must be registered first per plugin docs.
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
-            // Phase 6 wires deep-link routing on subsequent launches.
+            // A second launch (often a deep link) lands here: bring the
+            // existing window forward, then let the frontend route the args.
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
             let _ = app.emit("app:single_instance", serde_json::json!({ "args": args }));
         }))
         .plugin(tauri_plugin_dialog::init())
@@ -47,6 +53,17 @@ fn run() -> anyhow::Result<()> {
             // login-shell PATH so `claude`, `git`, `node`, etc. resolve.
             // Must run before any binary lookup.
             app_core::claude_cli::inherit_login_path();
+
+            // macOS registers the scheme from Info.plist at bundle time;
+            // Linux and Windows need a runtime registration (also covers
+            // dev builds, which have no installer).
+            #[cfg(any(target_os = "linux", windows))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                if let Err(e) = app.deep_link().register_all() {
+                    tracing::warn!(error = %e, "deep-link scheme registration failed");
+                }
+            }
 
             // Persisted AppConfig (theme, override, …) lives in the OS
             // app-config dir so the override can pick claude_dir. Best-effort.
@@ -116,6 +133,7 @@ fn run() -> anyhow::Result<()> {
                 tracing::warn!(error = %e, dir = %cache_dir.display(), "cache dir unavailable");
             }
 
+            app.manage(commands::updater::PendingUpdate::default());
             app.manage(AppState {
                 claude_dir: Arc::new(RwLock::new(claude_dir)),
                 claude_cli: Arc::new(RwLock::new(claude_cli)),
@@ -267,6 +285,8 @@ fn run() -> anyhow::Result<()> {
             commands::files::files_read,
             commands::files::fs_home_dir,
             commands::files::reveal_in_finder,
+            commands::updater::updater_check,
+            commands::updater::updater_install,
             commands::files::watch_project_dir,
             commands::files::unwatch_path,
             commands::terminal::terminal_session_create,

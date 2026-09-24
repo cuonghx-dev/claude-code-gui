@@ -67,6 +67,7 @@ import type {
   SettingsScope,
   StatusLine,
   StatusLinePreview,
+  UpdateInfo,
   WorktreeInclude,
   WorktreeInfo,
   Team,
@@ -333,6 +334,8 @@ export const sessionsMessages = (
     limit,
   })
 
+export const updaterCheck = () => invoke<UpdateInfo | null>('updater_check')
+export const updaterInstall = () => invoke<void>('updater_install')
 export const revealInFinder = (path: string) => invoke<void>('reveal_in_finder', { path })
 
 // Settings / config / setup

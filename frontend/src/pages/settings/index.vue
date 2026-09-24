@@ -11,7 +11,8 @@ import {
   useSettings,
   useSettingsPatch,
 } from '@/composables/useSettings'
-import type { AppConfig } from '@/types/ipc'
+import type { AppConfig, UpdateInfo } from '@/types/ipc'
+import { updaterCheck, updaterInstall } from '@/utils/ipc'
 
 const ctx = inject(SETTINGS_CONTEXT)!
 const { data: settings } = useSettings()
@@ -25,6 +26,8 @@ const cLocal = reactive({ theme: '', claudeDirOverride: '', updaterChannel: 'sta
 const lastSaved = ref('')
 const errorMessage = ref('')
 const checkingUpdate = ref(false)
+const installingUpdate = ref(false)
+const availableUpdate = ref<UpdateInfo | null>(null)
 
 watchEffect(() => {
   const s = settings.value
@@ -78,14 +81,30 @@ async function saveConfig() {
 async function checkForUpdates() {
   errorMessage.value = ''
   checkingUpdate.value = true
+  availableUpdate.value = null
   try {
-    const { check } = await import('@tauri-apps/plugin-updater')
-    const update = await check()
-    lastSaved.value = update?.available ? `update available: ${update.version}` : 'already up to date'
+    // Checks the saved channel's endpoint; save the channel first to switch.
+    availableUpdate.value = await updaterCheck()
+    lastSaved.value = availableUpdate.value
+      ? `update available: ${availableUpdate.value.version}`
+      : 'already up to date'
   } catch (e) {
     errorMessage.value = (e as { message?: string })?.message ?? String(e)
   } finally {
     checkingUpdate.value = false
+  }
+}
+
+async function installUpdate() {
+  errorMessage.value = ''
+  installingUpdate.value = true
+  try {
+    await updaterInstall()
+    const { relaunch } = await import('@tauri-apps/plugin-process')
+    await relaunch()
+  } catch (e) {
+    errorMessage.value = (e as { message?: string })?.message ?? String(e)
+    installingUpdate.value = false
   }
 }
 
@@ -199,7 +218,23 @@ async function redoOnboarding() {
           <Loader2 v-if="checkingUpdate" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
           {{ checkingUpdate ? 'Checking…' : 'Check for updates' }}
         </button>
+        <button
+          v-if="availableUpdate"
+          type="button"
+          class="ccg-btn-primary inline-flex items-center gap-1.5"
+          :disabled="installingUpdate"
+          @click="installUpdate"
+        >
+          <Loader2 v-if="installingUpdate" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          {{ installingUpdate ? 'Installing…' : `Install ${availableUpdate.version} and restart` }}
+        </button>
       </div>
+      <p
+        v-if="availableUpdate?.notes"
+        class="mt-2 whitespace-pre-wrap text-xs text-neutral-500 dark:text-neutral-400"
+      >
+        {{ availableUpdate.notes }}
+      </p>
     </div>
   </section>
 </template>

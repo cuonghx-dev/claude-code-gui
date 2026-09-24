@@ -53,7 +53,7 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": ["https://updates.example.com/{{target}}/{{current_version}}"],
+      "endpoints": ["https://updates.example.com/{{channel}}/{{target}}/{{current_version}}"],
       "pubkey": "REPLACE_WITH_TAURI_SIGNER_PUBKEY"
     },
     "deep-link": {
