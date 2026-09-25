@@ -487,7 +487,7 @@ dependencies = [
 
 [[package]]
 name = "claude-code-gui"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -521,7 +521,7 @@ dependencies = [
 
 [[package]]
 name = "claude-code-gui-claude-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "claude-code-gui-core",
  "serde",
@@ -533,7 +533,7 @@ dependencies = [
 
 [[package]]
 name = "claude-code-gui-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -561,7 +561,7 @@ dependencies = [
 
 [[package]]
 name = "claude-code-gui-pty"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "claude-code-gui-core",
@@ -580,7 +580,7 @@ dependencies = [
 
 [[package]]
 name = "claude-code-gui-watcher"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "claude-code-gui-core",
  "globset",
