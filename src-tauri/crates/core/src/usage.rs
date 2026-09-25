@@ -30,7 +30,8 @@ const SUBAGENTS_SUBDIR: &str = "subagents";
 const HISTORY_FILE: &str = "history.jsonl";
 const INDEX_FILE: &str = "usage-index.jsonl";
 /// Bump to discard a cache written by an older shape.
-const INDEX_VERSION: u32 = 1;
+/// v2: turns carry a `message_key` and are deduplicated.
+const INDEX_VERSION: u32 = 2;
 
 /// One assistant turn's token counts.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -47,6 +48,13 @@ pub struct TurnUsage {
     pub service_tier: Option<String>,
     #[serde(default)]
     pub is_sidechain: bool,
+    /// `message.id` + `requestId`. Claude Code writes one transcript line per
+    /// content block (thinking, text, tool_use) and repeats the response's
+    /// `usage` on each, and a resumed or forked session copies earlier lines
+    /// into its own file. Counting every line bills one response several
+    /// times, so rollups count each key once.
+    #[serde(default)]
+    pub message_key: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -125,42 +133,40 @@ pub fn rollup(
     let mut unpriced_turns = 0u64;
     let scanned_files = entries.len();
 
-    for entry in entries.values() {
+    for (project_name, turn) in unique_turns(&entries) {
         if let Some(project) = &q.project {
-            if &entry.project_name != project {
+            if project_name != project {
                 continue;
             }
         }
-        for turn in &entry.turns {
-            if q.from_ms.is_some_and(|f| turn.ts_ms < f) || q.to_ms.is_some_and(|t| turn.ts_ms > t) {
-                continue;
-            }
-            let cost = crate::models::cost_usd(
-                &turn.model,
-                turn.input,
-                turn.output,
-                turn.cache_read,
-                turn.cache_write,
-            );
-            if cost.is_none() && !turn.model.is_empty() {
-                unpriced.insert(turn.model.clone());
-                unpriced_turns += 1;
-            }
+        if q.from_ms.is_some_and(|f| turn.ts_ms < f) || q.to_ms.is_some_and(|t| turn.ts_ms > t) {
+            continue;
+        }
+        let cost = crate::models::cost_usd(
+            &turn.model,
+            turn.input,
+            turn.output,
+            turn.cache_read,
+            turn.cache_write,
+        );
+        if cost.is_none() && !turn.model.is_empty() {
+            unpriced.insert(turn.model.clone());
+            unpriced_turns += 1;
+        }
 
-            let key = match q.group_by {
-                GroupBy::Day => day_key(turn.ts_ms),
-                GroupBy::Project => entry.project_name.clone(),
-                GroupBy::Model => turn.model.clone(),
-            };
-            let slot = buckets.entry(key).or_default();
-            add(&mut slot.0, turn, cost);
-            add(
-                slot.1.entry(turn.model.clone()).or_default(),
-                turn,
-                cost,
-            );
-            add(&mut total, turn, cost);
-        }
+        let key = match q.group_by {
+            GroupBy::Day => day_key(turn.ts_ms),
+            GroupBy::Project => project_name.to_string(),
+            GroupBy::Model => turn.model.clone(),
+        };
+        let slot = buckets.entry(key).or_default();
+        add(&mut slot.0, turn, cost);
+        add(
+            slot.1.entry(turn.model.clone()).or_default(),
+            turn,
+            cost,
+        );
+        add(&mut total, turn, cost);
     }
 
     let mut out: Vec<UsageBucket> = buckets
@@ -239,6 +245,38 @@ pub fn activity(claude_dir: &Path, days: u32) -> Result<Vec<ActivityDay>, AppErr
         .collect())
 }
 
+/// Every turn once. The same response can appear in several files (a resumed
+/// session copies its parent's lines); the copy with the most tokens wins, as
+/// it is the one recorded after the response finished streaming. Turns
+/// without a key cannot be matched and are all kept.
+fn unique_turns(entries: &HashMap<String, CacheEntry>) -> Vec<(&str, &TurnUsage)> {
+    let mut keyed: HashMap<&str, (&str, &TurnUsage)> = HashMap::new();
+    let mut out = Vec::new();
+    // Sorted so a tie between copies resolves the same way on every run.
+    let mut sorted: Vec<&CacheEntry> = entries.values().collect();
+    sorted.sort_by(|a, b| a.path.cmp(&b.path));
+    for entry in sorted {
+        for turn in &entry.turns {
+            let pair = (entry.project_name.as_str(), turn);
+            match turn.message_key.as_deref() {
+                None => out.push(pair),
+                Some(k) => {
+                    let slot = keyed.entry(k).or_insert(pair);
+                    if token_sum(turn) > token_sum(slot.1) {
+                        *slot = pair;
+                    }
+                }
+            }
+        }
+    }
+    out.extend(keyed.into_values());
+    out
+}
+
+fn token_sum(t: &TurnUsage) -> u64 {
+    t.input + t.output + t.cache_read + t.cache_write
+}
+
 fn add(t: &mut UsageTotals, turn: &TurnUsage, cost: Option<f64>) {
     t.input += turn.input;
     t.output += turn.output;
@@ -302,7 +340,10 @@ fn scan_file(
     mtime_ms: i64,
     size_bytes: u64,
 ) -> Result<CacheEntry, AppError> {
-    let mut turns = Vec::new();
+    let mut turns: Vec<TurnUsage> = Vec::new();
+    // Index into `turns` per message key: a later line for the same response
+    // replaces the earlier one rather than adding to it.
+    let mut by_key: HashMap<String, usize> = HashMap::new();
     transcript_scan::for_each_line(path, |_, line| {
         let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
             return true;
@@ -325,7 +366,11 @@ fn scan_file(
         if input + output + cache_read + cache_write == 0 {
             return true;
         }
-        turns.push(TurnUsage {
+        let message_key = msg.get("id").and_then(|i| i.as_str()).map(|id| {
+            let req = v.get("requestId").and_then(|r| r.as_str()).unwrap_or_default();
+            format!("{id}:{req}")
+        });
+        let turn = TurnUsage {
             ts_ms: v
                 .get("timestamp")
                 .and_then(|t| t.as_str())
@@ -348,7 +393,18 @@ fn scan_file(
                 .get("isSidechain")
                 .and_then(|s| s.as_bool())
                 .unwrap_or(false),
-        });
+            message_key,
+        };
+        match turn.message_key.clone() {
+            Some(k) => match by_key.get(&k) {
+                Some(&i) => turns[i] = turn,
+                None => {
+                    by_key.insert(k, turns.len());
+                    turns.push(turn);
+                }
+            },
+            None => turns.push(turn),
+        }
         true
     })?;
 
@@ -401,9 +457,11 @@ fn parse_rfc3339_ms(s: &str) -> Option<i64> {
         .map(|dt| dt.timestamp_millis())
 }
 
+/// Calendar day in the machine's local time zone, so a day's row matches the
+/// day the person worked rather than the UTC date.
 fn day_key(ts_ms: i64) -> String {
     chrono::DateTime::from_timestamp_millis(ts_ms)
-        .map(|dt| dt.format("%Y-%m-%d").to_string())
+        .map(|dt| dt.with_timezone(&chrono::Local).format("%Y-%m-%d").to_string())
         .unwrap_or_else(|| "unknown".into())
 }
 
@@ -418,6 +476,13 @@ mod tests {
     fn assistant(ts: &str, model: &str, input: u64, output: u64) -> String {
         format!(
             r#"{{"type":"assistant","timestamp":"{ts}","message":{{"role":"assistant","model":"{model}","content":[{{"type":"text","text":"x"}}],"usage":{{"input_tokens":{input},"output_tokens":{output},"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}}}}"#
+        )
+    }
+
+    /// One content-block line of a response, as Claude Code writes them.
+    fn block(ts: &str, id: &str, req: &str, input: u64, output: u64) -> String {
+        format!(
+            r#"{{"type":"assistant","timestamp":"{ts}","requestId":"{req}","message":{{"id":"{id}","role":"assistant","model":"claude-sonnet-4-6","content":[{{"type":"text","text":"x"}}],"usage":{{"input_tokens":{input},"output_tokens":{output},"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}}}}"#
         )
     }
 
@@ -546,13 +611,67 @@ mod tests {
     }
 
     #[test]
+    fn content_blocks_of_one_response_count_once() {
+        let td = tempfile::tempdir().unwrap();
+        let cache = td.path().join("cache");
+        std::fs::create_dir_all(&cache).unwrap();
+        // thinking, text and tool_use lines share one message id and usage.
+        write_session(
+            td.path(),
+            "-tmp-a",
+            "s1",
+            &[
+                block("2026-01-01T10:00:00Z", "msg_1", "req_1", 1_000_000, 1_000_000),
+                block("2026-01-01T10:00:01Z", "msg_1", "req_1", 1_000_000, 1_000_000),
+                block("2026-01-01T10:00:02Z", "msg_1", "req_1", 1_000_000, 1_000_000),
+                block("2026-01-01T10:01:00Z", "msg_2", "req_2", 1_000_000, 0),
+            ],
+        );
+        let r = rollup(td.path(), &cache, &query(GroupBy::Day)).unwrap();
+        assert_eq!(r.total.turns, 2);
+        assert_eq!(r.total.input, 2_000_000);
+        assert_eq!(r.total.output, 1_000_000);
+        // $3 + $15 for msg_1, $3 for msg_2.
+        assert!((r.total.cost_usd - 21.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn response_copied_into_a_resumed_session_counts_once() {
+        let td = tempfile::tempdir().unwrap();
+        let cache = td.path().join("cache");
+        std::fs::create_dir_all(&cache).unwrap();
+        let shared = block("2026-01-01T10:00:00Z", "msg_1", "req_1", 1000, 10);
+        write_session(td.path(), "-tmp-a", "parent", &[shared.clone()]);
+        write_session(
+            td.path(),
+            "-tmp-a",
+            "resumed",
+            &[shared, block("2026-01-01T11:00:00Z", "msg_2", "req_2", 1000, 10)],
+        );
+        let r = rollup(td.path(), &cache, &query(GroupBy::Day)).unwrap();
+        assert_eq!(r.total.turns, 2);
+        assert_eq!(r.total.input, 2000);
+    }
+
+    #[test]
+    fn day_key_uses_local_time() {
+        let ts = parse_rfc3339_ms("2026-01-01T23:30:00Z").unwrap();
+        let local = chrono::DateTime::from_timestamp_millis(ts)
+            .unwrap()
+            .with_timezone(&chrono::Local)
+            .date_naive()
+            .to_string();
+        assert_eq!(day_key(ts), local);
+    }
+
+    #[test]
     fn torn_index_line_and_stale_version_are_tolerated() {
         let td = tempfile::tempdir().unwrap();
         let cache = td.path().join("cache");
         std::fs::create_dir_all(&cache).unwrap();
 
         std::fs::write(cache.join(INDEX_FILE), "{\"v\":1}\n{ torn\n").unwrap();
-        assert!(load_index(&cache).is_empty());
+        assert!(load_index(&cache).is_empty(), "a v1 index predates dedup and must be rebuilt");
 
         std::fs::write(cache.join(INDEX_FILE), "{\"v\":999}\n").unwrap();
         assert!(load_index(&cache).is_empty(), "a newer schema must be discarded");

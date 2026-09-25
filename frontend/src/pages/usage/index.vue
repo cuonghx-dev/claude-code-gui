@@ -88,9 +88,9 @@ const activityChart = computed(() =>
             </dd>
           </div>
           <div class="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
-            <dt class="text-xs text-neutral-500 dark:text-neutral-400">Cache read</dt>
+            <dt class="text-xs text-neutral-500 dark:text-neutral-400">Cache read / write</dt>
             <dd class="mt-1 text-2xl font-semibold tabular-nums">
-              {{ tokens(Number(r.total.cacheRead)) }}
+              {{ tokens(Number(r.total.cacheRead)) }} / {{ tokens(Number(r.total.cacheWrite)) }}
             </dd>
           </div>
         </dl>
@@ -117,6 +117,7 @@ const activityChart = computed(() =>
                 <th class="py-2 pr-4 text-right font-medium">Input</th>
                 <th class="py-2 pr-4 text-right font-medium">Output</th>
                 <th class="py-2 pr-4 text-right font-medium">Cache read</th>
+                <th class="py-2 pr-4 text-right font-medium">Cache write</th>
                 <th class="py-2 text-right font-medium">Cost</th>
               </tr>
             </thead>
@@ -143,6 +144,9 @@ const activityChart = computed(() =>
                 <td class="py-2 pr-4 text-right tabular-nums">
                   {{ tokens(Number(b.totals.cacheRead)) }}
                 </td>
+                <td class="py-2 pr-4 text-right tabular-nums">
+                  {{ tokens(Number(b.totals.cacheWrite)) }}
+                </td>
                 <td class="py-2 text-right tabular-nums">{{ money(b.totals.costUsd) }}</td>
               </tr>
             </tbody>
@@ -155,8 +159,9 @@ const activityChart = computed(() =>
         </div>
 
         <p class="text-xs text-neutral-500 dark:text-neutral-400">
-          {{ r.scannedFiles.toLocaleString() }} transcripts indexed. Cost is computed from each
-          turn's recorded token counts at current published rates.
+          {{ r.scannedFiles.toLocaleString() }} transcripts indexed. Cost is what these tokens would
+          cost at current published API rates — an estimate, not a bill: on a subscription plan you
+          are not charged per token. A turn is one API response; days follow your local time zone.
         </p>
       </section>
     </template>
