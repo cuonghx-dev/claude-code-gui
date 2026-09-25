@@ -38,6 +38,22 @@ const threads = useSessionThreads(projectName, sessionId)
 const messages = computed(() => transcript.data.value?.pages.flatMap((p) => p.items) ?? [])
 const total = computed(() => transcript.data.value?.pages[0]?.total ?? 0)
 
+// Summed over what has been paged in; subagent-file threads are separate
+// transcripts, while legacy sidechains are already among the messages.
+const cost = computed(() => {
+  let sum = 0
+  for (const m of messages.value) sum += m.costUsd ?? 0
+  for (const t of threads.data.value ?? []) {
+    if (t.source === 'subagent-file') sum += t.costUsd ?? 0
+  }
+  return sum
+})
+const costLabel = computed(() => {
+  if (!cost.value) return ''
+  const partial = transcript.hasNextPage.value ? '≥' : ''
+  return `${partial}$${cost.value.toFixed(2)}`
+})
+
 // Subagent turns are summarized by their card; showing them inline as well
 // doubles the transcript. Off by default, one toggle away.
 const showSidechains = ref(false)
@@ -95,53 +111,77 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
 <template>
   <section class="flex min-h-0 flex-1 flex-col">
     <header
-      class="flex shrink-0 items-center gap-3 border-b border-neutral-200 px-6 py-3 dark:border-neutral-800"
+      class="flex shrink-0 items-center gap-2.5 border-b px-[22px] py-3.5"
+      style="border-color: var(--ccg-hairline-soft);"
     >
-      <div class="min-w-0">
-        <h2 class="truncate text-sm font-semibold" :title="title ?? sessionId">
+      <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <h2 class="truncate text-[15px] font-semibold text-ink" :title="title ?? sessionId">
           <template v-if="title">{{ title }}</template>
           <template v-else>Session <span class="font-mono">{{ sessionId.slice(0, 8) }}…</span></template>
         </h2>
-        <p class="text-xs text-neutral-500 dark:text-neutral-400">
+        <p class="truncate text-[12px]" style="color: var(--ccg-subtle);">
           {{ total.toLocaleString() }} messages
           <template v-if="threads.data.value?.length">
             · {{ threads.data.value.length }} subagent{{ threads.data.value.length === 1 ? '' : 's' }}
           </template>
+          <template v-if="costLabel"> · {{ costLabel }}</template>
         </p>
       </div>
-      <div class="ml-auto flex shrink-0 items-center gap-2">
-        <label class="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-          <input v-model="showSidechains" type="checkbox" />
+      <div class="flex shrink-0 items-center gap-2.5">
+        <label
+          v-if="!resuming"
+          class="flex cursor-pointer select-none items-center gap-[7px] text-[12.5px]"
+          style="color: var(--ccg-body);"
+        >
+          <button
+            type="button"
+            role="switch"
+            class="ccg-switch"
+            :aria-checked="showSidechains"
+            @click="showSidechains = !showSidechains"
+          />
           Subagent messages
         </label>
-        <button type="button" class="ccg-btn-ghost" @click="showCheckpoints = !showCheckpoints">
-          {{ showCheckpoints ? 'Hide checkpoints' : 'Checkpoints' }}
+        <button
+          v-if="!resuming"
+          type="button"
+          class="ccg-btn-ghost ccg-btn-sm"
+          :aria-pressed="showCheckpoints"
+          @click="showCheckpoints = !showCheckpoints"
+        >
+          Checkpoints
         </button>
         <template v-if="replays.data.value?.length">
           <RouterLink
             v-if="replays.data.value.length === 1"
             :to="`/terminals/${replays.data.value[0].id}`"
-            class="ccg-btn-ghost"
+            class="ccg-btn-ghost ccg-btn-sm"
             title="Replay the terminal output recorded when this session ran here"
           >
             Terminal replay
           </RouterLink>
           <div v-else class="relative">
-            <button type="button" class="ccg-btn-ghost" @click="showReplays = !showReplays">
+            <button
+              type="button"
+              class="ccg-btn-ghost ccg-btn-sm"
+              :aria-pressed="showReplays"
+              @click="showReplays = !showReplays"
+            >
               Terminal replays ({{ replays.data.value.length }})
             </button>
             <ul
               v-if="showReplays"
-              class="absolute right-0 z-20 mt-1 w-64 rounded-md border border-neutral-200 bg-white py-1 text-xs shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+              class="absolute right-0 z-20 mt-1 w-64 rounded-lg border bg-white py-1 text-[12.5px] shadow-lg"
+              style="border-color: var(--ccg-hairline);"
             >
               <li v-for="r in replays.data.value" :key="r.id">
                 <RouterLink
                   :to="`/terminals/${r.id}`"
-                  class="flex items-center justify-between gap-2 px-3 py-1.5 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                  class="flex items-center justify-between gap-2 px-3 py-1.5 text-ink transition-colors duration-[120ms] ease-out hover:bg-canvas-soft"
                   @click="showReplays = false"
                 >
                   <span>{{ fmtReplay(r.endedAt) }}</span>
-                  <span class="text-neutral-400">
+                  <span class="font-mono text-[11.5px]" style="color: var(--ccg-muted-soft);">
                     {{ r.lineCount.toLocaleString() }} lines<template v-if="r.exitCode"> · exit {{ r.exitCode }}</template>
                   </span>
                 </RouterLink>
@@ -149,26 +189,37 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
             </ul>
           </div>
         </template>
-        <select
+        <div
           v-if="!resuming"
-          v-model="permissionMode"
-          class="ccg-input py-1 text-xs"
-          aria-label="Permission mode for the resumed session"
-          title="Permission mode"
+          class="flex overflow-hidden rounded-[7px] border"
+          style="border-color: var(--ccg-ink);"
         >
-          <option value="">CLI default</option>
-          <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
-        </select>
-        <button
-          v-if="!resuming"
-          type="button"
-          class="ccg-btn-ghost"
-          :disabled="!project.data.value"
-          @click="resuming = true"
-        >
-          Resume in terminal
-        </button>
-        <button v-else type="button" class="ccg-btn-ghost" @click="resuming = false">
+          <div class="relative flex h-7 items-center bg-white">
+            <select
+              v-model="permissionMode"
+              class="h-full cursor-pointer appearance-none bg-transparent pl-2.5 pr-6 font-mono text-[11.5px] text-ink outline-none"
+              aria-label="Permission mode for the resumed session"
+              title="Permission mode"
+            >
+              <option value="">CLI default</option>
+              <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
+            </select>
+            <span
+              class="pointer-events-none absolute right-2.5 font-mono text-[11.5px]"
+              style="color: var(--ccg-muted);"
+            >▾</span>
+          </div>
+          <button
+            type="button"
+            class="h-7 px-3 text-[12.5px] font-medium text-white transition-colors duration-[120ms] ease-out hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            style="background: var(--ccg-ink);"
+            :disabled="!project.data.value"
+            @click="resuming = true"
+          >
+            Resume in terminal
+          </button>
+        </div>
+        <button v-else type="button" class="ccg-btn-ghost ccg-btn-sm" @click="resuming = false">
           Close terminal
         </button>
       </div>
@@ -182,21 +233,21 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
       />
       <ContextPanel
         :session-id="ptyId || undefined"
-        class="w-72 shrink-0 overflow-y-auto border-l border-neutral-200 p-3 dark:border-neutral-800"
+        class="w-72 shrink-0 overflow-y-auto border-l p-3"
+        style="border-color: var(--ccg-hairline-soft); background: var(--ccg-canvas-soft);"
       />
     </div>
 
     <template v-else>
-      <p v-if="transcript.isPending.value" class="px-6 py-4 text-sm text-neutral-500">
-        Loading transcript…
-      </p>
-      <p v-else-if="transcript.isError.value" class="px-6 py-4 text-sm text-red-600">
+      <div v-if="transcript.isPending.value" class="flex max-w-[860px] flex-col gap-3 px-[22px] py-5">
+        <div v-for="i in 4" :key="i" class="ccg-skeleton h-14 rounded-lg" />
+      </div>
+      <p v-else-if="transcript.isError.value" class="ccg-alert-error mx-[22px] mt-5 px-3 py-2 text-[12.5px]" role="alert">
         {{ (transcript.error.value as Error)?.message ?? 'Failed to read the transcript' }}
       </p>
       <EmptyState
         v-else-if="!messages.length"
-        title="No messages"
-        hint="This session's transcript holds no renderable turns."
+        title="This session's transcript holds no renderable turns."
       />
       <div v-else class="flex min-h-0 flex-1">
         <MessageList
@@ -212,13 +263,14 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
         />
         <aside
           v-if="showCheckpoints"
-          class="w-[28rem] shrink-0 overflow-y-auto border-l border-neutral-200 p-4 dark:border-neutral-800"
+          class="flex w-[28rem] shrink-0 flex-col gap-3 overflow-y-auto border-l px-4 py-4"
+          style="border-color: var(--ccg-hairline-soft); background: var(--ccg-canvas-soft);"
         >
-          <h3 class="mb-3 text-sm font-semibold">Checkpoints</h3>
+          <h3 class="ccg-section-label">Checkpoints</h3>
           <CheckpointsPanel :project-name="projectName" :session-id="sessionId" />
         </aside>
       </div>
-      <TeamPanel :session-id="sessionId" class="mx-6 mb-4 shrink-0" />
+      <TeamPanel :session-id="sessionId" class="mx-[22px] mb-4 max-w-[816px] shrink-0" />
     </template>
   </section>
 </template>

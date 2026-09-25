@@ -59,44 +59,45 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <aside class="flex flex-col gap-3 text-sm">
-    <section class="rounded-lg border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Context</h3>
-      <p v-if="!tokens" class="mt-2 text-xs text-neutral-500">Waiting for first usage line…</p>
-      <dl v-else class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-        <dt class="text-neutral-500">Model</dt>
-        <dd class="font-mono">{{ tokens.model ?? '—' }}</dd>
-        <dt class="text-neutral-500">Input</dt>
-        <dd class="tabular-nums">{{ tokens.input.toLocaleString() }}</dd>
-        <dt class="text-neutral-500">Output</dt>
-        <dd class="tabular-nums">{{ tokens.output.toLocaleString() }}</dd>
-        <dt class="text-neutral-500">Cached</dt>
-        <dd class="tabular-nums">{{ tokens.cached.toLocaleString() }}</dd>
-        <dt class="text-neutral-500">Cost</dt>
-        <dd class="tabular-nums">${{ tokens.cost.toFixed(4) }}</dd>
+  <aside class="flex flex-col gap-3 text-[12.5px]">
+    <section class="ccg-card p-3">
+      <h3 class="ccg-section-label">Context</h3>
+      <p v-if="!tokens" class="mt-2 text-[12px]" style="color: var(--ccg-subtle);">Waiting for first usage line…</p>
+      <dl v-else class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
+        <dt style="color: var(--ccg-muted);">Model</dt>
+        <dd class="font-mono text-ink">{{ tokens.model ?? '—' }}</dd>
+        <dt style="color: var(--ccg-muted);">Input</dt>
+        <dd class="font-mono tabular-nums text-ink">{{ tokens.input.toLocaleString() }}</dd>
+        <dt style="color: var(--ccg-muted);">Output</dt>
+        <dd class="font-mono tabular-nums text-ink">{{ tokens.output.toLocaleString() }}</dd>
+        <dt style="color: var(--ccg-muted);">Cached</dt>
+        <dd class="font-mono tabular-nums text-ink">{{ tokens.cached.toLocaleString() }}</dd>
+        <dt style="color: var(--ccg-muted);">Cost</dt>
+        <dd class="font-mono tabular-nums text-ink">${{ tokens.cost.toFixed(4) }}</dd>
       </dl>
     </section>
 
-    <section class="rounded-lg border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Tool calls</h3>
-      <p v-if="!tools.length" class="mt-2 text-xs text-neutral-500">No tool calls yet.</p>
-      <ol v-else class="mt-2 max-h-72 overflow-auto space-y-1 text-xs">
+    <section class="ccg-card p-3">
+      <h3 class="ccg-section-label">Tool calls</h3>
+      <p v-if="!tools.length" class="mt-2 text-[12px]" style="color: var(--ccg-subtle);">No tool calls yet.</p>
+      <ol v-else class="mt-2 max-h-72 space-y-1 overflow-auto text-[12px]">
         <li
           v-for="(t, i) in tools"
           :key="`${t.name}-${i}`"
           class="flex items-baseline justify-between gap-2 font-mono"
         >
-          <span class="flex min-w-0 items-center gap-1.5 truncate">
+          <span class="flex min-w-0 items-center gap-1.5 truncate text-ink">
             <component
               :is="t.state === 'completed' ? CircleCheck : CircleDot"
               class="h-3 w-3 shrink-0"
-              :class="t.state === 'completed' ? 'text-emerald-600 dark:text-emerald-400' : 'text-violet-600 dark:text-violet-400'"
+              :stroke-width="1.5"
+              :style="{ color: t.state === 'completed' ? 'var(--ccg-success)' : 'var(--ccg-purple)' }"
               :aria-label="t.state === 'completed' ? 'completed' : 'running'"
             />
             <span class="truncate">{{ t.name }}</span>
           </span>
-          <span class="tabular-nums text-neutral-500">
-            {{ t.state }}<span v-if="t.durationMs">  · {{ t.durationMs }}ms</span>
+          <span class="tabular-nums" style="color: var(--ccg-subtle);">
+            {{ t.state }}<span v-if="t.durationMs"> · {{ t.durationMs }}ms</span>
           </span>
         </li>
       </ol>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Sidebar from './Sidebar.vue'
+import TitleBar from './TitleBar.vue'
 import OnboardingFlow from './OnboardingFlow.vue'
 import { useSettings } from '@/composables/useSettings'
 
@@ -11,11 +12,14 @@ const showOnboarding = computed(
 </script>
 
 <template>
-  <div class="flex h-full w-full overflow-hidden bg-neutral-50 dark:bg-neutral-950">
-    <Sidebar />
-    <main class="flex-1 overflow-auto">
-      <slot />
-    </main>
+  <div class="flex h-full w-full flex-col overflow-hidden" style="background: var(--ccg-canvas);">
+    <TitleBar />
+    <div class="flex min-h-0 flex-1">
+      <Sidebar />
+      <main class="min-w-0 flex-1 overflow-auto" style="background: var(--ccg-canvas);">
+        <slot />
+      </main>
+    </div>
     <OnboardingFlow v-if="showOnboarding" />
   </div>
 </template>

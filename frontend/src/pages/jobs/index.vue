@@ -20,47 +20,51 @@ const relative = (iso: string | null) => {
 </script>
 
 <template>
-  <PageHeader
-    title="Jobs"
-    :subtitle="`${data?.length ?? 0} background jobs in ~/.claude/jobs/`"
-  />
-  <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
-    <template #default="{ data: items }">
-      <section class="p-6">
+  <div class="flex h-full flex-col">
+    <PageHeader
+      title="Jobs"
+      :subtitle="`~/.claude/jobs/ · ${data?.length ?? 0} background job${data?.length === 1 ? '' : 's'}`"
+    />
+    <QueryStateBoundary
+      :is-pending="isPending"
+      :is-error="isError"
+      :error="error"
+      :data="data"
+      skeleton="rows"
+    >
+      <template #default="{ data: items }">
         <EmptyState
           v-if="!items?.length"
-          title="No background jobs"
-          hint="Jobs appear here when the CLI runs work in the background."
+          title="No background jobs. They appear here when the CLI runs work in the background."
         />
-        <ul
-          v-else
-          class="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900"
-        >
+        <ul v-else class="flex flex-col gap-2 px-7 py-5">
           <li v-for="j in items" :key="j.id">
             <RouterLink
               :to="`/jobs/${j.id}`"
-              class="block px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+              class="ccg-card ccg-card-hover flex flex-col gap-1.5 px-4 py-3"
             >
-              <div class="flex items-baseline justify-between gap-3">
-                <span class="flex min-w-0 items-center gap-2">
-                  <span v-if="j.pinned" class="text-xs text-amber-500" title="Pinned">★</span>
-                  <span class="truncate text-sm font-semibold">{{ j.name }}</span>
-                </span>
-                <span class="flex shrink-0 items-center gap-3">
-                  <JobStateBadge :state="j.state" />
-                  <span class="text-xs text-neutral-400">{{ relative(j.updatedAt) }}</span>
+              <div class="flex items-center gap-2">
+                <span v-if="j.pinned" class="text-[12px]" style="color: var(--ccg-accent);" title="Pinned">★</span>
+                <span class="min-w-0 flex-1 truncate text-[13.5px] font-medium text-ink">{{ j.name }}</span>
+                <JobStateBadge :state="j.state" />
+                <span class="w-16 text-right font-mono text-[11px]" style="color: var(--ccg-muted-soft);">
+                  {{ relative(j.updatedAt) }}
                 </span>
               </div>
-              <p v-if="j.detail" class="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">
+              <p
+                v-if="j.detail"
+                class="line-clamp-2 text-[13px] leading-[1.45]"
+                style="color: var(--ccg-body);"
+              >
                 {{ j.detail }}
               </p>
-              <p class="mt-0.5 font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
+              <p class="truncate font-mono text-[11.5px]" style="color: var(--ccg-subtle);">
                 {{ j.cwd ?? j.id }}
               </p>
             </RouterLink>
           </li>
         </ul>
-      </section>
-    </template>
-  </QueryStateBoundary>
+      </template>
+    </QueryStateBoundary>
+  </div>
 </template>

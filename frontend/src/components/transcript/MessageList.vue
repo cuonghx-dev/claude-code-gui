@@ -57,7 +57,7 @@ watch(rows, (items) => {
 </script>
 
 <template>
-  <div ref="parent" class="min-h-0 flex-1 overflow-y-auto">
+  <div ref="parent" class="min-h-0 flex-1 overflow-y-auto pb-5 pt-0.5">
     <div class="relative w-full" :style="{ height: `${virtualizer.getTotalSize()}px` }">
       <div
         v-for="row in rows"
@@ -77,6 +77,8 @@ watch(rows, (items) => {
         />
       </div>
     </div>
-    <p v-if="isFetchingNextPage" class="px-6 py-3 text-xs text-neutral-500">Loading more…</p>
+    <p v-if="isFetchingNextPage" class="px-[22px] py-3 text-[12px]" style="color: var(--ccg-subtle);">
+      Loading more…
+    </p>
   </div>
 </template>

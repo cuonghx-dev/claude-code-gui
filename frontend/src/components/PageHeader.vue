@@ -6,13 +6,14 @@ defineProps<{
 </script>
 
 <template>
-  <header class="flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4 dark:border-neutral-800 dark:bg-neutral-900">
-    <div>
-      <h2 class="text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-        {{ title }}
-      </h2>
-      <p v-if="subtitle" class="text-sm text-neutral-500 dark:text-neutral-400">
-        {{ subtitle }}
+  <header
+    class="flex items-center gap-3 border-b px-7 pb-4 pt-5"
+    style="border-color: var(--ccg-hairline-soft);"
+  >
+    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+      <h2 class="ccg-page-title truncate">{{ title }}</h2>
+      <p v-if="subtitle || $slots.subtitle" class="ccg-path truncate">
+        <slot name="subtitle">{{ subtitle }}</slot>
       </p>
     </div>
     <div class="flex items-center gap-2">

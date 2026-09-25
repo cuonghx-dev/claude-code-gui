@@ -30,40 +30,48 @@ const tokens = computed(() => {
 </script>
 
 <template>
-  <div class="rounded-lg border border-violet-300/60 dark:border-violet-900/60">
+  <div
+    class="overflow-hidden rounded-lg border"
+    style="background: var(--ccg-purple-bg); border-color: var(--ccg-purple-border);"
+  >
     <button
       type="button"
-      class="flex w-full items-baseline gap-2 px-3 py-2 text-left hover:bg-violet-500/5"
+      class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
+      :aria-expanded="expanded"
+      :title="`${tokens} tok${thread.costUsd != null ? ` · $${thread.costUsd.toFixed(4)}` : ''}`"
       @click="expanded = !expanded"
     >
-      <span class="shrink-0 text-xs font-semibold text-violet-600 dark:text-violet-400">
-        Subagent{{ thread.agentName ? `: ${thread.agentName}` : '' }}
+      <span
+        class="shrink-0 rounded px-1.5 py-0.5 font-mono text-[10.5px] font-medium text-white"
+        style="background: var(--ccg-purple);"
+      >subagent</span>
+      <span class="shrink-0 font-mono text-[12.5px] font-medium text-ink">{{ thread.agentName ?? 'agent' }}</span>
+      <span class="min-w-0 flex-1 truncate text-[12.5px]" style="color: var(--ccg-muted);">
+        {{ thread.description }}
       </span>
-      <span class="min-w-0 flex-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
-        <template v-if="thread.description">{{ thread.description }} · </template>
-        {{ thread.messageCount }} messages · {{ tokens }} tok
-        <template v-if="thread.costUsd != null"> · ${{ thread.costUsd.toFixed(4) }}</template>
+      <span class="shrink-0 text-[12px]" style="color: var(--ccg-purple);">
+        {{ thread.messageCount }} messages {{ expanded ? '▾' : '▸' }}
       </span>
-      <span class="text-xs text-neutral-400">{{ expanded ? '−' : '+' }}</span>
     </button>
 
-    <div v-if="expanded" class="border-t border-violet-300/60 dark:border-violet-900/60">
+    <div v-if="expanded" class="border-t bg-white" style="border-color: var(--ccg-purple-border);">
       <div class="p-3">
         <ToolUseBlock :message="message" />
       </div>
-      <p v-if="sub.isPending.value" class="px-3 pb-3 text-xs text-neutral-500">
+      <p v-if="sub.isPending.value" class="px-3 pb-3 text-[12px]" style="color: var(--ccg-subtle);">
         Loading subagent transcript…
       </p>
-      <div v-else-if="sub.data.value?.items.length" class="max-h-[32rem] overflow-y-auto">
+      <div v-else-if="sub.data.value?.items.length" class="max-h-[32rem] overflow-y-auto pb-3">
         <MessageRow
           v-for="m in sub.data.value.items"
           :key="m.id"
           :message="m"
           :project-name="projectName"
           :session-id="sessionId"
+          nested
         />
       </div>
-      <p v-else class="px-3 pb-3 text-xs text-neutral-500">
+      <p v-else class="px-3 pb-3 text-[12px]" style="color: var(--ccg-subtle);">
         This subagent's messages are inlined in the main transcript.
       </p>
     </div>

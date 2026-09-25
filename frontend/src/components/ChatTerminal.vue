@@ -46,7 +46,8 @@ async function start() {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
     fontSize: 13,
     cursorBlink: true,
-    theme: { background: '#0a0a0a' },
+    // Stays dark: the CLI picks its own palette and assumes a dark backdrop.
+    theme: { background: '#1F1E1B', foreground: '#EFECE6', cursor: '#C2552D', cursorAccent: '#1F1E1B', selectionBackground: '#5E5B5480' },
   })
   fit = new FitAddon()
   term.loadAddon(fit)
@@ -156,12 +157,9 @@ defineExpose({ sessionId, errorMessage })
 
 <template>
   <div class="flex h-full flex-col">
-    <p
-      v-if="errorMessage"
-      class="m-2 rounded-md border border-red-300 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-    >
+    <p v-if="errorMessage" class="ccg-alert-error m-3 px-3 py-2 text-[12.5px]" role="alert">
       {{ errorMessage }}
     </p>
-    <div ref="host" class="min-h-0 flex-1 overflow-hidden bg-neutral-950" />
+    <div ref="host" class="min-h-0 flex-1 overflow-hidden px-2 py-1.5" style="background: #1F1E1B;" />
   </div>
 </template>

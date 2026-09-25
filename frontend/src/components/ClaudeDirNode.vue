@@ -11,8 +11,9 @@ const props = withDefaults(
     depth?: number
     /** Label to show instead of the entry's own, for catalog rows. */
     label?: string
+    selectedPath?: string | null
   }>(),
-  { depth: 0 },
+  { depth: 0, selectedPath: null },
 )
 
 const emit = defineEmits<{ select: [ClaudeDirEntry] }>()
@@ -34,6 +35,8 @@ const onClick = () => {
   else emit('select', props.entry)
 }
 
+const isSelected = computed(() => !!props.selectedPath && props.selectedPath === props.entry.path)
+
 const formatSize = (bytes: bigint | number | null) => {
   if (bytes === null) return ''
   const n = Number(bytes)
@@ -47,50 +50,45 @@ const formatSize = (bytes: bigint | number | null) => {
   <li>
     <button
       type="button"
-      class="flex w-full items-start gap-2 py-2 pr-4 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800"
-      :style="{ paddingLeft: `${16 + depth * 16}px` }"
-      :class="entry.exists ? '' : 'opacity-50'"
+      class="ccg-dir-row flex w-full items-center gap-1.5 border py-[5px] pr-2 text-left"
+      :style="{ paddingLeft: `${8 + depth * 14}px` }"
+      :class="[entry.exists ? '' : 'opacity-50', isSelected ? 'ccg-dir-row-selected' : '']"
       :aria-expanded="expandable ? open : undefined"
+      :aria-current="isSelected ? 'true' : undefined"
+      :title="entry.oneLiner || entry.path"
       @click="onClick"
     >
-      <component
-        :is="entry.isSymlink ? Link2 : entry.kind === 'dir' ? Folder : FileText"
-        class="mt-0.5 h-4 w-4 shrink-0 text-neutral-500 dark:text-neutral-400"
-      />
-      <span class="min-w-0 flex-1">
-        <span class="flex flex-wrap items-baseline gap-2">
-          <span class="font-mono text-sm text-neutral-900 dark:text-neutral-100">
-            {{ label ?? entry.label }}
-          </span>
-          <span
-            v-if="!entry.known"
-            class="rounded bg-neutral-500/10 px-1.5 py-0.5 text-[10px] text-neutral-500 dark:text-neutral-400"
-          >
-            undocumented
-          </span>
-          <span v-if="!entry.exists" class="text-[11px] text-neutral-500 dark:text-neutral-400">
-            not present
-          </span>
-          <span v-else-if="entry.kind === 'dir'" class="text-[11px] text-neutral-500 dark:text-neutral-400">
-            {{ entry.childCount }} item{{ entry.childCount === 1 ? '' : 's' }}
-          </span>
-          <span v-else class="text-[11px] text-neutral-500 dark:text-neutral-400">
-            {{ formatSize(entry.sizeBytes) }}
-          </span>
-        </span>
-        <span v-if="entry.oneLiner" class="mt-0.5 block text-xs text-neutral-500 dark:text-neutral-400">
-          {{ entry.oneLiner }}
-        </span>
-      </span>
       <ChevronRight
         v-if="expandable"
-        class="mt-0.5 h-4 w-4 shrink-0 text-neutral-400 transition-transform"
+        :size="14"
+        :stroke-width="1.5"
+        class="flex-none transition-transform"
         :class="open ? 'rotate-90' : ''"
+        style="color: var(--ccg-muted-soft);"
       />
+      <span v-else class="w-[14px] flex-none" />
+      <component
+        :is="entry.isSymlink ? Link2 : entry.kind === 'dir' ? Folder : FileText"
+        :size="14"
+        :stroke-width="1.5"
+        class="flex-none"
+        style="color: var(--ccg-subtle);"
+      />
+      <span class="min-w-0 flex-1 truncate font-mono text-[12.5px] text-ink">{{ label ?? entry.label }}</span>
+      <span v-if="!entry.known" class="ccg-badge" style="font-size: 9.5px; padding: 0 4px;">extra</span>
+      <span class="flex-none font-mono text-[10.5px]" style="color: var(--ccg-muted-soft);">
+        <template v-if="!entry.exists">—</template>
+        <template v-else-if="entry.kind === 'dir'">{{ entry.childCount }}</template>
+        <template v-else>{{ formatSize(entry.sizeBytes) }}</template>
+      </span>
     </button>
 
-    <ul v-if="open" class="bg-neutral-50/60 dark:bg-neutral-950/40">
-      <li v-if="children.isPending.value" class="py-1.5 pl-12 text-xs text-neutral-500">
+    <ul v-if="open" class="flex flex-col gap-px">
+      <li
+        v-if="children.isPending.value"
+        class="py-1 text-[11.5px]"
+        :style="{ paddingLeft: `${30 + (depth + 1) * 14}px`, color: 'var(--ccg-muted-soft)' }"
+      >
         Loading…
       </li>
       <ClaudeDirNode
@@ -98,15 +96,35 @@ const formatSize = (bytes: bigint | number | null) => {
         :key="child.id"
         :entry="child"
         :project-path="projectPath"
+        :selected-path="selectedPath"
         :depth="depth + 1"
         @select="(e: ClaudeDirEntry) => emit('select', e)"
       />
       <li
         v-if="children.data.value?.some((c) => c.truncated)"
-        class="py-1.5 pl-12 text-xs text-neutral-500 dark:text-neutral-400"
+        class="py-1 text-[11.5px]"
+        :style="{ paddingLeft: `${30 + (depth + 1) * 14}px`, color: 'var(--ccg-muted-soft)' }"
       >
         Listing truncated.
       </li>
     </ul>
   </li>
 </template>
+
+<style scoped>
+.ccg-dir-row {
+  border-color: transparent;
+  border-radius: 7px;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+
+.ccg-dir-row:hover {
+  background: #efece5;
+}
+
+.ccg-dir-row-selected,
+.ccg-dir-row-selected:hover {
+  background: #fff;
+  border-color: var(--ccg-hairline-strong);
+}
+</style>

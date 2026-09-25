@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import PageHeader from '@/components/PageHeader.vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import {
@@ -43,42 +42,67 @@ async function onDelete() {
 </script>
 
 <template>
-  <PageHeader :title="data?.name ?? id" :subtitle="data?.version ? `v${data.version}` : undefined">
-    <template #actions>
-      <button
-        v-if="data"
-        type="button"
-        class="ccg-btn-ghost"
-        @click="toggle(!data.enabled)"
-      >
-        {{ data.enabled ? 'Disable' : 'Enable' }}
-      </button>
-      <button type="button" class="ccg-btn-danger" @click="confirmingDelete = true">Uninstall</button>
-    </template>
-  </PageHeader>
-  <p
-    v-if="errorMessage"
-    class="mx-6 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-  >
-    {{ errorMessage }}
-  </p>
-  <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
-    <template #default="{ data: detail }">
-      <section v-if="detail" class="p-6 space-y-4">
-        <dl class="grid grid-cols-3 gap-x-3 gap-y-2 rounded-lg border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-900">
-          <dt class="text-neutral-500">Description</dt>
-          <dd class="col-span-2">{{ describe(detail.description, detail.readme) }}</dd>
-          <dt class="text-neutral-500">Skills</dt>
-          <dd class="col-span-2">{{ detail.skills.join(', ') || '—' }}</dd>
-          <dt class="text-neutral-500">Enabled</dt>
-          <dd class="col-span-2">{{ detail.enabled ? 'yes' : 'no' }}</dd>
-          <dt class="text-neutral-500">Path</dt>
-          <dd class="col-span-2 break-all font-mono text-xs">{{ detail.dir }}</dd>
-        </dl>
-        <pre v-if="detail.readme" class="max-h-[60vh] overflow-auto rounded-lg border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-900">{{ detail.readme }}</pre>
-      </section>
-    </template>
-  </QueryStateBoundary>
+  <div class="flex h-full flex-col">
+    <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
+      <template #default="{ data: detail }">
+        <div v-if="detail" class="flex max-w-[960px] flex-col gap-[18px] px-7 py-[22px]">
+          <div class="flex flex-col gap-1">
+            <nav class="text-[13px]" style="color: var(--ccg-subtle);">
+              <RouterLink to="/plugins" class="hover:text-ink">Plugins</RouterLink>
+              <span v-if="detail.marketplace"> / <span class="font-mono text-[12px]">{{ detail.marketplace }}</span></span>
+              /
+            </nav>
+            <div class="flex items-center gap-2.5">
+              <h2 class="min-w-0 truncate font-mono text-[17px] font-semibold text-ink">{{ detail.name }}</h2>
+              <span v-if="detail.version" class="ccg-badge">v{{ detail.version }}</span>
+              <span class="flex-1" />
+              <label class="flex items-center gap-2 text-[12.5px]" style="color: var(--ccg-muted);">
+                {{ detail.enabled ? 'Enabled' : 'Disabled' }}
+                <button
+                  type="button"
+                  role="switch"
+                  class="ccg-switch disabled:opacity-50"
+                  :aria-checked="detail.enabled"
+                  :aria-label="detail.enabled ? 'Disable plugin' : 'Enable plugin'"
+                  :disabled="setEnabled.isPending.value"
+                  @click="toggle(!detail.enabled)"
+                />
+              </label>
+              <button type="button" class="ccg-btn-danger ccg-btn-sm" @click="confirmingDelete = true">
+                Uninstall
+              </button>
+            </div>
+          </div>
+
+          <p v-if="errorMessage" class="ccg-alert-error px-3 py-2 text-[12.5px]" role="alert">
+            {{ errorMessage }}
+          </p>
+
+          <p class="text-[13px] leading-[1.5]" style="color: var(--ccg-body); text-wrap: pretty;">
+            {{ describe(detail.description, detail.readme) }}
+          </p>
+
+          <div class="flex flex-col gap-1.5">
+            <span class="ccg-section-label">Location</span>
+            <div class="ccg-code-block break-all" style="white-space: pre-wrap;">{{ detail.dir }}</div>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <span class="ccg-section-label">Skills {{ detail.skills.length }}</span>
+            <div v-if="detail.skills.length" class="flex flex-wrap gap-1">
+              <span v-for="sk in detail.skills" :key="sk" class="ccg-chip">{{ sk }}</span>
+            </div>
+            <p v-else class="text-[13px]" style="color: var(--ccg-subtle);">This plugin contributes no skills.</p>
+          </div>
+
+          <div v-if="detail.readme" class="flex flex-col gap-1.5">
+            <span class="ccg-section-label">README</span>
+            <pre class="ccg-code-block max-h-[60vh]" style="white-space: pre-wrap;">{{ detail.readme }}</pre>
+          </div>
+        </div>
+      </template>
+    </QueryStateBoundary>
+  </div>
   <ConfirmDialog
     v-model:open="confirmingDelete"
     title="Uninstall plugin?"

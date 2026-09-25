@@ -42,15 +42,31 @@ async function complete() {
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-40 flex items-center justify-center bg-neutral-100/95 backdrop-blur-sm dark:bg-neutral-950/95">
-      <div class="w-[520px] rounded-xl border border-neutral-200 bg-white p-6 shadow-xl dark:border-neutral-800 dark:bg-neutral-900">
-        <header class="mb-4">
-          <h2 class="text-lg font-semibold">Welcome to Claude Code GUI</h2>
-          <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+    <div
+      class="fixed inset-0 z-40 flex items-start justify-center pt-[90px]"
+      style="background: rgba(31, 30, 27, .18);"
+    >
+      <div
+        class="flex w-[560px] flex-col overflow-hidden bg-white"
+        style="border-radius: 12px; box-shadow: 0 24px 60px rgba(40,30,20,.3), 0 0 0 1px rgba(0,0,0,.08);"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="onboarding-title"
+      >
+        <header class="flex flex-col gap-1 border-b px-5 pb-4 pt-5" style="border-color: var(--ccg-hairline-soft);">
+          <div class="flex items-baseline gap-2">
+            <h2 id="onboarding-title" class="flex-1 text-[17px] font-semibold text-ink" style="letter-spacing: -.01em;">
+              Welcome to Claude Code GUI
+            </h2>
+            <span class="font-mono text-[11px]" style="color: var(--ccg-muted-soft);">
+              {{ step + 1 }} / {{ totalSteps }}
+            </span>
+          </div>
+          <p class="text-[13px]" style="color: var(--ccg-body);">
             A few questions to set up your defaults. You can change everything later in Settings.
           </p>
           <div
-            class="mt-3 flex gap-1"
+            class="mt-2 flex gap-1"
             role="progressbar"
             :aria-valuenow="step + 1"
             aria-valuemin="1"
@@ -60,92 +76,105 @@ async function complete() {
             <span
               v-for="i in totalSteps"
               :key="i"
-              class="h-1 flex-1 rounded"
-              :class="i - 1 <= step ? 'bg-violet-600' : 'bg-neutral-200 dark:bg-neutral-700'"
+              class="h-[3px] flex-1 rounded-full"
+              :style="{ background: i - 1 <= step ? 'var(--ccg-ink)' : 'var(--ccg-surface-strong)' }"
             />
           </div>
-          <p class="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-            Step {{ step + 1 }} of {{ totalSteps }}
-          </p>
         </header>
 
-        <p
-          v-if="errorMessage"
-          class="mb-3 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+        <div class="flex min-h-[180px] flex-col gap-5 px-5 py-5">
+          <p v-if="errorMessage" class="ccg-alert-error px-3 py-2 text-[12.5px]" role="alert">
+            {{ errorMessage }}
+          </p>
+
+          <section v-if="step === 0" class="flex flex-col gap-2">
+            <div class="flex items-baseline gap-2">
+              <h3 class="text-[13px] font-semibold text-ink">Default model</h3>
+              <span class="text-[12px]" style="color: var(--ccg-muted-soft);">used when an agent does not pin a model</span>
+            </div>
+            <div class="ccg-seg self-start" role="group" aria-label="Default model">
+              <button
+                v-for="m in ['opus', 'sonnet', 'haiku']"
+                :key="m"
+                type="button"
+                class="font-mono"
+                :aria-pressed="state.defaultModel === m"
+                @click="state.defaultModel = m"
+              >
+                {{ m }}
+              </button>
+            </div>
+          </section>
+
+          <template v-else-if="step === 1">
+            <section class="flex flex-col gap-2">
+              <div class="flex items-baseline gap-2">
+                <h3 class="text-[13px] font-semibold text-ink">Default permission mode</h3>
+                <span class="text-[12px]" style="color: var(--ccg-muted-soft);">applied when launching a new terminal</span>
+              </div>
+              <select v-model="state.defaultPermissionMode" class="ccg-input w-[240px] font-mono text-[12px]">
+                <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
+              </select>
+            </section>
+            <section class="flex flex-col gap-2">
+              <h3 class="text-[13px] font-semibold text-ink">Theme</h3>
+              <div class="ccg-seg self-start" role="group" aria-label="Theme">
+                <button
+                  v-for="t in [
+                    { v: 'system', label: 'Match system' },
+                    { v: 'light', label: 'Light' },
+                    { v: 'dark', label: 'Dark' },
+                  ]"
+                  :key="t.v"
+                  type="button"
+                  :aria-pressed="state.theme === t.v"
+                  @click="state.theme = t.v"
+                >
+                  {{ t.label }}
+                </button>
+              </div>
+            </section>
+          </template>
+
+          <section v-else class="flex flex-col gap-2">
+            <div class="flex items-baseline gap-2">
+              <h3 class="text-[13px] font-semibold text-ink">Claude directory</h3>
+              <span class="text-[12px]" style="color: var(--ccg-muted-soft);">advanced</span>
+            </div>
+            <p class="text-[12.5px]" style="color: var(--ccg-muted);">
+              Default: <code class="font-mono text-[12px] text-ink">~/.claude</code>. Override only if you keep agents elsewhere.
+            </p>
+            <div class="flex gap-2">
+              <input v-model="state.claudeDirOverride" class="ccg-input flex-1 font-mono text-[12.5px]" placeholder="~/.claude" />
+              <button type="button" class="ccg-btn-ghost" @click="pickDir">Browse…</button>
+            </div>
+          </section>
+        </div>
+
+        <footer
+          class="flex items-center justify-between border-t px-5 py-3"
+          style="border-color: var(--ccg-hairline-soft); background: var(--ccg-canvas-soft);"
         >
-          {{ errorMessage }}
-        </p>
-
-        <section v-if="step === 0" class="space-y-3">
-          <h3 class="text-sm font-semibold">Default model</h3>
-          <p class="text-xs text-neutral-500 dark:text-neutral-400">
-            Used when an agent does not pin a model.
-          </p>
-          <div class="flex flex-col gap-2">
-            <label v-for="m in ['opus', 'sonnet', 'haiku']" :key="m" class="flex items-center gap-2">
-              <input v-model="state.defaultModel" type="radio" :value="m" />
-              <span class="text-sm capitalize">{{ m }}</span>
-            </label>
-          </div>
-        </section>
-
-        <section v-else-if="step === 1" class="space-y-3">
-          <h3 class="text-sm font-semibold">Default permission mode</h3>
-          <p class="text-xs text-neutral-500 dark:text-neutral-400">
-            Applied when launching a new terminal.
-          </p>
-          <select v-model="state.defaultPermissionMode" class="ccg-input">
-            <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
-          </select>
-          <h3 class="mt-4 text-sm font-semibold">Theme</h3>
-          <select v-model="state.theme" class="ccg-input">
-            <option value="system">match system</option>
-            <option value="light">light</option>
-            <option value="dark">dark</option>
-          </select>
-        </section>
-
-        <section v-else class="space-y-3">
-          <h3 class="text-sm font-semibold">Claude directory (advanced)</h3>
-          <p class="text-xs text-neutral-500 dark:text-neutral-400">
-            Default: <code>~/.claude</code>. Override only if you keep agents elsewhere.
-          </p>
-          <div class="flex gap-2">
-            <input v-model="state.claudeDirOverride" class="ccg-input flex-1" placeholder="~/.claude" />
-            <button type="button" class="ccg-btn-ghost" @click="pickDir">Browse…</button>
-          </div>
-        </section>
-
-        <footer class="mt-6 flex items-center justify-between">
-          <button
-            v-if="step > 0"
-            type="button"
-            class="ccg-btn-ghost"
-            @click="step -= 1"
-          >
-            Back
-          </button>
+          <button v-if="step > 0" type="button" class="ccg-btn-ghost" @click="step -= 1">Back</button>
           <span v-else />
-          <div class="flex items-center gap-2">
-            <button
-              v-if="step < totalSteps - 1"
-              type="button"
-              class="ccg-btn-primary"
-              :disabled="!canAdvance"
-              @click="step += 1"
-            >
-              Next
-            </button>
-            <button
-              v-else
-              type="button"
-              class="ccg-btn-primary"
-              :disabled="finalize.isPending.value"
-              @click="complete"
-            >
-              {{ finalize.isPending.value ? 'Saving…' : 'Finish' }}
-            </button>
-          </div>
+          <button
+            v-if="step < totalSteps - 1"
+            type="button"
+            class="ccg-btn-primary"
+            :disabled="!canAdvance"
+            @click="step += 1"
+          >
+            Next
+          </button>
+          <button
+            v-else
+            type="button"
+            class="ccg-btn-primary"
+            :disabled="finalize.isPending.value"
+            @click="complete"
+          >
+            {{ finalize.isPending.value ? 'Saving…' : 'Finish' }}
+          </button>
         </footer>
       </div>
     </div>

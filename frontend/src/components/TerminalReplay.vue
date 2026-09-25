@@ -32,7 +32,7 @@ onMounted(() => {
     cursorBlink: false,
     disableStdin: true,
     scrollback: 10_000,
-    theme: { background: '#0a0a0a' },
+    theme: { background: '#1F1E1B', foreground: '#EFECE6', cursor: '#C2552D', cursorAccent: '#1F1E1B', selectionBackground: '#5E5B5480' },
   })
   fit = new FitAddon()
   term.loadAddon(fit)
@@ -54,5 +54,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="host" class="h-full w-full overflow-hidden rounded-lg bg-[#0a0a0a] p-2" />
+  <div
+    ref="host" class="h-full w-full overflow-hidden rounded-lg border p-2"
+    style="background: #1F1E1B; border-color: var(--ccg-hairline);"
+  />
 </template>

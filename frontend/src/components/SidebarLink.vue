@@ -18,17 +18,32 @@ defineProps<{ item: NavItem }>()
 <template>
   <RouterLink
     :to="item.to"
-    class="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-    active-class="bg-neutral-100 font-medium text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
+    class="ccg-nav-item flex h-7 items-center gap-2 rounded-[6px] px-2.5 text-[13px] text-ink"
+    active-class="ccg-nav-item-active"
   >
-    <component :is="item.icon" class="h-4 w-4" />
-    <span class="flex-1">{{ item.label }}</span>
+    <component :is="item.icon" class="h-4 w-4 flex-none" :stroke-width="1.5" style="color: var(--ccg-muted);" />
+    <span class="flex-1 truncate">{{ item.label }}</span>
     <span
       v-if="item.count() !== undefined"
-      class="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] tabular-nums text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100"
+      class="font-mono text-[11px] tabular-nums"
+      style="color: var(--ccg-muted-soft);"
       :aria-label="`${item.count()} ${item.label.toLowerCase()}`"
     >
       {{ item.count() }}
     </span>
   </RouterLink>
 </template>
+
+<style scoped>
+.ccg-nav-item {
+  transition: background-color 120ms ease-out;
+}
+.ccg-nav-item:hover {
+  background: var(--ccg-hover);
+}
+.ccg-nav-item-active,
+.ccg-nav-item-active:hover {
+  background: var(--ccg-active);
+  font-weight: 600;
+}
+</style>

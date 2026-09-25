@@ -85,46 +85,60 @@ function onSubmit() {
 </script>
 
 <template>
-  <form class="grid grid-cols-1 gap-4 lg:grid-cols-2" @submit.prevent="onSubmit">
-    <FormField label="ID" required :error="errors.id">
-      <input v-model="state.id" :readonly="lockId" type="text" class="ccg-input" />
-    </FormField>
-    <FormField label="Scope">
-      <select v-model="state.scope" class="ccg-input">
-        <option value="global">global</option>
-        <option value="project">project</option>
-      </select>
-    </FormField>
-    <FormField
-      v-if="state.scope === 'project'"
-      label="Working dir"
-      :error="errors.workingDir"
-      class="lg:col-span-2"
-    >
-      <input v-model="state.workingDir" type="text" class="ccg-input" />
-    </FormField>
-    <FormField label="Name" :error="errors['frontmatter.name']">
-      <input v-model="state.name" type="text" class="ccg-input" />
-    </FormField>
-    <FormField label="Keep coding instructions" class="flex-row items-center">
-      <label class="inline-flex items-center gap-2">
-        <input v-model="state.keepCodingInstructions" type="checkbox" />
-        <span class="text-xs text-neutral-500 dark:text-neutral-400">
-          Preserve coding sections from base style
-        </span>
-      </label>
-    </FormField>
-    <FormField label="Description" class="lg:col-span-2">
-      <textarea v-model="state.description" rows="2" class="ccg-input" />
-    </FormField>
-    <FormField label="Body" class="lg:col-span-2">
-      <MarkdownEditor v-model="state.body" min-height="320px" />
-    </FormField>
-    <div class="lg:col-span-2 flex items-center justify-end gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
-      <button type="button" class="ccg-btn-ghost" @click="emit('cancel')">Cancel</button>
-      <button type="submit" :disabled="submitting" class="ccg-btn-primary">
-        {{ submitting ? 'Saving…' : (submitLabel ?? 'Save') }}
-      </button>
+  <form class="flex max-w-[820px] flex-col gap-2" @submit.prevent="onSubmit">
+    <div class="flex items-baseline gap-2">
+      <span class="text-[13px] font-semibold text-ink">Output style</span>
+      <span class="text-[12px]" style="color: var(--ccg-muted-soft);">Written as &lt;id&gt;.md in the selected scope</span>
+    </div>
+    <div class="flex flex-col gap-4 rounded-lg border bg-white p-4" style="border-color: var(--ccg-hairline);">
+      <div class="grid grid-cols-2 gap-3">
+        <FormField label="ID" required :error="errors.id">
+          <input v-model="state.id" :readonly="lockId" type="text" class="ccg-input font-mono text-[12.5px]" />
+        </FormField>
+        <FormField label="Scope">
+          <select v-model="state.scope" class="ccg-input font-mono text-[12.5px]">
+            <option value="global">global</option>
+            <option value="project">project</option>
+          </select>
+        </FormField>
+        <FormField
+          v-if="state.scope === 'project'"
+          label="Working dir"
+          :error="errors.workingDir"
+          class="col-span-2"
+        >
+          <input v-model="state.workingDir" type="text" class="ccg-input font-mono text-[12.5px]" />
+        </FormField>
+        <FormField label="Name" :error="errors['frontmatter.name']">
+          <input v-model="state.name" type="text" class="ccg-input" />
+        </FormField>
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-medium text-neutral-700">Keep coding instructions</span>
+          <div class="flex h-8 items-center gap-2">
+            <button
+              type="button"
+              role="switch"
+              class="ccg-switch"
+              :aria-checked="state.keepCodingInstructions"
+              aria-label="Keep coding instructions"
+              @click="state.keepCodingInstructions = !state.keepCodingInstructions"
+            />
+            <span class="text-[12px]" style="color: var(--ccg-muted);">Preserve coding sections from base style</span>
+          </div>
+        </div>
+        <FormField label="Description" class="col-span-2">
+          <textarea v-model="state.description" rows="2" class="ccg-input" />
+        </FormField>
+      </div>
+      <FormField label="Body">
+        <MarkdownEditor v-model="state.body" min-height="320px" />
+      </FormField>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" class="ccg-btn-ghost" @click="emit('cancel')">Cancel</button>
+        <button type="submit" :disabled="submitting" class="ccg-btn-primary">
+          {{ submitting ? 'Saving…' : (submitLabel ?? 'Save') }}
+        </button>
+      </div>
     </div>
   </form>
 </template>

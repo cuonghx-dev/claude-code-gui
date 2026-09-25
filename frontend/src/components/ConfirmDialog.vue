@@ -60,49 +60,44 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style="background: rgba(31, 30, 27, .18);"
       @click.self="close"
     >
       <div
-        class="relative w-full max-w-md rounded-lg border border-neutral-200 bg-white p-5 shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
+        class="relative w-full max-w-[420px] rounded-[12px] bg-white p-5"
+        style="box-shadow: 0 24px 60px rgba(40, 30, 20, .3), 0 0 0 1px rgba(0, 0, 0, .08);"
         role="dialog"
         aria-modal="true"
         :aria-labelledby="titleId"
       >
         <button
           type="button"
-          class="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+          class="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors hover:bg-[#F3F1EC]"
+          style="color: var(--ccg-subtle);"
           aria-label="Close dialog"
           @click="close"
         >
-          <X class="h-4 w-4" aria-hidden="true" />
+          <X class="h-4 w-4" :stroke-width="1.5" aria-hidden="true" />
         </button>
-        <h3 :id="titleId" class="pr-8 text-base font-semibold text-neutral-900 dark:text-neutral-100">
+        <h3 :id="titleId" class="pr-8 text-[15px] font-semibold text-ink">
           {{ props.title }}
         </h3>
         <p
           v-if="props.message"
-          class="mt-2 text-sm text-neutral-600 dark:text-neutral-400"
+          class="mt-2 text-[13px] leading-[1.5]"
+          style="color: var(--ccg-body);"
         >
           {{ props.message }}
         </p>
         <div class="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            class="ccg-btn-ghost"
-            @click="close"
-          >
+          <button type="button" class="ccg-btn-ghost" @click="close">
             {{ props.cancelLabel }}
           </button>
           <button
             ref="confirmRef"
             type="button"
-            class="rounded-md px-3 py-1.5 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900"
-            :class="
-              props.danger
-                ? 'bg-red-600 hover:bg-red-700 focus-visible:ring-red-500'
-                : 'bg-violet-600 hover:bg-violet-700 focus-visible:ring-violet-500'
-            "
+            :class="props.danger ? 'ccg-btn-primary ccg-btn-destructive' : 'ccg-btn-primary'"
             @click="confirm"
           >
             {{ props.confirmLabel }}
@@ -112,3 +107,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+.ccg-btn-destructive {
+  background: var(--ccg-error);
+}
+.ccg-btn-destructive:hover:not(:disabled) {
+  background: #962f25;
+}
+</style>

@@ -120,121 +120,131 @@ async function redoOnboarding() {
 </script>
 
 <template>
-  <section class="space-y-6 p-6">
-    <p v-if="errorMessage" class="rounded-md bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-300">
+  <section class="flex max-w-[820px] flex-col gap-[18px] px-7 py-[22px]">
+    <p v-if="errorMessage" class="ccg-alert-error px-3 py-2 text-[12.5px]">
       {{ errorMessage }}
     </p>
-    <p v-if="lastSaved" class="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+    <p v-if="lastSaved" class="rounded-[7px] bg-[#DDEBDF] px-3 py-2 text-[12.5px] text-[#3F7A4E]">
       {{ lastSaved }}
     </p>
 
-    <div class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Claude CLI</h3>
-      <dl class="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
-        <dt class="text-neutral-500">Path</dt>
-        <dd class="col-span-2 break-all font-mono text-xs">{{ cli?.path ?? 'not found' }}</dd>
-        <dt class="text-neutral-500">Version</dt>
-        <dd class="col-span-2">{{ cli?.version ?? '—' }}</dd>
+    <div class="flex flex-col gap-2">
+      <div class="flex items-baseline gap-2">
+        <span class="text-[13px] font-semibold text-ink">Claude CLI</span>
+        <span class="text-[12px] text-[#A29E94]">The binary sessions and terminals launch</span>
+      </div>
+      <dl class="rounded-lg border border-[#E6E2DA] bg-white text-[12.5px]">
+        <div class="flex items-center gap-3 border-b border-[#F3F0EA] px-3 py-2">
+          <dt class="w-20 shrink-0 text-[#8A867C]">Path</dt>
+          <dd class="min-w-0 flex-1 break-all font-mono text-ink">{{ cli?.path ?? 'not found' }}</dd>
+        </div>
+        <div class="flex items-center gap-3 px-3 py-2">
+          <dt class="w-20 shrink-0 text-[#8A867C]">Version</dt>
+          <dd class="font-mono text-ink">{{ cli?.version ?? '—' }}</dd>
+        </div>
       </dl>
     </div>
 
-    <div class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-        Session defaults
-      </h3>
-      <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-        <FormField label="Default model">
-          <select v-model="sLocal.defaultModel" class="ccg-input">
-            <option value="">— inherit —</option>
-            <option value="opus">opus</option>
-            <option value="sonnet">sonnet</option>
-            <option value="haiku">haiku</option>
-          </select>
-        </FormField>
-        <FormField label="Default permission mode">
-          <select v-model="sLocal.defaultPermissionMode" class="ccg-input">
-            <option value="">— inherit —</option>
-            <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
-          </select>
-        </FormField>
+    <div class="flex flex-col gap-2">
+      <div class="flex items-baseline gap-2">
+        <span class="text-[13px] font-semibold text-ink">Session defaults</span>
+        <span class="text-[12px] text-[#A29E94]">Written to the selected scope's settings file</span>
       </div>
-      <div class="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          class="ccg-btn-primary inline-flex items-center gap-1.5"
-          :disabled="patch.isPending.value"
-          @click="saveSettings"
-        >
-          <Loader2 v-if="patch.isPending.value" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          Save
-        </button>
-        <button type="button" class="ccg-btn-ghost" @click="redoOnboarding">
-          Replay onboarding
-        </button>
+      <div class="flex flex-col gap-4 rounded-lg border border-[#E6E2DA] bg-white p-4">
+        <div class="grid grid-cols-2 gap-3">
+          <FormField label="Default model">
+            <select v-model="sLocal.defaultModel" class="ccg-input font-mono text-[12.5px]">
+              <option value="">— inherit —</option>
+              <option value="opus">opus</option>
+              <option value="sonnet">sonnet</option>
+              <option value="haiku">haiku</option>
+            </select>
+          </FormField>
+          <FormField label="Default permission mode">
+            <select v-model="sLocal.defaultPermissionMode" class="ccg-input font-mono text-[12.5px]">
+              <option value="">— inherit —</option>
+              <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
+            </select>
+          </FormField>
+        </div>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" class="ccg-btn-ghost" @click="redoOnboarding">
+            Replay onboarding
+          </button>
+          <button
+            type="button"
+            class="ccg-btn-primary"
+            :disabled="patch.isPending.value"
+            @click="saveSettings"
+          >
+            <Loader2 v-if="patch.isPending.value" :size="14" class="animate-spin" aria-hidden="true" />
+            Save
+          </button>
+        </div>
       </div>
     </div>
 
-    <div class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-        App preferences
-      </h3>
-      <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-        Stored by this app, not by Claude Code.
-      </p>
-      <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-        <FormField label="Theme">
-          <select v-model="cLocal.theme" class="ccg-input">
-            <option value="">match system</option>
-            <option value="light">light</option>
-            <option value="dark">dark</option>
-          </select>
-        </FormField>
-        <FormField label="Claude directory override" hint="Default: ~/.claude">
-          <input v-model="cLocal.claudeDirOverride" type="text" class="ccg-input" />
-        </FormField>
-        <FormField label="Updater channel">
-          <select v-model="cLocal.updaterChannel" class="ccg-input">
-            <option value="stable">stable</option>
-            <option value="beta">beta</option>
-          </select>
-        </FormField>
+    <div class="flex flex-col gap-2">
+      <div class="flex items-baseline gap-2">
+        <span class="text-[13px] font-semibold text-ink">App preferences</span>
+        <span class="text-[12px] text-[#A29E94]">Stored by this app, not by Claude Code</span>
       </div>
-      <div class="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          class="ccg-btn-primary inline-flex items-center gap-1.5"
-          :disabled="configMut.isPending.value"
-          @click="saveConfig"
+      <div class="flex flex-col gap-4 rounded-lg border border-[#E6E2DA] bg-white p-4">
+        <div class="grid grid-cols-3 gap-3">
+          <FormField label="Theme">
+            <select v-model="cLocal.theme" class="ccg-input">
+              <option value="">match system</option>
+              <option value="light">light</option>
+              <option value="dark">dark</option>
+            </select>
+          </FormField>
+          <FormField label="Claude directory override" hint="Default: ~/.claude">
+            <input v-model="cLocal.claudeDirOverride" type="text" class="ccg-input font-mono text-[12.5px]" />
+          </FormField>
+          <FormField label="Updater channel">
+            <select v-model="cLocal.updaterChannel" class="ccg-input">
+              <option value="stable">stable</option>
+              <option value="beta">beta</option>
+            </select>
+          </FormField>
+        </div>
+        <p
+          v-if="availableUpdate?.notes"
+          class="whitespace-pre-wrap text-[12px] text-[#8A867C]"
         >
-          <Loader2 v-if="configMut.isPending.value" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          Save preferences
-        </button>
-        <button
-          type="button"
-          class="ccg-btn-ghost inline-flex items-center gap-1.5"
-          :disabled="checkingUpdate"
-          @click="checkForUpdates"
-        >
-          <Loader2 v-if="checkingUpdate" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          {{ checkingUpdate ? 'Checking…' : 'Check for updates' }}
-        </button>
-        <button
-          v-if="availableUpdate"
-          type="button"
-          class="ccg-btn-primary inline-flex items-center gap-1.5"
-          :disabled="installingUpdate"
-          @click="installUpdate"
-        >
-          <Loader2 v-if="installingUpdate" class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          {{ installingUpdate ? 'Installing…' : `Install ${availableUpdate.version} and restart` }}
-        </button>
+          {{ availableUpdate.notes }}
+        </p>
+        <div class="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            class="ccg-btn-ghost"
+            :disabled="checkingUpdate"
+            @click="checkForUpdates"
+          >
+            <Loader2 v-if="checkingUpdate" :size="14" class="animate-spin" aria-hidden="true" />
+            {{ checkingUpdate ? 'Checking…' : 'Check for updates' }}
+          </button>
+          <button
+            v-if="availableUpdate"
+            type="button"
+            class="ccg-btn-ghost"
+            :disabled="installingUpdate"
+            @click="installUpdate"
+          >
+            <Loader2 v-if="installingUpdate" :size="14" class="animate-spin" aria-hidden="true" />
+            {{ installingUpdate ? 'Installing…' : `Install ${availableUpdate.version} and restart` }}
+          </button>
+          <button
+            type="button"
+            class="ccg-btn-primary"
+            :disabled="configMut.isPending.value"
+            @click="saveConfig"
+          >
+            <Loader2 v-if="configMut.isPending.value" :size="14" class="animate-spin" aria-hidden="true" />
+            Save preferences
+          </button>
+        </div>
       </div>
-      <p
-        v-if="availableUpdate?.notes"
-        class="mt-2 whitespace-pre-wrap text-xs text-neutral-500 dark:text-neutral-400"
-      >
-        {{ availableUpdate.notes }}
-      </p>
     </div>
   </section>
 </template>

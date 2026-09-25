@@ -8,21 +8,20 @@ const expanded = ref(false)
 </script>
 
 <template>
-  <div class="rounded-lg bg-neutral-100/60 dark:bg-neutral-900/60">
+  <div>
     <button
       type="button"
-      class="flex w-full items-baseline gap-2 px-3 py-2 text-left"
+      class="text-left text-[12.5px] italic transition-colors duration-[120ms] ease-out hover:text-body"
+      style="color: var(--ccg-subtle);"
+      :aria-expanded="expanded"
       @click="expanded = !expanded"
     >
-      <span class="text-xs font-medium italic text-neutral-500 dark:text-neutral-400">thinking</span>
-      <span class="min-w-0 flex-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
-        {{ expanded ? '' : (message.thinking ?? '') }}
-      </span>
-      <span class="text-xs text-neutral-400">{{ expanded ? '−' : '+' }}</span>
+      {{ expanded ? '▾' : '▸' }} Thinking
     </button>
     <p
       v-if="expanded"
-      class="whitespace-pre-wrap px-3 pb-3 text-sm italic text-neutral-600 dark:text-neutral-300"
+      class="mt-1.5 whitespace-pre-wrap border-l-2 pl-3 text-[12.5px] italic leading-[1.55]"
+      style="color: var(--ccg-muted); border-color: var(--ccg-hairline);"
     >
       {{ message.thinking }}
     </p>

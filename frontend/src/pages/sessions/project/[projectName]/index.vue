@@ -4,9 +4,6 @@ import EmptyState from '@/components/EmptyState.vue'
 
 <template>
   <section class="flex h-full items-center justify-center p-6">
-    <EmptyState
-      title="No session selected"
-      hint="Pick a session from the list, or start a new chat."
-    />
+    <EmptyState title="Pick a session from the list to read its transcript." />
   </section>
 </template>

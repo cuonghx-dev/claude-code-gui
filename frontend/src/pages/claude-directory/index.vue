@@ -6,6 +6,7 @@ import { ExternalLink, X } from 'lucide-vue-next'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import ClaudeDirNode from '@/components/ClaudeDirNode.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import { useClaudeDirectoryTree } from '@/composables/useClaudeDirectory'
 import { useProjectsList } from '@/composables/useProjects'
 import { filesRead } from '@/utils/ipc'
@@ -74,94 +75,116 @@ const subtitle = computed(() =>
 </script>
 
 <template>
-  <PageHeader title="Claude directory" :subtitle="subtitle">
-    <template #actions>
-      <select
-        v-model="projectPath"
-        aria-label="Project scope"
-        class="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-      >
-        <option value="">No project</option>
-        <option v-for="p in projects.data.value ?? []" :key="p.name" :value="p.workingDir">
-          {{ p.workingDir }}
-        </option>
-      </select>
-      <button
-        class="ccg-btn-ghost inline-flex items-center gap-1"
-        @click="openUrl('https://code.claude.com/docs/en/claude-directory')"
-      >
-        <ExternalLink class="h-3.5 w-3.5" /> Docs
-      </button>
-    </template>
-  </PageHeader>
-
-  <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
-    <template #default="{ data: trees }">
-      <section class="flex h-full min-h-0 gap-6 p-6">
-        <div class="min-w-0 flex-1 space-y-8 overflow-auto">
-          <div v-for="tree in trees ?? []" :key="tree.scope">
-            <div class="mb-3 flex flex-wrap items-baseline gap-2">
-              <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                {{ scopeLabel(tree) }}
-              </span>
-              <span class="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">{{ tree.root }}</span>
-              <span class="text-xs text-neutral-500 dark:text-neutral-400">
-                {{ presentCount(tree) }} / {{ tree.entries.length }} present
-              </span>
-            </div>
-
-            <ul class="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
-              <ClaudeDirNode
-                v-for="entry in tree.entries"
-                :key="entry.id"
-                :entry="entry"
-                :label="relPath(tree, entry)"
-                :project-path="projectPath || undefined"
-                @select="select"
-              />
-            </ul>
-          </div>
-        </div>
-
-        <aside
-          v-if="selected"
-          class="flex w-[36rem] max-w-[45%] shrink-0 flex-col rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+  <div class="flex h-full flex-col">
+    <PageHeader title="Claude directory" :subtitle="subtitle">
+      <template #actions>
+        <select
+          v-model="projectPath"
+          aria-label="Project scope"
+          class="ccg-input max-w-[280px] font-mono text-[12px]"
         >
-          <div class="flex items-start gap-2 border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
-            <div class="min-w-0 flex-1">
-              <p class="truncate font-mono text-sm font-medium text-neutral-900 dark:text-neutral-100">{{ selected.label }}</p>
-              <p class="truncate font-mono text-[11px] text-neutral-500 dark:text-neutral-400">{{ selected.path }}</p>
+          <option value="">No project</option>
+          <option v-for="p in projects.data.value ?? []" :key="p.name" :value="p.workingDir">
+            {{ p.workingDir }}
+          </option>
+        </select>
+        <button
+          type="button"
+          class="ccg-btn-ghost"
+          @click="openUrl('https://code.claude.com/docs/en/claude-directory')"
+        >
+          <ExternalLink :size="14" :stroke-width="1.5" /> Docs
+        </button>
+      </template>
+    </PageHeader>
+
+    <QueryStateBoundary
+      :is-pending="isPending"
+      :is-error="isError"
+      :error="error"
+      :data="data"
+      skeleton="rows"
+    >
+      <template #default="{ data: trees }">
+        <div class="flex min-h-0 flex-1">
+          <nav
+            class="flex w-[300px] flex-none flex-col gap-4 overflow-auto border-r p-3"
+            style="border-color: var(--ccg-hairline-soft);"
+            aria-label=".claude tree"
+          >
+            <div v-for="tree in trees ?? []" :key="tree.scope" class="flex flex-col gap-1">
+              <div class="flex flex-col gap-0.5 px-2 pb-1">
+                <div class="flex items-baseline gap-2">
+                  <span class="ccg-section-label">{{ scopeLabel(tree) }}</span>
+                  <span class="flex-1" />
+                  <span class="font-mono text-[10.5px]" style="color: var(--ccg-muted-soft);">
+                    {{ presentCount(tree) }}/{{ tree.entries.length }}
+                  </span>
+                </div>
+                <span class="truncate font-mono text-[11px]" style="color: var(--ccg-subtle);" :title="tree.root">
+                  {{ tree.root }}
+                </span>
+              </div>
+              <ul class="flex flex-col gap-px">
+                <ClaudeDirNode
+                  v-for="entry in tree.entries"
+                  :key="entry.id"
+                  :entry="entry"
+                  :label="relPath(tree, entry)"
+                  :project-path="projectPath || undefined"
+                  :selected-path="selected?.path"
+                  @select="select"
+                />
+              </ul>
             </div>
-            <RouterLink
-              v-if="editorRoute"
-              :to="editorRoute"
-              class="ccg-btn-ghost whitespace-nowrap"
-            >
-              Edit
-            </RouterLink>
-            <button
-              v-if="selected.docsUrl"
-              class="ccg-btn-ghost inline-flex items-center gap-1"
-              @click="openUrl(selected.docsUrl)"
-            >
-              <ExternalLink class="h-3.5 w-3.5" /> Docs
-            </button>
-            <button
-              type="button"
-              aria-label="Close preview"
-              class="rounded p-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              @click="selected = null"
-            >
-              <X class="h-4 w-4" />
-            </button>
-          </div>
-          <div class="min-h-0 flex-1 overflow-auto p-4">
-            <p v-if="previewLoading" class="text-sm text-neutral-500 dark:text-neutral-400">Loading…</p>
-            <p v-else-if="previewError" class="text-sm text-red-700 dark:text-red-300">{{ previewError }}</p>
-            <pre v-else class="whitespace-pre-wrap break-words font-mono text-xs text-neutral-700 dark:text-neutral-300">{{ preview }}</pre>
-          </div>
-        </aside>
-      </section>
-    </template>
-  </QueryStateBoundary>
+          </nav>
+
+          <section class="flex min-w-0 flex-1 flex-col gap-[18px] overflow-auto px-7 py-[22px]">
+            <EmptyState v-if="!selected" title="Select a file in the tree to preview it." />
+            <template v-else>
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-2.5">
+                  <h3 class="min-w-0 flex-1 truncate font-mono text-[17px] font-semibold text-ink">
+                    {{ selected.label }}
+                  </h3>
+                  <span v-if="selected.badge" class="ccg-badge">{{ selected.badge }}</span>
+                  <RouterLink v-if="editorRoute" :to="editorRoute" class="ccg-btn-primary ccg-btn-sm">Edit</RouterLink>
+                  <button
+                    v-if="selected.docsUrl"
+                    type="button"
+                    class="ccg-btn-ghost ccg-btn-sm"
+                    @click="openUrl(selected.docsUrl)"
+                  >
+                    <ExternalLink :size="14" :stroke-width="1.5" /> Docs
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Close preview"
+                    class="ccg-btn-ghost ccg-btn-sm px-2"
+                    @click="selected = null"
+                  >
+                    <X :size="16" :stroke-width="1.5" />
+                  </button>
+                </div>
+                <p class="ccg-path truncate" :title="selected.path">{{ selected.path }}</p>
+              </div>
+              <p
+                v-if="selected.oneLiner"
+                class="text-[13px] leading-[1.5]"
+                style="color: var(--ccg-body);"
+              >
+                {{ selected.oneLiner }}
+              </p>
+              <div class="flex min-h-0 flex-col gap-1.5">
+                <span class="ccg-section-label">Contents</span>
+                <div v-if="previewLoading" class="ccg-skeleton h-40" style="border-radius: 8px;" />
+                <p v-else-if="previewError" class="ccg-alert-error px-3 py-2 text-[12.5px]">{{ previewError }}</p>
+                <pre v-else class="ccg-code-block" style="white-space: pre-wrap; word-break: break-word;">{{ preview }}</pre>
+              </div>
+            </template>
+          </section>
+        </div>
+      </template>
+    </QueryStateBoundary>
+  </div>
 </template>

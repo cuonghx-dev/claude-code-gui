@@ -27,20 +27,19 @@ async function onSubmit(input: McpServerInput) {
 </script>
 
 <template>
-  <PageHeader title="New MCP server" :subtitle="`Adds an entry to ${fileLabel}`" />
-  <section class="p-6">
-    <p
-      v-if="errorMessage"
-      class="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-    >
-      {{ errorMessage }}
-    </p>
-    <McpForm
-      :draft-key="`mcp:new:${scope}`"
-      :submitting="create.isPending.value"
-      submit-label="Create"
-      @submit="onSubmit"
-      @cancel="router.push({ path: '/mcp', query })"
-    />
-  </section>
+  <div class="flex h-full flex-col">
+    <PageHeader title="New MCP server" :subtitle="fileLabel" />
+    <section class="max-w-[640px] px-7 py-5">
+      <p v-if="errorMessage" class="ccg-alert-error mb-4 px-3 py-2 text-[12.5px]" role="alert">
+        {{ errorMessage }}
+      </p>
+      <McpForm
+        :draft-key="`mcp:new:${scope}`"
+        :submitting="create.isPending.value"
+        submit-label="Create"
+        @submit="onSubmit"
+        @cancel="router.push({ path: '/mcp', query })"
+      />
+    </section>
+  </div>
 </template>

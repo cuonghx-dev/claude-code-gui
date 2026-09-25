@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import RelationshipGraph from '@/components/RelationshipGraph.vue'
+import RelationshipsPanel from '@/components/RelationshipsPanel.vue'
+import EditorPage from '@/components/EditorPage.vue'
 import { useRelatedCount } from '@/composables/useRelationships'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
-import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import {
   useCommand,
@@ -69,51 +68,62 @@ async function onDelete() {
     errorMessage.value = (e as { message?: string })?.message ?? String(e)
   }
 }
+
+async function onExport() {
+  errorMessage.value = ''
+  try {
+    const raw = await exportMut.mutateAsync(slug.value)
+    const blob = new Blob([raw], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${slug.value}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    errorMessage.value = (e as { message?: string })?.message ?? String(e)
+  }
+}
 </script>
 
 <template>
-  <PageHeader :title="`/${slug}`" :subtitle="data?.frontmatter?.description ?? undefined">
-    <template #actions>
-      <button
-        v-if="relatedCount > 0"
-        type="button"
-        class="ccg-btn-ghost"
-        :aria-pressed="showRelated"
-        @click="showRelated = !showRelated"
-      >
-        Relationships ({{ relatedCount }})
-      </button>
-      <button type="button" class="ccg-btn-danger" @click="confirmingDelete = true">Delete</button>
-      <button
-        type="button"
-        class="ccg-btn-primary"
-        :disabled="!dirty || update.isPending.value"
-        @click="onSave"
-      >
-        {{ update.isPending.value ? 'Saving…' : 'Save' }}
-      </button>
-    </template>
-  </PageHeader>
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
     <template #default="{ data: cmd }">
-      <section v-if="cmd" class="flex h-[calc(100vh-65px)] min-h-0 flex-col p-6">
-        <p
-          v-if="errorMessage"
-          class="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-        >
-          {{ errorMessage }}
-        </p>
-        <div class="flex min-h-0 flex-1 gap-4">
-          <MarkdownEditor v-model="content" fill class="min-h-0 min-w-0 flex-1" />
-          <aside
-            v-if="showRelated && relatedCount > 0"
-            class="w-80 shrink-0 overflow-y-auto rounded-lg border border-neutral-200 p-3 dark:border-neutral-800"
-            aria-label="Relationships"
+      <EditorPage
+        v-if="cmd"
+        v-model="content"
+        section="Commands"
+        section-to="/commands"
+        :name="`/${slug}`"
+        :dirty="dirty"
+        :file-path="cmd.filePath"
+        :error="errorMessage"
+      >
+        <template #actions>
+          <button
+            type="button"
+            class="ccg-btn-ghost ccg-btn-sm"
+            :aria-pressed="showRelated"
+            :disabled="relatedCount === 0"
+            @click="showRelated = !showRelated"
           >
-            <RelationshipGraph :command-slug="slug" />
-          </aside>
-        </div>
-      </section>
+            Relationships ({{ relatedCount }})
+          </button>
+          <button type="button" class="ccg-btn-ghost ccg-btn-sm" @click="onExport">Export</button>
+          <button type="button" class="ccg-btn-danger ccg-btn-sm" @click="confirmingDelete = true">Delete</button>
+          <button
+            type="button"
+            class="ccg-btn-primary ccg-btn-sm"
+            :disabled="!dirty || update.isPending.value"
+            @click="onSave"
+          >
+            {{ update.isPending.value ? 'Saving…' : 'Save' }}
+          </button>
+        </template>
+        <template #panel>
+          <RelationshipsPanel v-if="showRelated && relatedCount > 0" :command-slug="slug" />
+        </template>
+      </EditorPage>
     </template>
   </QueryStateBoundary>
   <ConfirmDialog

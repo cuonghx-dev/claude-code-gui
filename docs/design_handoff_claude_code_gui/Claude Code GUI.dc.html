@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#D9D6CF;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#1F1E1B;-webkit-font-smoothing:antialiased}a{color:#B4502B;text-decoration:none}a:hover{color:#8E3A1C;text-decoration:underline}*{box-sizing:border-box}</style></helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:safe center;padding:32px;overflow-x:auto">
+<div style="width:1280px;height:800px;flex:none;background:#FBFAF7;border-radius:12px;box-shadow:0 30px 80px rgba(40,30,20,.28),0 0 0 1px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column;position:relative">
+  <div style="height:38px;flex:none;display:flex;align-items:center;gap:8px;padding:0 14px;background:#EFECE6;border-bottom:1px solid #E1DDD4">
+    <span style="width:12px;height:12px;border-radius:50%;background:#EC6A5E"></span><span style="width:12px;height:12px;border-radius:50%;background:#F4BF4F"></span><span style="width:12px;height:12px;border-radius:50%;background:#61C554"></span>
+    <div style="flex:1;text-align:center;font-size:12px;color:#6B6860;font-weight:500">Claude Code GUI</div>
+    <div style="font:11px 'JetBrains Mono',monospace;color:#8A867C">~/.claude</div>
+  </div>
+  <div style="flex:1;display:flex;min-height:0">
+    <aside style="width:220px;flex:none;background:#F3F1EC;border-right:1px solid #E1DDD4;display:flex;flex-direction:column;padding:12px 10px;gap:14px">
+      <button onClick="{{ openPalette }}" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:1px solid #DEDAD1;background:#FFFFFF;border-radius:7px;font:13px 'IBM Plex Sans';color:#8A867C;cursor:pointer;text-align:left">
+        <span style="flex:1">Search…</span><span style="font:11px 'JetBrains Mono';color:#A29E94">⌘K</span>
+      </button>
+      <sc-for list="{{ nav }}" as="g" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#A29E94;padding:0 10px 4px">{{ g.label }}</div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+            <div onClick="{{ it.go }}" style="display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:6px;font-size:13px;cursor:pointer;background:{{ it.bg }};color:{{ it.fg }};font-weight:{{ it.fw }}" style-hover="background:#E8E5DE">
+              <span style="flex:1">{{ it.name }}</span><span style="font:11px 'JetBrains Mono';color:#A29E94">{{ it.count }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <div style="flex:1"></div>
+      <div onClick="{{ goSettings }}" style="display:flex;align-items:center;height:28px;padding:0 10px;border-radius:6px;font-size:13px;cursor:pointer;background:{{ settingsBg }}" style-hover="background:#E8E5DE">Settings</div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid #E1DDD4;font:11px 'JetBrains Mono';color:#8A867C"><span style="width:7px;height:7px;border-radius:50%;background:#4E9A5B"></span>claude 2.4.1</div>
+    </aside>
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:#FBFAF7">
+
+      <sc-if value="{{ isAgents }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;height:100%">
+          <div style="display:flex;align-items:center;gap:12px;padding:20px 28px 16px;border-bottom:1px solid #ECE9E2">
+            <div style="display:flex;flex-direction:column;gap:2px;flex:1"><div style="font-size:20px;font-weight:600;letter-spacing:-.01em">Agents</div><div style="font:12px 'JetBrains Mono';color:#8A867C">~/.claude/agents/**/*.md</div></div>
+            <div style="display:flex;align-items:center;height:32px;width:220px;padding:0 10px;border:1px solid #DEDAD1;border-radius:7px;background:#fff;font-size:13px;color:#A29E94">Filter…</div>
+            <button style="height:32px;padding:0 14px;border:1px solid #DEDAD1;background:#fff;border-radius:7px;font:500 13px 'IBM Plex Sans';cursor:pointer">Import</button>
+            <button onClick="{{ goAgent }}" style="height:32px;padding:0 14px;border:0;background:#1F1E1B;color:#fff;border-radius:7px;font:500 13px 'IBM Plex Sans';cursor:pointer">+ New</button>
+          </div>
+          <div style="flex:1;overflow:auto;padding:20px 28px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-content:start">
+            <sc-for list="{{ agents }}" as="a" hint-placeholder-count="6">
+              <div onClick="{{ goAgent }}" style="display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:#fff;border:1px solid #E6E2DA;border-radius:9px;cursor:pointer" style-hover="border-color:#C9C3B7;box-shadow:0 2px 8px rgba(40,30,20,.06)">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="width:9px;height:9px;border-radius:50%;background:{{ a.color }}"></span>
+                  <span style="font:500 13.5px 'JetBrains Mono';flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</span>
+                  <span style="font:500 10.5px 'JetBrains Mono';padding:2px 6px;border-radius:4px;background:#F1EEE8;color:#6B6860">{{ a.model }}</span>
+                </div>
+                <div style="font-size:13px;line-height:1.45;color:#5E5B54;text-wrap:pretty;min-height:38px">{{ a.desc }}</div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                  <sc-for list="{{ a.tools }}" as="t" hint-placeholder-count="3"><span style="font:11px 'JetBrains Mono';padding:2px 6px;border:1px solid #ECE9E2;border-radius:4px;color:#8A867C">{{ t }}</span></sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAgent }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;height:100%">
+          <div style="display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid #ECE9E2">
+            <span onClick="{{ goAgents }}" style="font-size:13px;color:#8A867C;cursor:pointer">Agents</span><span style="color:#C9C3B7">/</span>
+            <span style="width:9px;height:9px;border-radius:50%;background:#C2552D"></span>
+            <span style="font:500 14px 'JetBrains Mono'">code-reviewer</span>
+            <span style="font-size:12px;color:#B4502B;display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#B4502B"></span>Unsaved</span>
+            <div style="flex:1"></div>
+            <button onClick="{{ toggleRel }}" style="height:30px;padding:0 12px;border:1px solid #DEDAD1;background:{{ relBg }};border-radius:7px;font:500 12.5px 'IBM Plex Sans';cursor:pointer">Relationships (4)</button>
+            <button style="height:30px;padding:0 12px;border:1px solid #DEDAD1;background:#fff;border-radius:7px;font:500 12.5px 'IBM Plex Sans';cursor:pointer">Export</button>
+            <button style="height:30px;padding:0 12px;border:1px solid #EBCFC3;background:#fff;color:#B03A2E;border-radius:7px;font:500 12.5px 'IBM Plex Sans';cursor:pointer">Delete</button>
+            <button style="height:30px;padding:0 14px;border:0;background:#1F1E1B;color:#fff;border-radius:7px;font:500 12.5px 'IBM Plex Sans';cursor:pointer">Save</button>
+          </div>
+          <div style="flex:1;display:flex;min-height:0">
+            <div style="flex:1;min-width:0;display:flex;font:13px/22px 'JetBrains Mono',monospace;background:#FFFFFF;overflow:auto">
+              <div style="flex:none;width:48px;padding:14px 12px 14px 0;text-align:right;color:#C2BDB2;background:#FAF9F6;border-right:1px solid #F0EDE7">
+                <sc-for list="{{ lineNums }}" as="n" hint-placeholder-count="20"><div>{{ n }}</div></sc-for>
+              </div>
+              <div style="flex:1;padding:14px 18px;white-space:pre-wrap">
+                <div style="color:#A29E94">---</div>
+                <div><span style="color:#B4502B">name</span>: code-reviewer</div>
+                <div><span style="color:#B4502B">description</span>: <span style="color:#3F7A4E">"Use after writing or modifying code. Reviews diffs for bugs, security and style."</span></div>
+                <div><span style="color:#B4502B">tools</span>: Read, Grep, Glob, Bash</div>
+                <div><span style="color:#B4502B">model</span>: sonnet</div>
+                <div><span style="color:#B4502B">color</span>: orange</div>
+                <div><span style="color:#B4502B">skills</span>: [security-audit, style-guide]</div>
+                <div style="color:#A29E94">---</div>
+                <div> </div>
+                <div style="color:#2F5E9E;font-weight:500"># Code reviewer</div>
+                <div> </div>
+                <div>You are a senior engineer reviewing a pull request.</div>
+                <div> </div>
+                <div style="color:#2F5E9E;font-weight:500">## Process</div>
+                <div>1. Run <span style="color:#7A4FA0">`git diff --staged`</span> to see changes.</div>
+                <div>2. Read every touched file in full.</div>
+                <div>3. Group findings: <span style="font-weight:600">Critical</span>, <span style="font-weight:600">Warning</span>, <span style="font-weight:600">Nit</span>.</div>
+                <div style="background:#FFF6E8;margin:0 -18px;padding:0 18px">4. Cite file:line for each finding.<span style="display:inline-block;width:2px;height:16px;background:#1F1E1B;vertical-align:-3px"></span></div>
+                <div> </div>
+                <div>Never modify files directly.</div>
+              </div>
+            </div>
+            <sc-if value="{{ showRel }}" hint-placeholder-val="{{ true }}">
+              <div style="width:320px;flex:none;border-left:1px solid #ECE9E2;background:#F7F5F0;display:flex;flex-direction:column">
+                <div style="padding:14px 16px;font-size:13px;font-weight:600;border-bottom:1px solid #ECE9E2">Relationships</div>
+                <div style="position:relative;height:280px;margin:12px">
+                  <svg width="296" height="280" style="position:absolute;inset:0"><g stroke="#D6D0C4" stroke-width="1.5" fill="none"><path d="M148 140 C 90 140 70 60 60 50"></path><path d="M148 140 C 210 140 230 60 236 50"></path><path d="M148 140 C 90 140 70 220 60 230"></path><path d="M148 140 C 210 140 230 220 236 230"></path></g></svg>
+                  <div style="position:absolute;left:92px;top:122px;width:112px;height:36px;border-radius:8px;background:#1F1E1B;color:#fff;font:500 11.5px 'JetBrains Mono';display:flex;align-items:center;justify-content:center">code-reviewer</div>
+                  <div style="position:absolute;left:4px;top:34px;padding:6px 9px;border-radius:7px;background:#fff;border:1px solid #D9E4DB;font:11px 'JetBrains Mono';color:#3F7A4E">security-audit</div>
+                  <div style="position:absolute;left:186px;top:34px;padding:6px 9px;border-radius:7px;background:#fff;border:1px solid #D9E4DB;font:11px 'JetBrains Mono';color:#3F7A4E">style-guide</div>
+                  <div style="position:absolute;left:14px;top:214px;padding:6px 9px;border-radius:7px;background:#fff;border:1px solid #E3D7EC;font:11px 'JetBrains Mono';color:#7A4FA0">/review</div>
+                  <div style="position:absolute;left:192px;top:214px;padding:6px 9px;border-radius:7px;background:#fff;border:1px solid #E3D7EC;font:11px 'JetBrains Mono';color:#7A4FA0">/pr-check</div>
+                </div>
+                <div style="display:flex;gap:14px;padding:0 16px;font-size:11.5px;color:#6B6860">
+                  <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:#3F7A4E"></span>Skills</span>
+                  <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:#7A4FA0"></span>Commands</span>
+                </div>
+                <div style="margin:16px;padding:10px 12px;border-radius:7px;background:#fff;border:1px solid #ECE9E2;font-size:12px;color:#6B6860;line-height:1.5">Click a node to open it. Renaming <span style="font-family:'JetBrains Mono'">name:</span> won’t rename the file — slug is fixed at creation.</div>
+              </div>
+            </sc-if>
+          </div>
+          <div style="height:26px;flex:none;display:flex;align-items:center;gap:16px;padding:0 16px;border-top:1px solid #ECE9E2;background:#F7F5F0;font:11px 'JetBrains Mono';color:#8A867C"><span style="color:#3F7A4E">✓ Valid YAML</span><span>Ln 18, Col 38</span><span style="flex:1"></span><span>~/.claude/agents/code-reviewer.md</span></div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSession }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;height:100%">
+          <div style="width:260px;flex:none;border-right:1px solid #ECE9E2;display:flex;flex-direction:column;background:#F9F8F4">
+            <div style="padding:16px 16px 10px;display:flex;flex-direction:column;gap:3px"><div style="font-size:15px;font-weight:600">payments-api</div><div style="font:11px 'JetBrains Mono';color:#8A867C">~/work/payments-api</div></div>
+            <div style="display:flex;align-items:center;gap:10px;margin:0 16px 10px;padding:7px 10px;border-radius:7px;background:#fff;border:1px solid #ECE9E2;font:11.5px 'JetBrains Mono';color:#6B6860"><span style="color:#1F1E1B">⎇ feat/refunds</span><span>↑2 ↓0</span><span style="flex:1"></span><span style="color:#B4502B">3 changed</span></div>
+            <div style="flex:1;overflow:auto;display:flex;flex-direction:column;padding:0 8px;gap:2px">
+              <sc-for list="{{ sessions }}" as="s" hint-placeholder-count="6">
+                <div style="padding:9px 10px;border-radius:7px;background:{{ s.bg }};display:flex;flex-direction:column;gap:3px;cursor:pointer" style-hover="background:#EFECE5">
+                  <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.title }}</div>
+                  <div style="font-size:11.5px;color:#8A867C">{{ s.meta }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:10px;padding:14px 22px;border-bottom:1px solid #ECE9E2">
+              <div style="flex:1;display:flex;flex-direction:column;gap:2px"><div style="font-size:15px;font-weight:600">Add partial refund endpoint</div><div style="font-size:12px;color:#8A867C">48 messages · 2 subagents · $1.84</div></div>
+              <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#5E5B54"><span style="width:28px;height:16px;border-radius:8px;background:#1F1E1B;position:relative;display:inline-block"><span style="position:absolute;right:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff"></span></span>Subagent messages</label>
+              <button style="height:30px;padding:0 12px;border:1px solid #DEDAD1;background:#fff;border-radius:7px;font:500 12.5px 'IBM Plex Sans'">Checkpoints</button>
+              <div style="display:flex;border-radius:7px;overflow:hidden;border:1px solid #1F1E1B"><div style="height:28px;padding:0 10px;display:flex;align-items:center;font:11.5px 'JetBrains Mono';background:#fff">acceptEdits ▾</div><button style="height:28px;padding:0 12px;border:0;background:#1F1E1B;color:#fff;font:500 12.5px 'IBM Plex Sans'">Resume in terminal</button></div>
+            </div>
+            <div style="flex:1;overflow:auto;padding:20px 22px;display:flex;flex-direction:column;gap:18px;max-width:860px">
+              <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:12px;color:#8A867C"><span style="font-weight:600;color:#1F1E1B">You</span> · 14:02</div><div style="font-size:14px;line-height:1.55">Add a POST /refunds/:id/partial endpoint. Validate the amount against the captured total and write tests.</div></div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:12px;color:#8A867C"><span style="font-weight:600;color:#B4502B">Claude</span> · 14:02 · <span style="font-family:'JetBrains Mono'">sonnet · 12.4k tok · 9.1k cached · $0.041</span></div>
+                <div style="font-size:12.5px;color:#8A867C;font-style:italic">▸ Thinking</div>
+                <div style="font-size:14px;line-height:1.55">I’ll look at the existing refund handler first, then add validation.</div>
+                <div style="border:1px solid #E6E2DA;border-radius:8px;background:#fff;overflow:hidden">
+                  <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;font:12px 'JetBrains Mono'"><span style="color:#8A867C">▾</span><span style="font-weight:500">Grep</span><span style="color:#6B6860">"refund" in src/</span></div>
+                  <div style="border-top:1px solid #F0EDE7;padding:8px 12px;font:12px/1.6 'JetBrains Mono';color:#5E5B54;background:#FAF9F6">src/routes/refunds.ts:12<br>src/services/refund.ts:4<br><span style="color:#A29E94">… 6 lines · 312 B</span></div>
+                </div>
+                <div style="border:1px solid #E6E2DA;border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:8px 12px;font:12px 'JetBrains Mono'"><span style="color:#8A867C">▸</span><span style="font-weight:500">Edit</span><span style="color:#6B6860">src/routes/refunds.ts</span><span style="flex:1"></span><span style="color:#3F7A4E">+42</span><span style="color:#B03A2E">−3</span></div>
+                <div style="border:1px solid #E3D7EC;border-radius:8px;background:#FAF6FC;display:flex;align-items:center;gap:10px;padding:10px 12px"><span style="font:500 10.5px 'JetBrains Mono';padding:2px 6px;border-radius:4px;background:#7A4FA0;color:#fff">subagent</span><span style="font:500 12.5px 'JetBrains Mono'">test-writer</span><span style="font-size:12.5px;color:#6B6860;flex:1">Write vitest cases for partial refunds</span><span style="font-size:12px;color:#7A4FA0">14 turns ▸</span></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:12px;color:#8A867C"><span style="font-weight:600;color:#B4502B">Claude</span> · 14:06 · <span style="font-family:'JetBrains Mono'">sonnet · 3.2k tok · $0.012</span></div><div style="font-size:14px;line-height:1.55">Endpoint added with amount validation. 9 new tests pass. Over-refund returns 422.</div></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isMcp }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;height:100%">
+          <div style="display:flex;align-items:center;gap:12px;padding:20px 28px 16px;border-bottom:1px solid #ECE9E2">
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px"><div style="font-size:20px;font-weight:600">MCP servers</div><div style="font:12px 'JetBrains Mono';color:#8A867C">~/.claude.json</div></div>
+            <div style="display:flex;padding:3px;border-radius:8px;background:#EFECE6;gap:2px"><span style="padding:5px 12px;border-radius:6px;background:#fff;font-size:12.5px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)">User</span><span style="padding:5px 12px;font-size:12.5px;color:#6B6860">Project</span></div>
+            <button style="height:32px;padding:0 14px;border:0;background:#1F1E1B;color:#fff;border-radius:7px;font:500 13px 'IBM Plex Sans'">+ New</button>
+          </div>
+          <div style="flex:1;display:flex;min-height:0">
+            <div style="width:300px;flex:none;border-right:1px solid #ECE9E2;padding:12px;display:flex;flex-direction:column;gap:4px">
+              <sc-for list="{{ servers }}" as="m" hint-placeholder-count="4">
+                <div style="padding:10px 12px;border-radius:8px;background:{{ m.bg }};border:1px solid {{ m.bd }};display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="font:500 13px 'JetBrains Mono';flex:1">{{ m.name }}</span><span style="font:10.5px 'JetBrains Mono';padding:1px 6px;border-radius:4px;background:#F1EEE8;color:#6B6860">{{ m.transport }}</span></div>
+                  <div style="font:11.5px 'JetBrains Mono';color:#8A867C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.target }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="flex:1;min-width:0;overflow:auto;padding:22px 28px;display:flex;flex-direction:column;gap:18px">
+              <div style="display:flex;align-items:center;gap:10px"><div style="font:600 17px 'JetBrains Mono';flex:1">linear</div><button style="height:30px;padding:0 12px;border:1px solid #DEDAD1;background:#fff;border-radius:7px;font:500 12.5px 'IBM Plex Sans'">↻ Probe capabilities</button><button style="height:30px;padding:0 12px;border:1px solid #EBCFC3;background:#fff;color:#B03A2E;border-radius:7px;font:500 12.5px 'IBM Plex Sans'">Delete</button></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#A29E94">Configuration</div><div style="padding:12px 14px;border-radius:8px;background:#fff;border:1px solid #E6E2DA;font:12.5px/1.65 'JetBrains Mono';white-space:pre;color:#5E5B54">{ <span style="color:#B4502B">"type"</span>: "http",
+  <span style="color:#B4502B">"url"</span>: "https://mcp.linear.app/mcp",
+  <span style="color:#B4502B">"headers"</span>: { "X-Team": "ENG" } }</div></div>
+              <div style="display:flex;gap:10px;padding:12px 14px;border-radius:8px;background:#F6F0FA;border:1px solid #E3D7EC;font-size:13px;line-height:1.5;color:#5A3A78"><span style="font-weight:600">claude/channel</span><span>This server can push events into sessions and answer permission prompts externally.</span></div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:baseline;gap:14px;border-bottom:1px solid #ECE9E2"><span style="padding:0 0 8px;font-size:13px;font-weight:600;border-bottom:2px solid #1F1E1B">Tools 12</span><span style="padding:0 0 8px;font-size:13px;color:#8A867C">Resources 3</span><span style="padding:0 0 8px;font-size:13px;color:#8A867C">Prompts 2</span><span style="flex:1"></span><span style="font-size:11.5px;color:#A29E94">probed 18s ago · cached 60s</span></div>
+                <sc-for list="{{ tools }}" as="t" hint-placeholder-count="5">
+                  <div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:12px;padding:8px 2px;border-bottom:1px solid #F3F0EA;font-size:13px"><span style="font-family:'JetBrains Mono';font-size:12.5px">{{ t.name }}</span><span style="color:#6B6860">{{ t.desc }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isUsage }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;height:100%;overflow:auto">
+          <div style="display:flex;align-items:center;gap:12px;padding:20px 28px 16px">
+            <div style="font-size:20px;font-weight:600;flex:1">Usage</div>
+            <div style="display:flex;padding:3px;border-radius:8px;background:#EFECE6;gap:2px;font-size:12.5px"><span style="padding:5px 10px;color:#6B6860">7d</span><span style="padding:5px 10px;border-radius:6px;background:#fff;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)">30d</span><span style="padding:5px 10px;color:#6B6860">90d</span><span style="padding:5px 10px;color:#6B6860">All</span></div>
+            <div style="display:flex;padding:3px;border-radius:8px;background:#EFECE6;gap:2px;font-size:12.5px"><span style="padding:5px 10px;border-radius:6px;background:#fff;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)">Day</span><span style="padding:5px 10px;color:#6B6860">Project</span><span style="padding:5px 10px;color:#6B6860">Model</span></div>
+            <button style="height:30px;padding:0 12px;border:1px solid #DEDAD1;background:#fff;border-radius:7px;font:500 12.5px 'IBM Plex Sans'">Rescan</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:0 28px;border:1px solid #E6E2DA;border-radius:10px;background:#fff">
+            <div style="padding:14px 16px;border-right:1px solid #F0EDE7"><div style="font-size:12px;color:#8A867C">Est. cost</div><div style="font-size:24px;font-weight:600;letter-spacing:-.02em">$148.20</div></div>
+            <div style="padding:14px 16px;border-right:1px solid #F0EDE7"><div style="font-size:12px;color:#8A867C">Turns</div><div style="font-size:24px;font-weight:600;letter-spacing:-.02em">3,412</div></div>
+            <div style="padding:14px 16px;border-right:1px solid #F0EDE7"><div style="font-size:12px;color:#8A867C">Input / Output</div><div style="font-size:24px;font-weight:600;letter-spacing:-.02em">18.2M <span style="color:#A29E94;font-weight:400">/</span> 2.1M</div></div>
+            <div style="padding:14px 16px;border-right:1px solid #F0EDE7"><div style="font-size:12px;color:#8A867C">Cache read</div><div style="font-size:24px;font-weight:600;letter-spacing:-.02em">142M</div></div>
+            <div style="padding:14px 16px"><div style="font-size:12px;color:#8A867C">Cache write</div><div style="font-size:24px;font-weight:600;letter-spacing:-.02em">9.8M</div></div>
+          </div>
+          <div style="margin:16px 28px 0;padding:16px 18px;border:1px solid #E6E2DA;border-radius:10px;background:#fff;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:baseline"><div style="font-size:13px;font-weight:600;flex:1">Cost by day</div><div style="font-size:11.5px;color:#A29E94">Estimate at public API prices · not a bill</div></div>
+            <div style="height:170px;display:flex;align-items:flex-end;gap:5px;border-bottom:1px solid #ECE9E2">
+              <sc-for list="{{ bars }}" as="b" hint-placeholder-count="30"><div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%"><div style="height:{{ b.h2 }};background:#E7B9A3;border-radius:2px 2px 0 0"></div><div style="height:{{ b.h1 }};background:#C2552D"></div></div></sc-for>
+            </div>
+            <div style="display:flex;gap:16px;font-size:11.5px;color:#6B6860"><span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:#C2552D"></span>opus</span><span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:#E7B9A3"></span>sonnet</span><span style="flex:1"></span><span>Aug 27 → Sep 25</span></div>
+          </div>
+          <div style="margin:16px 28px 24px;border:1px solid #E6E2DA;border-radius:10px;background:#fff;overflow:hidden">
+            <div style="display:grid;grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr));padding:9px 16px;font-size:11.5px;color:#8A867C;background:#FAF9F6;border-bottom:1px solid #ECE9E2"><span>Project</span><span style="text-align:right">Turns</span><span style="text-align:right">Input</span><span style="text-align:right">Output</span><span style="text-align:right">Cost</span></div>
+            <sc-for list="{{ usageRows }}" as="r" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr));padding:9px 16px;font-size:13px;border-bottom:1px solid #F3F0EA;font-variant-numeric:tabular-nums"><span style="font-family:'JetBrains Mono';font-size:12.5px">{{ r.p }}</span><span style="text-align:right">{{ r.t }}</span><span style="text-align:right">{{ r.i }}</span><span style="text-align:right">{{ r.o }}</span><span style="text-align:right;font-weight:500">{{ r.c }}</span></div></sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;height:100%">
+          <div style="padding:20px 28px 0;display:flex;flex-direction:column;gap:14px;border-bottom:1px solid #ECE9E2">
+            <div style="display:flex;align-items:center;gap:12px"><div style="font-size:20px;font-weight:600;flex:1">Settings</div>
+              <div style="display:flex;padding:3px;border-radius:8px;background:#EFECE6;gap:2px;font-size:12.5px"><span style="padding:5px 10px;color:#6B6860">User</span><span style="padding:5px 10px;border-radius:6px;background:#fff;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)">Project</span><span style="padding:5px 10px;color:#6B6860">Project local</span><span style="padding:5px 10px;color:#A29E94">Managed</span></div>
+              <div style="height:30px;display:flex;align-items:center;padding:0 10px;border:1px solid #DEDAD1;border-radius:7px;background:#fff;font:12px 'JetBrains Mono'">payments-api ▾</div>
+            </div>
+            <div style="display:flex;gap:20px;font-size:13px"><span style="padding-bottom:10px;color:#8A867C">General</span><span style="padding-bottom:10px;font-weight:600;border-bottom:2px solid #1F1E1B">Permissions</span><span style="padding-bottom:10px;color:#8A867C">Status line</span><span style="padding-bottom:10px;color:#8A867C">Hooks</span><span style="padding-bottom:10px;color:#8A867C">Keybindings</span><span style="padding-bottom:10px;color:#8A867C">Effective</span><span style="padding-bottom:10px;color:#8A867C">Raw JSON</span><span style="flex:1"></span><span style="padding-bottom:10px;font:11.5px 'JetBrains Mono';color:#A29E94">~/work/payments-api/.claude/settings.json</span></div>
+          </div>
+          <div style="flex:1;overflow:auto;padding:22px 28px;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-content:start">
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <sc-for list="{{ permLists }}" as="pl" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:13px;font-weight:600">{{ pl.label }}</span><span style="font-size:12px;color:#A29E94">{{ pl.hint }}</span></div>
+                  <div style="border:1px solid #E6E2DA;border-radius:8px;background:#fff">
+                    <sc-for list="{{ pl.rules }}" as="r" hint-placeholder-count="2">
+                      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #F3F0EA;font:12.5px 'JetBrains Mono'"><span style="flex:1">{{ r.v }}</span><sc-if value="{{ r.warn }}" hint-placeholder-val="{{ false }}"><span style="font:11.5px 'IBM Plex Sans';color:#9A6A12;background:#FDF3DC;padding:2px 7px;border-radius:4px">{{ r.warn }}</span></sc-if><span style="color:#C2BDB2;cursor:pointer">×</span></div>
+                    </sc-for>
+                    <div style="display:flex;align-items:center;padding:8px 12px;font:12.5px 'JetBrains Mono';color:#A29E94">{{ pl.placeholder }}</div>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="display:flex;justify-content:flex-end;gap:8px"><button style="height:32px;padding:0 14px;border:0;background:#1F1E1B;color:#fff;border-radius:7px;font:500 13px 'IBM Plex Sans'">Save</button></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:10px;background:#F3F1EC;align-self:start">
+              <div style="font-size:13px;font-weight:600">In force everywhere</div>
+              <div style="font-size:12px;color:#6B6860">Mode: <span style="font-family:'JetBrains Mono';color:#1F1E1B">acceptEdits</span> <span style="font-size:10.5px;padding:1px 5px;border-radius:3px;background:#DDEBDF;color:#3F7A4E">project</span></div>
+              <sc-for list="{{ merged }}" as="m" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:8px;font:11.5px 'JetBrains Mono'"><span style="width:38px;color:{{ m.c }};font-weight:500">{{ m.k }}</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.v }}</span><span style="font:10.5px 'IBM Plex Sans';padding:1px 5px;border-radius:3px;background:#fff;color:#6B6860">{{ m.s }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </main>
+  </div>
+
+  <sc-if value="{{ paletteOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePalette }}" style="position:absolute;inset:38px 0 0 0;background:rgba(31,30,27,.18);display:flex;justify-content:center;padding-top:90px">
+      <div onClick="{{ stop }}" style="width:600px;align-self:flex-start;background:#fff;border-radius:12px;box-shadow:0 24px 60px rgba(40,30,20,.3),0 0 0 1px rgba(0,0,0,.08);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #ECE9E2"><span style="font-size:16px">review</span><span style="width:2px;height:18px;background:#1F1E1B"></span><span style="flex:1"></span><span style="font:11px 'JetBrains Mono';color:#A29E94">esc</span></div>
+        <div style="padding:6px">
+          <sc-for list="{{ results }}" as="r" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;background:{{ r.bg }}">
+              <span style="width:64px;font:10.5px 'JetBrains Mono';color:#8A867C;text-transform:uppercase;letter-spacing:.04em">{{ r.kind }}</span>
+              <span style="font:500 13px 'JetBrains Mono'">{{ r.name }}</span>
+              <span style="flex:1;font-size:12.5px;color:#8A867C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.desc }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:14px;padding:8px 16px;border-top:1px solid #ECE9E2;background:#FAF9F6;font-size:11.5px;color:#8A867C"><span>↑↓ move</span><span>↵ open</span><span style="flex:1"></span><span>Agents · Commands · Skills · Plans</span></div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;agents&quot;,&quot;agent&quot;,&quot;session&quot;,&quot;mcp&quot;,&quot;usage&quot;,&quot;settings&quot;],&quot;default&quot;:&quot;agents&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;showPalette&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { screen: null, palette: null, rel: true };
+  componentDidMount() {
+    this._k = e => { if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); this.setState(s => ({ palette: !this.isPal(s) })); } if (e.key === 'Escape') this.setState({ palette: false }); };
+    window.addEventListener('keydown', this._k);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._k); }
+  isPal(s) { return s.palette ?? !!this.props.showPalette; }
+  renderVals() {
+    const scr = this.state.screen ?? this.props.startScreen ?? 'agents';
+    const go = k => () => this.setState({ screen: k });
+    const navKey = scr === 'agent' ? 'agents' : scr;
+    const G = [
+      ['Authoring', [['Agents', 14, 'agents'], ['Commands', 22], ['Skills', 9], ['Plans', 31], ['Workflows', 4], ['Output styles', 5]]],
+      ['Extend', [['MCP', 6, 'mcp'], ['Hooks', 7], ['Plugins', 11]]],
+      ['Activity', [['Sessions', 128, 'session'], ['Jobs', 3], ['Usage', '', 'usage']]],
+      ['Config', [['Memory', 8], ['.claude', '']]]
+    ];
+    const nav = G.map(([label, items]) => ({ label, items: items.map(([name, count, k]) => {
+      const on = k && k === navKey;
+      return { name, count, go: k ? go(k) : () => {}, bg: on ? '#E4E0D8' : 'transparent', fg: k ? '#1F1E1B' : '#6B6860', fw: on ? 600 : 400 };
+    }) }));
+    const ag = (name, color, model, desc, tools) => ({ name, color, model, desc, tools });
+    return {
+      nav, settingsBg: scr === 'settings' ? '#E4E0D8' : 'transparent',
+      goSettings: go('settings'), goAgent: go('agent'), goAgents: go('agents'),
+      isAgents: scr === 'agents', isAgent: scr === 'agent', isSession: scr === 'session', isMcp: scr === 'mcp', isUsage: scr === 'usage', isSettings: scr === 'settings',
+      showRel: this.state.rel, relBg: this.state.rel ? '#EFECE6' : '#fff', toggleRel: () => this.setState(s => ({ rel: !s.rel })),
+      paletteOpen: this.isPal(this.state), openPalette: () => this.setState({ palette: true }), closePalette: () => this.setState({ palette: false }), stop: e => e.stopPropagation(),
+      agents: [
+        ag('code-reviewer', '#C2552D', 'sonnet', 'Use after writing or modifying code. Reviews diffs for bugs, security and style.', ['Read', 'Grep', 'Glob']),
+        ag('test-writer', '#7A4FA0', 'sonnet', 'Writes and runs unit tests for new or changed functions.', ['Read', 'Write', 'Bash']),
+        ag('architect', '#2F5E9E', 'opus', 'Plans multi-file changes and proposes module boundaries before coding.', ['Read', 'Glob', 'Grep']),
+        ag('db-migrator', '#3F7A4E', 'sonnet', 'Generates and validates SQL migrations against the current schema.', ['Read', 'Write', 'Bash']),
+        ag('doc-writer', '#B08A1E', 'haiku', 'Updates READMEs and docstrings to match the latest code.', ['Read', 'Edit', 'Glob']),
+        ag('debugger', '#B03A2E', 'opus', 'Reproduces failing tests, bisects, and isolates root cause.', ['Read', 'Bash', 'Grep']),
+        ag('i18n-checker', '#2E8A8A', 'haiku', 'Finds hard-coded strings and missing translation keys.', ['Grep', 'Read', 'Edit']),
+        ag('perf-profiler', '#6B6860', 'sonnet', 'Profiles hot paths and suggests targeted optimizations.', ['Bash', 'Read', 'Grep']),
+        ag('release-notes', '#8E5A3A', 'haiku', 'Drafts release notes from merged PRs since the last tag.', ['Bash', 'Read', 'Write'])
+      ],
+      lineNums: Array.from({ length: 20 }, (_, i) => i + 1),
+      sessions: [
+        ['Add partial refund endpoint', '48 msgs · 12m ago', 1], ['Fix flaky webhook retry test', '22 msgs · 2h ago'], ['Migrate to Postgres 16', '91 msgs · yesterday'],
+        ['Refactor currency rounding', '17 msgs · Sep 22'], ['Explain idempotency keys', '6 msgs · Sep 21'], ['Stripe SDK upgrade', '64 msgs · Sep 19'], ['01J8Z4Q…', '3 msgs · Sep 18']
+      ].map(([title, meta, on]) => ({ title, meta, bg: on ? '#E9E5DD' : 'transparent' })),
+      servers: [['linear', 'httpSse', 'https://mcp.linear.app/mcp', 1], ['github', 'stdio', 'npx -y @modelcontextprotocol/server-github'], ['postgres', 'stdio', 'uvx mcp-postgres --dsn $DB_URL'], ['sentry', 'httpSse', 'https://mcp.sentry.dev/sse']]
+        .map(([name, transport, target, on]) => ({ name, transport, target, bg: on ? '#fff' : 'transparent', bd: on ? '#DEDAD1' : 'transparent' })),
+      tools: [['list_issues', 'List issues filtered by team, state or assignee'], ['get_issue', 'Fetch a single issue with comments'], ['create_issue', 'Create an issue in a team'], ['update_issue', 'Change state, priority or assignee'], ['search_docs', 'Full-text search across workspace docs']].map(([name, desc]) => ({ name, desc })),
+      bars: Array.from({ length: 30 }, (_, i) => { const a = 20 + Math.abs(Math.sin(i * 1.7)) * 70 * (i % 7 > 4 ? .3 : 1); const b = 10 + Math.abs(Math.cos(i * 1.3)) * 40 * (i % 7 > 4 ? .3 : 1); return { h1: a + 'px', h2: b + 'px' }; }),
+      usageRows: [['payments-api', '1,208', '6.9M', '812k', '$62.40'], ['web-dashboard', '941', '5.1M', '604k', '$41.10'], ['infra-terraform', '702', '3.8M', '410k', '$28.90'], ['claude-code-gui', '561', '2.4M', '274k', '$15.80']].map(([p, t, i, o, c]) => ({ p, t, i, o, c })),
+      permLists: [
+        { label: 'Allow', hint: 'runs without asking', placeholder: 'Bash(npm run test:*)  ↵', rules: [{ v: 'Bash(npm run test:*)' }, { v: 'Bash(git diff:*)' }, { v: 'Edit(src/**)', warn: 'Also in Deny — deny wins' }] },
+        { label: 'Ask', hint: 'always prompt', placeholder: 'Add rule…', rules: [{ v: 'Bash(git push:*)' }] },
+        { label: 'Deny', hint: 'never allowed', placeholder: 'Read(./.env)  ↵', rules: [{ v: 'Read(./.env)' }, { v: 'Edit(src/**)' }] },
+        { label: 'Additional directories', hint: '', placeholder: '../shared-lib  ↵', rules: [{ v: '../shared-lib' }] }
+      ],
+      merged: [['allow', '#3F7A4E', 'Bash(npm run test:*)', 'project'], ['allow', '#3F7A4E', 'Bash(git diff:*)', 'user'], ['ask', '#9A6A12', 'Bash(git push:*)', 'project'], ['deny', '#B03A2E', 'Read(./.env)', 'managed'], ['deny', '#B03A2E', 'Edit(src/**)', 'project']].map(([k, c, v, s]) => ({ k, c, v, s })),
+      results: [['agent', 'code-reviewer', 'Reviews diffs for bugs, security and style', 1], ['command', '/review', 'Review staged changes with code-reviewer'], ['command', '/pr-check', 'Run review + tests before opening a PR'], ['skill', 'style-guide', 'Team code style rules for reviewers'], ['plan', 'review-pipeline-v2', 'Plan · edited Sep 23']].map(([kind, name, desc, on]) => ({ kind, name, desc, bg: on ? '#F3F1EC' : 'transparent' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

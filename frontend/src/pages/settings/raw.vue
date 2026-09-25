@@ -2,6 +2,7 @@
 import { computed, inject, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import JsonEditor from '@/components/JsonEditor.vue'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { SETTINGS_CONTEXT } from '@/composables/settingsContext'
 import { useSettingsRaw, useSettingsRawPut } from '@/composables/useSettings'
 
@@ -17,6 +18,9 @@ watch(
   },
   { immediate: true },
 )
+
+const dirty = computed(() => content.value !== (doc.data.value?.content || '{\n}\n'))
+useUnsavedChanges(dirty)
 
 const readOnly = computed(() => ctx.scope.value === 'managed')
 
@@ -38,20 +42,18 @@ const save = async () => {
 </script>
 
 <template>
-  <section class="flex h-[calc(100vh-13rem)] min-h-0 flex-col gap-3 p-6">
-    <div class="flex items-center gap-2">
-      <p class="font-mono text-xs text-neutral-500 dark:text-neutral-400">
-        {{ doc.data.value?.path }}
-      </p>
-      <button
-        type="button"
-        class="ccg-btn-primary ml-auto"
-        :disabled="readOnly || put.isPending.value"
-        @click="save"
-      >
-        {{ put.isPending.value ? 'Saving…' : 'Save' }}
-      </button>
-    </div>
-    <JsonEditor v-model="content" :disabled="readOnly" fill class="min-h-0 flex-1" />
+  <section class="flex min-h-[360px] flex-1 flex-col px-7 py-[22px]">
+    <JsonEditor v-model="content" :disabled="readOnly" fill min-height="0">
+      <template #actions>
+        <button
+          type="button"
+          class="ccg-btn-primary ccg-btn-sm"
+          :disabled="readOnly || !dirty || put.isPending.value"
+          @click="save"
+        >
+          {{ put.isPending.value ? 'Saving…' : 'Save' }}
+        </button>
+      </template>
+    </JsonEditor>
   </section>
 </template>

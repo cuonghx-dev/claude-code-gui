@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import PageHeader from '@/components/PageHeader.vue'
@@ -14,6 +14,19 @@ const router = useRouter()
 const importError = ref('')
 const githubOpen = ref(false)
 const githubUrl = ref('')
+const search = ref('')
+
+const filtered = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  const items = data.value ?? []
+  if (!q) return items
+  return items.filter(
+    (s) =>
+      s.slug.toLowerCase().includes(q) ||
+      (s.frontmatter.name?.toLowerCase().includes(q) ?? false) ||
+      (s.frontmatter.description?.toLowerCase().includes(q) ?? false),
+  )
+})
 
 async function importLocal() {
   importError.value = ''
@@ -43,56 +56,93 @@ async function importGithub() {
 </script>
 
 <template>
-  <PageHeader title="Skills" :subtitle="`${data?.length ?? 0} skills (local + plugin)`">
-    <template #actions>
-      <button type="button" class="ccg-btn-ghost" @click="importLocal">Import folder</button>
-      <button type="button" class="ccg-btn-ghost" :aria-expanded="githubOpen" @click="githubOpen = !githubOpen">
-        Import from GitHub
+  <div class="flex h-full flex-col">
+    <PageHeader title="Skills" subtitle="~/.claude/skills/*/SKILL.md">
+      <template #actions>
+        <input v-model="search" placeholder="Filter…" class="ccg-input w-[220px]" />
+        <button type="button" class="ccg-btn-ghost" @click="importLocal">Import folder</button>
+        <button
+          type="button"
+          class="ccg-btn-ghost"
+          :aria-expanded="githubOpen"
+          :aria-pressed="githubOpen"
+          @click="githubOpen = !githubOpen"
+        >
+          Import from GitHub
+        </button>
+        <RouterLink to="/skills/new" class="ccg-btn-primary">+ New</RouterLink>
+      </template>
+    </PageHeader>
+    <form
+      v-if="githubOpen"
+      class="ccg-card mx-7 mt-4 flex items-center gap-2 p-3"
+      @submit.prevent="importGithub"
+    >
+      <input
+        v-model="githubUrl"
+        type="url"
+        required
+        class="ccg-input flex-1 font-mono text-[12px]"
+        placeholder="https://github.com/owner/repo/tree/main/path/to/skill"
+        aria-label="GitHub URL of the skill directory"
+      />
+      <button type="submit" class="ccg-btn-primary" :disabled="importMut.isPending.value">
+        {{ importMut.isPending.value ? 'Importing…' : 'Import' }}
       </button>
-      <RouterLink to="/skills/new" class="ccg-btn-primary">+ New</RouterLink>
-    </template>
-  </PageHeader>
-  <form
-    v-if="githubOpen"
-    class="mx-6 mt-4 flex items-center gap-2 rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900"
-    @submit.prevent="importGithub"
-  >
-    <input
-      v-model="githubUrl"
-      type="url"
-      required
-      class="ccg-input flex-1 font-mono text-xs"
-      placeholder="https://github.com/owner/repo/tree/main/path/to/skill"
-      aria-label="GitHub URL of the skill directory"
-    />
-    <button type="submit" class="ccg-btn-primary" :disabled="importMut.isPending.value">
-      {{ importMut.isPending.value ? 'Importing…' : 'Import' }}
-    </button>
-  </form>
-  <p
-    v-if="importError"
-    class="mx-6 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-  >
-    Import failed: {{ importError }}
-  </p>
-  <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
-    <template #default="{ data: items }">
-      <section class="p-6">
-        <EmptyState v-if="!items?.length" title="No skills" />
-        <ul v-else class="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <li v-for="s in items" :key="s.slug">
-            <RouterLink :to="`/skills/${s.slug}`" class="block rounded-lg border border-neutral-200 bg-white p-4 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900">
+    </form>
+    <p v-if="importError" class="ccg-alert-error mx-7 mt-4 px-3 py-2 text-[12.5px]" role="alert">
+      Import failed: {{ importError }}
+    </p>
+
+    <QueryStateBoundary
+      :is-pending="isPending"
+      :is-error="isError"
+      :error="error"
+      :data="filtered"
+      skeleton="cards"
+    >
+      <template #default="{ data: items }">
+        <EmptyState
+          v-if="!items?.length"
+          :title="search.trim() ? `No skills match “${search.trim()}”.` : 'No skills yet.'"
+        >
+          <RouterLink v-if="!search.trim()" to="/skills/new" class="ccg-btn-primary">+ New</RouterLink>
+        </EmptyState>
+        <ul v-else class="grid grid-cols-3 content-start gap-3 px-7 py-5">
+          <li v-for="s in items" :key="s.slug" class="min-w-0">
+            <RouterLink
+              :to="`/skills/${encodeURIComponent(s.slug)}`"
+              class="ccg-card ccg-card-hover flex h-full flex-col gap-2.5 px-4 py-3.5"
+            >
               <div class="flex items-center gap-2">
-                <span class="text-sm font-semibold">{{ s.frontmatter.name ?? s.slug }}</span>
-                <span class="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                  {{ s.source.kind === 'plugin' ? `plugin: ${s.source.id}` : 'local' }}
+                <span class="min-w-0 flex-1 truncate font-mono text-[13.5px] font-medium text-ink">
+                  {{ s.frontmatter.name ?? s.slug }}
+                </span>
+                <span
+                  class="ccg-badge"
+                  :style="s.source.kind === 'local' ? 'background: var(--ccg-success-bg); color: var(--ccg-success);' : undefined"
+                >
+                  {{ s.source.kind === 'plugin' ? 'plugin' : 'local' }}
                 </span>
               </div>
-              <p class="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">{{ describe(s.frontmatter.description, s.body) }}</p>
+              <p
+                class="line-clamp-3 min-h-[38px] text-[13px] leading-[1.45]"
+                style="color: var(--ccg-body); text-wrap: pretty;"
+              >
+                {{ describe(s.frontmatter.description, s.body) }}
+              </p>
+              <div
+                v-if="s.source.kind === 'plugin' || s.frontmatter.context || s.frontmatter.agent"
+                class="flex flex-wrap gap-1"
+              >
+                <span v-if="s.source.kind === 'plugin'" class="ccg-chip max-w-full truncate">{{ s.source.id }}</span>
+                <span v-if="s.frontmatter.context" class="ccg-chip">context: {{ s.frontmatter.context }}</span>
+                <span v-if="s.frontmatter.agent" class="ccg-chip">agent: {{ s.frontmatter.agent }}</span>
+              </div>
             </RouterLink>
           </li>
         </ul>
-      </section>
-    </template>
-  </QueryStateBoundary>
+      </template>
+    </QueryStateBoundary>
+  </div>
 </template>

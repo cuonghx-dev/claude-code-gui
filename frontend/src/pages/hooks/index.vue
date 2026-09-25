@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Webhook, Terminal, FileCode } from 'lucide-vue-next'
+import { Terminal, FileCode } from 'lucide-vue-next'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -59,68 +59,92 @@ function isScript(command: string | null): boolean {
 </script>
 
 <template>
-  <PageHeader
-    title="Hooks"
-    subtitle="Run shell commands automatically when certain events happen in Claude Code."
-  />
+  <div class="flex h-full flex-col">
+    <PageHeader title="Hooks" subtitle="settings.json → hooks" />
 
-  <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
-    <template #default="{ data: items }">
-      <section class="p-6">
-        <EmptyState v-if="!items?.length" title="No hooks" />
-        <div v-else class="space-y-8">
-          <div v-for="bucket in grouped" :key="bucket.event">
-            <div class="mb-3 flex items-center gap-2">
-              <Webhook class="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
-              <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{{ bucket.label }}</span>
-              <span class="text-xs text-neutral-500 dark:text-neutral-400">{{ bucket.groups.length }}</span>
+    <QueryStateBoundary
+      :is-pending="isPending"
+      :is-error="isError"
+      :error="error"
+      :data="data"
+      skeleton="rows"
+    >
+      <template #default="{ data: items }">
+        <EmptyState
+          v-if="!items?.length"
+          title="No hooks configured."
+          hint="Add them under “hooks” in a settings.json file."
+        />
+        <div v-else class="flex flex-col gap-6 px-7 py-5">
+          <section v-for="bucket in grouped" :key="bucket.event" class="flex flex-col gap-2">
+            <div class="flex items-baseline gap-2">
+              <span class="text-[13px] font-semibold text-ink">{{ bucket.event }}</span>
+              <span
+                v-if="bucket.label !== bucket.event"
+                class="text-[12px]"
+                style="color: var(--ccg-muted-soft);"
+              >{{ bucket.label }}</span>
+              <span class="font-mono text-[11px]" style="color: var(--ccg-muted-soft);">
+                {{ bucket.groups.length }}
+              </span>
             </div>
-            <div class="space-y-3">
+            <div
+              v-for="(g, gi) in bucket.groups"
+              :key="`${bucket.event}:${gi}`"
+              class="ccg-card overflow-hidden"
+              style="border-radius: 8px;"
+            >
               <div
-                v-for="(g, gi) in bucket.groups"
-                :key="`${bucket.event}:${gi}`"
-                class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
+                class="flex items-center gap-2 border-b px-3 py-2"
+                style="border-color: var(--ccg-hairline-faint); background: var(--ccg-canvas-soft);"
               >
-                <div
-                  v-for="(entry, ei) in g.entries"
-                  :key="ei"
-                  :class="ei > 0 ? 'mt-4 border-t border-neutral-100 pt-4 dark:border-neutral-800' : ''"
-                >
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center gap-1 rounded bg-neutral-100 px-2 py-0.5 text-xs font-mono text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
-                      <FileCode v-if="isScript(entry.command)" class="h-3 w-3" />
-                      <Terminal v-else class="h-3 w-3" />
-                      {{ deriveName(entry.command) }}
-                    </span>
-                    <span
-                      v-if="g.matcher"
-                      class="rounded bg-neutral-100 px-2 py-0.5 text-xs font-mono text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
-                    >
-                      {{ g.matcher }}
-                    </span>
-                    <span
-                      v-if="entry.timeout != null"
-                      class="text-[11px] text-neutral-500 dark:text-neutral-400"
-                    >
-                      timeout {{ entry.timeout }}s
-                    </span>
-                  </div>
-                  <p
+                <span class="text-[11.5px]" style="color: var(--ccg-subtle);">matcher</span>
+                <span class="font-mono text-[12.5px] text-ink">{{ g.matcher || '*' }}</span>
+                <span class="flex-1" />
+                <span class="ccg-badge">{{ g.scope }}</span>
+                <span class="ccg-path max-w-[320px] truncate text-[11px]" :title="g.filePath">{{ g.filePath }}</span>
+              </div>
+              <div
+                v-for="(entry, ei) in g.entries"
+                :key="ei"
+                class="flex flex-col gap-1 px-3 py-2"
+                :class="ei > 0 ? 'border-t' : ''"
+                style="border-color: var(--ccg-hairline-faint);"
+              >
+                <div class="flex items-center gap-2">
+                  <FileCode
+                    v-if="isScript(entry.command)"
+                    :size="14"
+                    :stroke-width="1.5"
+                    class="flex-none"
+                    style="color: var(--ccg-subtle);"
+                  />
+                  <Terminal
+                    v-else
+                    :size="14"
+                    :stroke-width="1.5"
+                    class="flex-none"
+                    style="color: var(--ccg-subtle);"
+                  />
+                  <span class="font-mono text-[12.5px] font-medium text-ink">{{ deriveName(entry.command) }}</span>
+                  <span
                     v-if="entry.statusMessage"
-                    class="mt-2 text-xs text-neutral-500 dark:text-neutral-400"
-                  >
-                    {{ entry.statusMessage }}
-                  </p>
-                  <pre
-                    v-if="entry.command"
-                    class="mt-2 overflow-auto whitespace-pre-wrap break-all rounded bg-neutral-50 p-3 font-mono text-xs text-neutral-700 dark:bg-neutral-950 dark:text-neutral-300"
-                  >▸ {{ entry.command }}</pre>
+                    class="min-w-0 flex-1 truncate text-[12px]"
+                    style="color: var(--ccg-muted);"
+                  >{{ entry.statusMessage }}</span>
+                  <span v-else class="flex-1" />
+                  <span v-if="entry.timeout != null" class="ccg-chip">timeout {{ entry.timeout }}s</span>
                 </div>
+                <pre
+                  v-if="entry.command"
+                  class="whitespace-pre-wrap break-all font-mono text-[12px] leading-[1.6]"
+                  style="color: var(--ccg-body);"
+                >{{ entry.command }}</pre>
               </div>
             </div>
-          </div>
+          </section>
         </div>
-      </section>
-    </template>
-  </QueryStateBoundary>
+      </template>
+    </QueryStateBoundary>
+  </div>
 </template>

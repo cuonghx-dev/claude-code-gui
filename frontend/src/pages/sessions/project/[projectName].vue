@@ -128,104 +128,107 @@ function truncate(s: string | null | undefined, max = 60) {
 
 <template>
   <div class="flex h-full min-h-0">
-    <aside class="flex w-[360px] shrink-0 flex-col border-r border-neutral-200 dark:border-neutral-800">
-      <header class="flex items-center gap-2 border-b border-neutral-200 px-3 py-3 dark:border-neutral-800">
+    <aside
+      class="flex w-[260px] shrink-0 flex-col border-r"
+      style="background: #F9F8F4; border-color: var(--ccg-hairline-soft);"
+    >
+      <header class="flex items-start gap-1.5 px-4 pb-2.5 pt-4">
         <RouterLink
           to="/sessions"
-          class="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          class="ccg-icon-btn -ml-1.5 mt-px"
           aria-label="Back to projects"
+          title="All projects"
         >
-          <ArrowLeft class="h-4 w-4" />
+          <ArrowLeft class="h-4 w-4" :stroke-width="1.5" />
         </RouterLink>
-        <div class="min-w-0 flex-1">
-          <div class="truncate text-sm font-semibold">
+        <div class="flex min-w-0 flex-1 flex-col gap-[3px]">
+          <div class="truncate text-[15px] font-semibold text-ink" :title="project.data.value?.workingDir ?? projectName">
             {{ basename(project.data.value?.workingDir) || projectName }}
           </div>
-          <div class="truncate text-[11px] text-neutral-500 dark:text-neutral-400">
+          <div class="truncate font-mono text-[11px]" style="color: var(--ccg-subtle);">
             {{ project.data.value?.workingDir }}
           </div>
         </div>
+      </header>
+      <div
+        v-if="git.data.value"
+        class="mx-4 mb-2.5 flex items-center gap-2.5 rounded-[7px] border bg-white px-2.5 py-[7px] font-mono text-[11.5px]"
+        style="border-color: var(--ccg-hairline-soft); color: var(--ccg-muted);"
+        data-testid="git-status"
+      >
+        <span class="min-w-0 truncate text-ink">⎇ {{ git.data.value.branch ?? 'detached' }}</span>
+        <span
+          v-if="git.data.value.upstream || git.data.value.ahead || git.data.value.behind"
+          class="shrink-0"
+          title="Commits ahead / behind upstream"
+        >↑{{ git.data.value.ahead }} ↓{{ git.data.value.behind }}</span>
+        <span
+          class="ml-auto shrink-0"
+          :style="{ color: git.data.value.clean ? 'var(--ccg-success)' : 'var(--ccg-accent)' }"
+        >
+          {{ git.data.value.clean ? 'clean' : `${git.data.value.files.length} changed` }}
+        </span>
+      </div>
+      <div class="mx-4 mb-2 flex items-center gap-0.5">
         <button
           type="button"
-          class="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 disabled:opacity-40 dark:hover:bg-neutral-800"
+          class="ccg-btn-ghost ccg-btn-sm mr-auto gap-1"
+          disabled
+          title="Not yet wired"
+        >
+          <Plus class="h-3.5 w-3.5" :stroke-width="1.5" />
+          New chat
+        </button>
+        <button
+          type="button"
+          class="ccg-icon-btn"
           :disabled="!project.data.value?.workingDir"
           aria-label="Reveal project folder"
           title="Reveal in file manager"
           @click="reveal(project.data.value?.workingDir)"
         >
-          <FolderOpen class="h-4 w-4" />
+          <FolderOpen class="h-4 w-4" :stroke-width="1.5" />
         </button>
         <RouterLink
           :to="`/sessions/project/${encodeURIComponent(projectName)}/worktrees`"
-          class="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          class="ccg-icon-btn"
           aria-label="Worktrees"
+          title="Worktrees"
         >
-          <GitBranch class="h-4 w-4" />
+          <GitBranch class="h-4 w-4" :stroke-width="1.5" />
         </RouterLink>
         <RouterLink
           :to="`/sessions/project/${encodeURIComponent(projectName)}/settings`"
-          class="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          class="ccg-icon-btn"
           aria-label="Project settings"
+          title="Project settings"
         >
-          <Settings class="h-4 w-4" />
+          <Settings class="h-4 w-4" :stroke-width="1.5" />
         </RouterLink>
         <button
           type="button"
-          class="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 disabled:opacity-40 dark:hover:bg-neutral-800"
+          class="ccg-icon-btn"
           :disabled="sessions.isFetching.value"
           aria-label="Refresh sessions"
+          title="Refresh"
           @click="() => sessions.refetch()"
         >
-          <RefreshCcw class="h-4 w-4" :class="sessions.isFetching.value ? 'animate-spin' : ''" />
+          <RefreshCcw class="h-4 w-4" :stroke-width="1.5" :class="sessions.isFetching.value ? 'animate-spin' : ''" />
         </button>
-      </header>
-      <div
-        v-if="git.data.value"
-        class="flex items-center gap-2 border-b border-neutral-200 px-3 py-1.5 text-[11px] text-neutral-500 dark:border-neutral-800 dark:text-neutral-400"
-        data-testid="git-status"
-      >
-        <GitBranch class="h-3 w-3 shrink-0" />
-        <span class="truncate font-mono">{{ git.data.value.branch ?? 'detached' }}</span>
-        <span v-if="git.data.value.ahead" title="Commits ahead of upstream">↑{{ git.data.value.ahead }}</span>
-        <span v-if="git.data.value.behind" title="Commits behind upstream">↓{{ git.data.value.behind }}</span>
-        <span
-          class="ml-auto shrink-0"
-          :class="git.data.value.clean ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'"
-        >
-          {{ git.data.value.clean ? 'clean' : `${git.data.value.files.length} changed` }}
-        </span>
       </div>
-      <p
-        v-if="errorMessage"
-        role="alert"
-        class="mx-3 mt-3 rounded-md border border-red-300 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-      >
+      <p v-if="errorMessage" role="alert" class="ccg-alert-error mx-4 mb-2 px-2.5 py-2 text-[12px]">
         {{ errorMessage }}
       </p>
-      <div class="p-3">
-        <button
-          type="button"
-          class="flex w-full items-center justify-center gap-2 rounded-md bg-amber-500 px-3 py-2 text-sm font-medium text-amber-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled
-          title="Not yet wired"
-        >
-          <Plus class="h-4 w-4" />
-          New Chat
-        </button>
-      </div>
-      <ul class="flex-1 space-y-2 overflow-auto px-3 pb-3">
-        <li v-if="!sessions.data.value?.length" class="text-xs text-neutral-500 dark:text-neutral-400">
+      <ul class="flex flex-1 flex-col gap-0.5 overflow-auto px-2 pb-3">
+        <li v-if="!sessions.data.value?.length" class="px-2.5 py-2 text-[13px]" style="color: var(--ccg-subtle);">
           No sessions yet.
         </li>
         <li v-for="s in sessions.data.value ?? []" :key="s.sessionId" class="group relative">
-          <div
-            v-if="editingId === s.sessionId"
-            class="rounded-md border-l-2 border-amber-500 bg-amber-500/5 px-3 py-2"
-          >
+          <div v-if="editingId === s.sessionId" class="rounded-[7px] px-1 py-1" style="background: #E9E5DD;">
             <input
               :id="`rename-${s.sessionId}`"
               v-model="editName"
-              class="ccg-input w-full text-sm"
+              class="ccg-input w-full text-[13px]"
               aria-label="Session name"
               maxlength="200"
               @keydown.enter.prevent="commitRename"
@@ -236,40 +239,37 @@ function truncate(s: string | null | undefined, max = 60) {
           <RouterLink
             v-else
             :to="`/sessions/project/${encodeURIComponent(projectName)}/session/${s.sessionId}`"
-            class="block rounded-md border-l-2 px-3 py-2 pr-16 transition hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
-            :class="s.sessionId === activeSessionId
-              ? 'border-amber-500 bg-amber-500/5'
-              : 'border-transparent bg-neutral-50/40 dark:bg-neutral-900'"
+            class="ccg-session-item flex flex-col gap-[3px] rounded-[7px] px-2.5 py-[9px]"
+            :class="{ 'is-active': s.sessionId === activeSessionId }"
           >
-            <div class="truncate text-sm font-medium" :title="sessionLabel(s)">
-              {{ truncate(sessionLabel(s), 60) }}
+            <div class="truncate text-[13px] font-medium text-ink" :title="sessionLabel(s)">
+              {{ sessionLabel(s) }}
             </div>
-            <div class="mt-1 flex items-center gap-2 text-[11px] text-neutral-500 dark:text-neutral-400">
-              <span>{{ s.messageCount }} messages</span>
-              <span>{{ relativeTime(s.lastMessageAt) }}</span>
+            <div class="truncate text-[11.5px]" style="color: var(--ccg-subtle);">
+              {{ s.messageCount }} messages<template v-if="relativeTime(s.lastMessageAt)"> · {{ relativeTime(s.lastMessageAt) }}</template>
             </div>
           </RouterLink>
           <div
             v-if="editingId !== s.sessionId"
-            class="absolute right-2 top-2 flex gap-0.5 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100"
+            class="ccg-session-actions absolute right-1.5 top-1.5 flex gap-0.5 rounded-md opacity-0 group-hover:opacity-100 focus-within:opacity-100"
           >
             <button
               type="button"
-              class="rounded p-1 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+              class="ccg-icon-btn"
               :aria-label="`Rename ${sessionLabel(s)}`"
               title="Rename"
               @click="startRename(s)"
             >
-              <Pencil class="h-3.5 w-3.5" />
+              <Pencil class="h-4 w-4" :stroke-width="1.5" />
             </button>
             <button
               type="button"
-              class="rounded p-1 text-neutral-500 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-950/60"
+              class="ccg-icon-btn ccg-icon-btn-danger"
               :aria-label="`Delete ${sessionLabel(s)}`"
               title="Delete"
               @click="pendingDelete = s"
             >
-              <Trash2 class="h-3.5 w-3.5" />
+              <Trash2 class="h-4 w-4" :stroke-width="1.5" />
             </button>
           </div>
         </li>
@@ -290,3 +290,48 @@ function truncate(s: string | null | undefined, max = 60) {
     />
   </div>
 </template>
+
+<style scoped>
+.ccg-session-item {
+  transition: background-color 120ms ease-out;
+}
+.ccg-session-item:hover,
+.group:hover .ccg-session-item {
+  background: #EFECE5;
+}
+.ccg-session-item.is-active,
+.group:hover .ccg-session-item.is-active {
+  background: #E9E5DD;
+}
+/* Sits over the title's tail, so it takes the row's background to hide it. */
+.ccg-session-actions {
+  background: #EFECE5;
+  transition: opacity 120ms ease-out;
+}
+.group:has(.is-active) .ccg-session-actions {
+  background: #E9E5DD;
+}
+.ccg-icon-btn {
+  display: inline-flex;
+  height: 26px;
+  width: 26px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--ccg-muted);
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.ccg-icon-btn:hover:not(:disabled) {
+  background: var(--ccg-hover);
+  color: var(--ccg-ink);
+}
+.ccg-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ccg-icon-btn-danger:hover:not(:disabled) {
+  background: var(--ccg-error-bg);
+  color: var(--ccg-error);
+}
+</style>

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
-import MarkdownEditor from '@/components/MarkdownEditor.vue'
+import EditorPage from '@/components/EditorPage.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useWorkflow, useWorkflowDelete, useWorkflowUpdate } from '@/composables/useWorkflows'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
@@ -60,42 +59,44 @@ async function onDelete() {
 </script>
 
 <template>
-  <PageHeader :title="data ? `/${data.name}` : slug" :subtitle="data?.filename">
-    <template #actions>
-      <button type="button" class="ccg-btn-danger" @click="confirmingDelete = true">Delete</button>
-      <button
-        type="button"
-        class="ccg-btn-primary"
-        :disabled="!dirty || update.isPending.value"
-        @click="onSave"
-      >
-        {{ update.isPending.value ? 'Saving…' : 'Save' }}
-      </button>
-    </template>
-  </PageHeader>
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
     <template #default="{ data: workflow }">
-      <section v-if="workflow" class="flex h-[calc(100vh-65px)] min-h-0 flex-col p-6">
-        <p
-          v-if="errorMessage"
-          class="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-        >
-          {{ errorMessage }}
-        </p>
-        <p v-if="workflow.description" class="mb-3 text-sm text-neutral-600 dark:text-neutral-300">
-          {{ workflow.description }}
-        </p>
-        <div v-if="workflow.phases.length" class="mb-3 flex flex-wrap gap-1.5">
-          <span
-            v-for="phase in workflow.phases"
-            :key="phase"
-            class="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100"
+      <EditorPage
+        v-if="workflow"
+        v-model="body"
+        section="Workflows"
+        section-to="/workflows"
+        :name="`/${workflow.name}`"
+        :dirty="dirty"
+        :file-path="workflow.filePath"
+        :error="errorMessage"
+        language="javascript"
+        :frontmatter="false"
+      >
+        <template #actions>
+          <button type="button" class="ccg-btn-danger ccg-btn-sm" @click="confirmingDelete = true">Delete</button>
+          <button
+            type="button"
+            class="ccg-btn-primary ccg-btn-sm"
+            :disabled="!dirty || update.isPending.value"
+            @click="onSave"
           >
-            {{ phase }}
-          </span>
-        </div>
-        <MarkdownEditor v-model="body" language="javascript" fill class="min-h-0 flex-1" />
-      </section>
+            {{ update.isPending.value ? 'Saving…' : 'Save' }}
+          </button>
+        </template>
+        <template #banner>
+          <div
+            v-if="workflow.description || workflow.phases.length"
+            class="flex flex-none flex-wrap items-center gap-1.5 border-b px-5 py-2.5"
+            style="border-color: var(--ccg-hairline-soft);"
+          >
+            <p v-if="workflow.description" class="mr-2 text-[13px]" style="color: var(--ccg-body);">
+              {{ workflow.description }}
+            </p>
+            <span v-for="phase in workflow.phases" :key="phase" class="ccg-chip">{{ phase }}</span>
+          </div>
+        </template>
+      </EditorPage>
     </template>
   </QueryStateBoundary>
   <ConfirmDialog

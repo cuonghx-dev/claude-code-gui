@@ -12,80 +12,79 @@ const include = useProjectWorktreeInclude(projectName)
 </script>
 
 <template>
-  <PageHeader title="Worktrees" subtitle="Read-only: this app never creates or removes worktrees" />
+  <div class="flex min-h-0 flex-1 flex-col overflow-auto">
+    <PageHeader title="Worktrees" subtitle="Read-only: this app never creates or removes worktrees" />
 
-  <section class="space-y-6 p-6">
-    <p v-if="worktrees.isPending.value" class="text-sm text-neutral-500">Loading…</p>
-    <p
-      v-else-if="!worktrees.data.value?.length"
-      class="text-sm text-neutral-500 dark:text-neutral-400"
-    >
-      Not a git repository.
-    </p>
+    <section class="flex flex-col gap-6 px-7 py-5">
+      <div v-if="worktrees.isPending.value" class="flex flex-col gap-2">
+        <div v-for="i in 2" :key="i" class="ccg-skeleton h-14" />
+      </div>
+      <p v-else-if="!worktrees.data.value?.length" class="text-[13px]" style="color: var(--ccg-subtle);">
+        Not a git repository.
+      </p>
 
-    <ul
-      v-else
-      class="divide-y divide-neutral-200 rounded-lg border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800"
-    >
-      <li v-for="w in worktrees.data.value" :key="w.path" class="px-4 py-3">
-        <div class="flex items-baseline gap-2">
-          <span class="text-sm font-semibold">{{ w.name }}</span>
-          <span v-if="w.isMain" class="rounded bg-blue-500/10 px-1.5 py-0.5 text-[11px] text-blue-600 dark:text-blue-400">
-            main checkout
-          </span>
-          <span v-if="w.isCurrent" class="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[11px] text-emerald-600 dark:text-emerald-400">
-            current
-          </span>
-          <span v-if="w.isLocked" class="rounded bg-amber-500/10 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-300">
-            locked{{ w.lockReason ? `: ${w.lockReason}` : '' }}
-          </span>
-          <span v-if="w.prunable" class="rounded bg-red-500/10 px-1.5 py-0.5 text-[11px] text-red-600 dark:text-red-400">
-            directory missing — prunable
-          </span>
-          <span class="ml-auto font-mono text-xs text-neutral-500 dark:text-neutral-400">
-            {{ w.branch ?? 'detached' }}<template v-if="w.head"> · {{ w.head }}</template>
-          </span>
-        </div>
-        <p class="mt-0.5 font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
-          {{ w.path }}
+      <ul v-else class="ccg-card divide-y overflow-hidden">
+        <li
+          v-for="w in worktrees.data.value"
+          :key="w.path"
+          class="flex flex-col gap-1 px-4 py-3"
+          style="border-color: var(--ccg-hairline-soft);"
+        >
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[13px] font-medium text-ink">{{ w.name }}</span>
+            <span v-if="w.isMain" class="ccg-badge">main checkout</span>
+            <span
+              v-if="w.isCurrent"
+              class="ccg-badge"
+              style="background: var(--ccg-success-bg); color: var(--ccg-success);"
+            >current</span>
+            <span
+              v-if="w.isLocked"
+              class="ccg-badge"
+              style="background: var(--ccg-warning-bg); color: var(--ccg-warning);"
+            >locked{{ w.lockReason ? `: ${w.lockReason}` : '' }}</span>
+            <span
+              v-if="w.prunable"
+              class="ccg-badge"
+              style="background: var(--ccg-error-bg); color: var(--ccg-error);"
+            >directory missing — prunable</span>
+            <span class="ml-auto font-mono text-[12px]" style="color: var(--ccg-muted);">
+              {{ w.branch ?? 'detached' }}<template v-if="w.head"> · {{ w.head }}</template>
+            </span>
+          </div>
+          <p class="ccg-path">{{ w.path }}</p>
+        </li>
+      </ul>
+
+      <div class="flex flex-col gap-2">
+        <h3 class="ccg-section-label">.worktreeinclude</h3>
+        <p class="text-[12.5px]" style="color: var(--ccg-muted);">
+          Gitignored files a new worktree should still get. Parsed with gitignore semantics, so
+          <span class="font-mono">!</span> negation works.
         </p>
-      </li>
-    </ul>
-
-    <div>
-      <h3 class="text-sm font-semibold">.worktreeinclude</h3>
-      <p class="text-xs text-neutral-500 dark:text-neutral-400">
-        Gitignored files a new worktree should still get. Parsed with gitignore semantics, so
-        <span class="font-mono">!</span> negation works.
-      </p>
-      <p
-        v-if="include.data.value && !include.data.value.exists"
-        class="mt-2 text-sm text-neutral-500 dark:text-neutral-400"
-      >
-        Not present in this project.
-      </p>
-      <div v-else-if="include.data.value" class="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <p class="text-xs font-medium text-neutral-700 dark:text-neutral-300">Patterns</p>
-          <ul class="mt-1 space-y-0.5 font-mono text-xs">
-            <li v-for="p in include.data.value.patterns" :key="p">{{ p }}</li>
-          </ul>
-        </div>
-        <div>
-          <p class="text-xs font-medium text-neutral-700 dark:text-neutral-300">
-            Matching files ({{ include.data.value.matchedFiles.length }})
-          </p>
-          <ul class="mt-1 space-y-0.5 font-mono text-xs text-neutral-600 dark:text-neutral-300">
-            <li v-for="f in include.data.value.matchedFiles" :key="f">{{ f }}</li>
-          </ul>
-          <p
-            v-if="include.data.value.truncated"
-            class="mt-1 text-xs text-neutral-500 dark:text-neutral-400"
-          >
-            Listing truncated.
-          </p>
+        <p
+          v-if="include.data.value && !include.data.value.exists"
+          class="text-[13px]"
+          style="color: var(--ccg-subtle);"
+        >
+          Not present in this project.
+        </p>
+        <div v-else-if="include.data.value" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="flex flex-col gap-1.5">
+            <p class="text-[12px] font-medium text-body">Patterns</p>
+            <pre class="ccg-code-block">{{ include.data.value.patterns.join('\n') }}</pre>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <p class="text-[12px] font-medium text-body">
+              Matching files ({{ include.data.value.matchedFiles.length }})
+            </p>
+            <pre class="ccg-code-block max-h-80">{{ include.data.value.matchedFiles.join('\n') }}</pre>
+            <p v-if="include.data.value.truncated" class="text-[12px]" style="color: var(--ccg-subtle);">
+              Listing truncated.
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 </template>

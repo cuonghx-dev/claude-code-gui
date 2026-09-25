@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
-import { ChevronRight, Folder, Pencil, Trash2 } from 'lucide-vue-next'
+import { Folder, Pencil, Trash2 } from 'lucide-vue-next'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -83,115 +83,134 @@ function relativeTime(iso: string | null | undefined) {
 </script>
 
 <template>
-  <PageHeader title="Sessions" subtitle="Pick a project to view past Claude Code sessions">
-    <template #actions>
-      <button type="button" class="ccg-btn-primary" @click="pickAndCreate">+ Add project</button>
-    </template>
-  </PageHeader>
-  <p
-    v-if="errorMessage"
-    class="mx-6 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-  >
-    {{ errorMessage }}
-  </p>
-  <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
-    <template #default="{ data: items }">
-      <section class="p-6">
-        <EmptyState
-          v-if="!items?.length"
-          title="No projects"
-          hint="Open `claude` in any directory or use Add project."
-        />
-        <ul
-          v-else
-          class="divide-y rounded-lg border bg-surface-card"
-          style="border-color: var(--ccg-hairline);"
-        >
+  <div class="flex h-full flex-col">
+    <PageHeader title="Sessions" subtitle="~/.claude/projects">
+      <template #actions>
+        <button type="button" class="ccg-btn-primary" @click="pickAndCreate">+ Add project</button>
+      </template>
+    </PageHeader>
+    <p v-if="errorMessage" class="ccg-alert-error mx-7 mt-4 px-3 py-2 text-[12.5px]" role="alert">
+      {{ errorMessage }}
+    </p>
+    <QueryStateBoundary
+      :is-pending="isPending"
+      :is-error="isError"
+      :error="error"
+      :data="data"
+      skeleton="cards"
+    >
+      <template #default="{ data: items }">
+        <EmptyState v-if="!items?.length" title="No projects yet. Run claude in any directory, or add one.">
+          <button type="button" class="ccg-btn-primary" @click="pickAndCreate">+ Add project</button>
+        </EmptyState>
+        <ul v-else class="grid grid-cols-3 content-start gap-3 px-7 py-5">
           <li
             v-for="p in items"
             :key="p.name"
-            class="group relative flex items-center gap-3 px-4 py-3 hover:bg-canvas-soft"
-            style="border-color: var(--ccg-hairline);"
+            class="group ccg-card ccg-card-hover relative flex min-w-0 flex-col gap-2.5 px-4 py-3.5"
           >
             <RouterLink
               :to="`/sessions/project/${encodeURIComponent(p.name)}`"
-              class="absolute inset-0"
+              class="absolute inset-0 rounded-[9px]"
               :aria-label="`Open ${basename(p.workingDir)}`"
             />
-            <Folder class="h-5 w-5 shrink-0" style="color: var(--ccg-muted);" />
-            <div class="min-w-0 flex-1">
-              <h3 class="truncate text-sm font-medium text-ink">{{ basename(p.workingDir) }}</h3>
-              <p class="truncate text-xs" style="color: var(--ccg-muted);">{{ p.workingDir }}</p>
-            </div>
-            <div class="hidden shrink-0 text-right text-xs sm:block" style="color: var(--ccg-muted);">
-              <div>{{ p.sessionCount }} session{{ p.sessionCount === 1 ? '' : 's' }}</div>
-              <div>{{ relativeTime(p.lastActive) }}</div>
-            </div>
-            <div class="relative z-10 flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                class="rounded-md p-1.5 hover:bg-surface-strong"
-                style="color: var(--ccg-muted);"
-                :aria-label="`Rename ${p.name}`"
-                @click="renaming = { name: p.name, value: p.name }"
+            <div class="flex items-center gap-2">
+              <Folder class="h-4 w-4 flex-none" :stroke-width="1.5" style="color: var(--ccg-muted);" />
+              <span class="min-w-0 flex-1 truncate text-[13.5px] font-medium text-ink">
+                {{ basename(p.workingDir) }}
+              </span>
+              <div
+                class="relative z-10 -my-1 -mr-1.5 flex flex-none items-center gap-0.5 opacity-0 transition-opacity duration-[120ms] ease-out group-hover:opacity-100 focus-within:opacity-100"
               >
-                <Pencil class="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                class="rounded-md p-1.5 hover:bg-surface-strong"
-                style="color: var(--ccg-error);"
-                :aria-label="`Delete ${p.name}`"
-                @click="confirmingDelete = p.name"
-              >
-                <Trash2 class="h-4 w-4" />
-              </button>
-              <ChevronRight class="h-4 w-4" style="color: var(--ccg-muted-soft);" />
+                <button
+                  type="button"
+                  class="ccg-icon-btn"
+                  :aria-label="`Rename ${p.name}`"
+                  title="Rename"
+                  @click="renaming = { name: p.name, value: p.name }"
+                >
+                  <Pencil class="h-4 w-4" :stroke-width="1.5" />
+                </button>
+                <button
+                  type="button"
+                  class="ccg-icon-btn ccg-icon-btn-danger"
+                  :aria-label="`Delete ${p.name}`"
+                  title="Delete"
+                  @click="confirmingDelete = p.name"
+                >
+                  <Trash2 class="h-4 w-4" :stroke-width="1.5" />
+                </button>
+              </div>
             </div>
+            <p class="ccg-path truncate" :title="p.workingDir">{{ p.workingDir }}</p>
+            <p class="text-[12px]" style="color: var(--ccg-subtle);">
+              {{ p.sessionCount }} session{{ p.sessionCount === 1 ? '' : 's' }} · {{ relativeTime(p.lastActive) }}
+            </p>
           </li>
         </ul>
-      </section>
-    </template>
-  </QueryStateBoundary>
+      </template>
+    </QueryStateBoundary>
 
-  <ConfirmDialog
-    :open="!!confirmingDelete"
-    title="Delete project entry?"
-    :message="confirmingDelete ? `Remove ~/.claude/projects/${confirmingDelete}/ permanently. The actual working directory is not touched.` : ''"
-    confirm-label="Delete"
-    danger
-    @update:open="(v: boolean) => { if (!v) confirmingDelete = null }"
-    @confirm="onConfirmDelete"
-  />
+    <ConfirmDialog
+      :open="!!confirmingDelete"
+      title="Delete project entry?"
+      :message="confirmingDelete ? `Remove ~/.claude/projects/${confirmingDelete}/ permanently. The actual working directory is not touched.` : ''"
+      confirm-label="Delete"
+      danger
+      @update:open="(v: boolean) => { if (!v) confirmingDelete = null }"
+      @confirm="onConfirmDelete"
+    />
 
-  <Teleport to="body">
-    <div
-      v-if="renaming"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      @click.self="renaming = null"
-    >
-      <div class="w-[420px] rounded-lg border border-neutral-200 bg-white p-5 shadow-xl dark:border-neutral-800 dark:bg-neutral-900">
-        <h3 class="text-sm font-semibold">Rename project entry</h3>
-        <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          Renames the encoded directory under <code>~/.claude/projects/</code>. Does not touch the working dir.
-        </p>
-        <input
-          v-model="renaming.value"
-          class="ccg-input mt-3 font-mono text-xs"
-          @keyup.enter="onConfirmRename"
-        />
-        <div class="mt-4 flex justify-end gap-2">
-          <button type="button" class="ccg-btn-ghost" @click="renaming = null">Cancel</button>
-          <button
-            type="button"
-            class="ccg-btn-primary"
-            :disabled="rename.isPending.value || !renaming.value.trim()"
-            @click="onConfirmRename"
-          >
-            {{ rename.isPending.value ? 'Saving…' : 'Save' }}
-          </button>
+    <Teleport to="body">
+      <div
+        v-if="renaming"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(31, 30, 27, .18);"
+        @click.self="renaming = null"
+      >
+        <div class="ccg-card w-[420px] p-5 shadow-xl">
+          <h3 class="text-[14px] font-semibold text-ink">Rename project entry</h3>
+          <p class="mt-1 text-[12.5px]" style="color: var(--ccg-muted);">
+            Renames the encoded directory under <code class="font-mono">~/.claude/projects/</code>. Does not touch the working dir.
+          </p>
+          <input
+            v-model="renaming.value"
+            class="ccg-input mt-3 font-mono text-[12.5px]"
+            @keyup.enter="onConfirmRename"
+          />
+          <div class="mt-4 flex justify-end gap-2">
+            <button type="button" class="ccg-btn-ghost" @click="renaming = null">Cancel</button>
+            <button
+              type="button"
+              class="ccg-btn-primary"
+              :disabled="rename.isPending.value || !renaming.value.trim()"
+              @click="onConfirmRename"
+            >
+              {{ rename.isPending.value ? 'Saving…' : 'Save' }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  </Teleport>
+    </Teleport>
+  </div>
 </template>
+
+<style scoped>
+.ccg-icon-btn {
+  display: inline-flex;
+  height: 26px;
+  width: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--ccg-muted);
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.ccg-icon-btn:hover {
+  background: var(--ccg-hover);
+  color: var(--ccg-ink);
+}
+.ccg-icon-btn-danger:hover {
+  background: var(--ccg-error-bg);
+  color: var(--ccg-error);
+}
+</style>

@@ -17,7 +17,6 @@ import {
   BookText,
   Settings,
 } from 'lucide-vue-next'
-import logoUrl from '@/assets/logo.png'
 import GlobalSearch from '@/components/GlobalSearch.vue'
 import SidebarLink from '@/components/SidebarLink.vue'
 import type { NavItem } from '@/components/SidebarLink.vue'
@@ -33,6 +32,7 @@ import { useOutputStylesList } from '@/composables/useOutputStyles'
 import { useHooksList } from '@/composables/useHooks'
 import { usePluginsList } from '@/composables/usePlugins'
 import { useProjectsList } from '@/composables/useProjects'
+import { useClaudeCliInfo } from '@/composables/useSettings'
 
 const agents = useAgentsList()
 const commands = useCommandsList()
@@ -46,6 +46,7 @@ const outputStyles = useOutputStylesList()
 const hooks = useHooksList()
 const plugins = usePluginsList()
 const projects = useProjectsList()
+const cli = useClaudeCliInfo()
 
 interface NavSection {
   label: string
@@ -95,42 +96,42 @@ const bottomItems = computed<NavItem[]>(() => [
 </script>
 
 <template>
-  <nav class="flex w-56 shrink-0 flex-col gap-1 border-r bg-canvas px-2 py-4" style="border-color: var(--ccg-hairline);">
-    <div class="mb-6 mt-4 flex items-center gap-2 px-3">
-      <img
-        :src="logoUrl"
-        alt=""
-        aria-hidden="true"
-        class="h-7 w-7 shrink-0 rounded-md"
-        style="image-rendering: pixelated;"
-      />
-      <h1
-        class="flex items-baseline gap-1.5 text-sm font-medium leading-none text-ink"
-        style="letter-spacing: -0.015em;"
-      >
-        <span>Claude Code</span>
-        <span
-          class="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
-          style="background-color: var(--ccg-primary); color: var(--ccg-on-primary);"
-        >GUI</span>
-      </h1>
-    </div>
+  <nav
+    class="flex w-[220px] flex-none flex-col gap-[14px] overflow-y-auto border-r px-2.5 py-3"
+    style="background: var(--ccg-sidebar); border-color: var(--ccg-chrome-border);"
+  >
     <GlobalSearch />
     <div
-      v-for="(section, i) in sections"
+      v-for="section in sections"
       :key="section.label"
       role="group"
       :aria-label="section.label"
-      class="flex flex-col gap-1"
-      :class="i === 0 ? '' : 'mt-3'"
+      class="flex flex-col gap-px"
     >
-      <h2 class="mb-0.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+      <h2
+        class="px-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-[.08em]"
+        style="color: var(--ccg-muted-soft);"
+      >
         {{ section.label }}
       </h2>
       <SidebarLink v-for="item in section.items" :key="item.to" :item="item" />
     </div>
-    <div class="mt-auto flex flex-col gap-1 border-t border-neutral-200 pt-2 dark:border-neutral-800">
+    <div class="flex-1" />
+    <div class="flex flex-col gap-px">
       <SidebarLink v-for="item in bottomItems" :key="item.to" :item="item" />
+    </div>
+    <div
+      class="-mt-2 flex items-center gap-2 border-t px-2.5 pt-2 font-mono text-[11px]"
+      style="border-color: var(--ccg-chrome-border); color: var(--ccg-subtle);"
+      :title="cli.data.value?.path ?? 'claude CLI not found on PATH'"
+    >
+      <span
+        class="h-[7px] w-[7px] flex-none rounded-full"
+        :style="{ background: cli.isPending.value ? 'var(--ccg-muted-soft)' : cli.data.value ? '#4E9A5B' : 'var(--ccg-error)' }"
+      />
+      <span class="truncate">{{
+        cli.isPending.value ? 'claude …' : cli.data.value ? `claude ${cli.data.value.version.split(/\s/)[0]}` : 'claude not found'
+      }}</span>
     </div>
   </nav>
 </template>

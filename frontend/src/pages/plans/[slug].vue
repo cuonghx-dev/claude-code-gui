@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
-import MarkdownEditor from '@/components/MarkdownEditor.vue'
+import EditorPage from '@/components/EditorPage.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { usePlan, usePlanDelete, usePlanUpdate } from '@/composables/usePlans'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
@@ -60,30 +59,31 @@ async function onDelete() {
 </script>
 
 <template>
-  <PageHeader :title="data?.title ?? slug" :subtitle="data?.filename">
-    <template #actions>
-      <button type="button" class="ccg-btn-danger" @click="confirmingDelete = true">Delete</button>
-      <button
-        type="button"
-        class="ccg-btn-primary"
-        :disabled="!dirty || update.isPending.value"
-        @click="onSave"
-      >
-        {{ update.isPending.value ? 'Saving…' : 'Save' }}
-      </button>
-    </template>
-  </PageHeader>
   <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
     <template #default="{ data: plan }">
-      <section v-if="plan" class="flex h-[calc(100vh-65px)] min-h-0 flex-col p-6">
-        <p
-          v-if="errorMessage"
-          class="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-        >
-          {{ errorMessage }}
-        </p>
-        <MarkdownEditor v-model="body" fill class="min-h-0 flex-1" />
-      </section>
+      <EditorPage
+        v-if="plan"
+        v-model="body"
+        section="Plans"
+        section-to="/plans"
+        :name="plan.title"
+        :dirty="dirty"
+        :file-path="plan.filePath"
+        :error="errorMessage"
+        :frontmatter="false"
+      >
+        <template #actions>
+          <button type="button" class="ccg-btn-danger ccg-btn-sm" @click="confirmingDelete = true">Delete</button>
+          <button
+            type="button"
+            class="ccg-btn-primary ccg-btn-sm"
+            :disabled="!dirty || update.isPending.value"
+            @click="onSave"
+          >
+            {{ update.isPending.value ? 'Saving…' : 'Save' }}
+          </button>
+        </template>
+      </EditorPage>
     </template>
   </QueryStateBoundary>
   <ConfirmDialog

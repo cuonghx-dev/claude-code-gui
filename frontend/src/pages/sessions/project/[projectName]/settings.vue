@@ -107,106 +107,111 @@ async function doDelete() {
 </script>
 
 <template>
-  <PageHeader
-    :title="project.data.value?.workingDir ?? projectName"
-    subtitle="Project settings + CLAUDE.md editor"
-  >
-    <template #actions>
-      <button type="button" class="ccg-btn-ghost" @click="renaming = true; renameTo = projectName">
-        Rename
-      </button>
-      <button type="button" class="ccg-btn-danger" @click="confirmingDelete = true">
-        Delete
-      </button>
-    </template>
-  </PageHeader>
+  <div class="flex min-h-0 flex-1 flex-col overflow-auto">
+    <PageHeader
+      :title="project.data.value?.workingDir ?? projectName"
+      subtitle="Project settings + CLAUDE.md editor"
+    >
+      <template #actions>
+        <button type="button" class="ccg-btn-ghost" :aria-pressed="renaming" @click="renaming = true; renameTo = projectName">
+          Rename
+        </button>
+        <button type="button" class="ccg-btn-danger" @click="confirmingDelete = true">
+          Delete
+        </button>
+      </template>
+    </PageHeader>
 
-  <section v-if="renaming" class="mx-6 mt-4 rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
-    <div class="flex items-center gap-2">
-      <input
-        v-model="renameTo"
-        :placeholder="projectName"
-        class="ccg-input flex-1 font-mono text-xs"
-      />
-      <button type="button" class="ccg-btn-primary" @click="doRename">Save</button>
-      <button type="button" class="ccg-btn-ghost" @click="renaming = false">Cancel</button>
-    </div>
-  </section>
-  <p
-    v-if="errorMessage"
-    class="mx-6 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-  >
-    {{ errorMessage }}
-  </p>
-  <p
-    v-if="status"
-    class="mx-6 mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
-  >
-    {{ status }}
-  </p>
-  <QueryStateBoundary
-    :is-pending="settings.isPending.value"
-    :is-error="settings.isError.value"
-    :error="settings.error.value"
-    :data="settings.data.value"
-  >
-    <template #default>
-      <section class="p-6 space-y-6">
-        <div class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Project settings.json</h3>
-          <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <FormField label="Default model">
-              <select v-model="sLocal.defaultModel" class="ccg-input">
-                <option value="">— inherit —</option>
-                <option value="opus">opus</option>
-                <option value="sonnet">sonnet</option>
-                <option value="haiku">haiku</option>
-              </select>
-            </FormField>
-            <FormField label="Default permission mode">
-              <select v-model="sLocal.defaultPermissionMode" class="ccg-input">
-                <option value="">— inherit —</option>
-                <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
-              </select>
-            </FormField>
+    <section v-if="renaming" class="ccg-card mx-7 mt-4 p-3">
+      <div class="flex items-center gap-2">
+        <input
+          v-model="renameTo"
+          :placeholder="projectName"
+          class="ccg-input flex-1 font-mono text-xs"
+        />
+        <button type="button" class="ccg-btn-primary" @click="doRename">Save</button>
+        <button type="button" class="ccg-btn-ghost" @click="renaming = false">Cancel</button>
+      </div>
+    </section>
+    <p
+      v-if="errorMessage"
+      class="ccg-alert-error mx-7 mt-4 px-3 py-2 text-[12.5px]"
+      role="alert"
+    >
+      {{ errorMessage }}
+    </p>
+    <p
+      v-if="status"
+      class="mx-7 mt-4 rounded-[7px] px-3 py-2 text-[12.5px]"
+      style="background: var(--ccg-success-bg); color: var(--ccg-success);"
+      role="status"
+    >
+      {{ status }}
+    </p>
+    <QueryStateBoundary
+      :is-pending="settings.isPending.value"
+      :is-error="settings.isError.value"
+      :error="settings.error.value"
+      :data="settings.data.value"
+    >
+      <template #default>
+        <section class="flex flex-col gap-4 px-7 py-5">
+          <div class="ccg-card p-4">
+            <h3 class="ccg-section-label">Project settings.json</h3>
+            <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <FormField label="Default model">
+                <select v-model="sLocal.defaultModel" class="ccg-input">
+                  <option value="">— inherit —</option>
+                  <option value="opus">opus</option>
+                  <option value="sonnet">sonnet</option>
+                  <option value="haiku">haiku</option>
+                </select>
+              </FormField>
+              <FormField label="Default permission mode">
+                <select v-model="sLocal.defaultPermissionMode" class="ccg-input">
+                  <option value="">— inherit —</option>
+                  <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
+                </select>
+              </FormField>
+            </div>
+            <button
+              type="button"
+              class="mt-3 ccg-btn-primary"
+              :disabled="settingsPatch.isPending.value"
+              @click="saveSettings"
+            >
+              {{ settingsPatch.isPending.value ? 'Saving…' : 'Save settings' }}
+            </button>
           </div>
-          <button
-            type="button"
-            class="mt-3 ccg-btn-primary"
-            :disabled="settingsPatch.isPending.value"
-            @click="saveSettings"
-          >
-            {{ settingsPatch.isPending.value ? 'Saving…' : 'Save settings' }}
-          </button>
-        </div>
 
-        <div class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-neutral-500">CLAUDE.md</h3>
-          <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            Project conventions document. Loaded by the CLI on session start.
-          </p>
-          <div class="mt-3">
-            <MarkdownEditor v-model="mdLocal" min-height="280px" />
+          <div class="ccg-card p-4">
+            <h3 class="ccg-section-label">CLAUDE.md</h3>
+            <p class="mt-1 text-[12.5px]" style="color: var(--ccg-muted);">
+              Project conventions document. Loaded by the CLI on session start.
+            </p>
+            <div class="mt-3">
+              <MarkdownEditor v-model="mdLocal" min-height="280px" />
+            </div>
+            <button
+              type="button"
+              class="mt-3 ccg-btn-primary"
+              :disabled="claudeMdPut.isPending.value"
+              @click="saveClaudeMd"
+            >
+              {{ claudeMdPut.isPending.value ? 'Saving…' : 'Save CLAUDE.md' }}
+            </button>
           </div>
-          <button
-            type="button"
-            class="mt-3 ccg-btn-primary"
-            :disabled="claudeMdPut.isPending.value"
-            @click="saveClaudeMd"
-          >
-            {{ claudeMdPut.isPending.value ? 'Saving…' : 'Save CLAUDE.md' }}
-          </button>
-        </div>
-      </section>
-    </template>
-  </QueryStateBoundary>
+        </section>
+      </template>
+    </QueryStateBoundary>
 
-  <ConfirmDialog
-    v-model:open="confirmingDelete"
-    title="Delete project entry?"
-    :message="`This removes ~/.claude/projects/${projectName}/ permanently. The actual working directory is not touched.`"
-    confirm-label="Delete"
-    danger
-    @confirm="doDelete"
-  />
+    <ConfirmDialog
+      v-model:open="confirmingDelete"
+      title="Delete project entry?"
+      :message="`This removes ~/.claude/projects/${projectName}/ permanently. The actual working directory is not touched.`"
+      confirm-label="Delete"
+      danger
+      @confirm="doDelete"
+    />
+  </div>
 </template>

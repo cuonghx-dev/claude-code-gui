@@ -17,41 +17,27 @@ const fmt = (ms: number | null) =>
 </script>
 
 <template>
-  <div
-    v-if="team"
-    class="rounded-lg border border-neutral-200 p-4 text-left dark:border-neutral-800"
-  >
+  <div v-if="team" class="ccg-card p-4 text-left">
     <div class="flex items-baseline justify-between gap-4">
-      <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-        Team {{ team.name }}
-      </h3>
-      <span class="text-xs text-neutral-500 dark:text-neutral-400">
-        {{ fmt(team.createdAtMs) }}
-      </span>
+      <h3 class="text-[13px] font-semibold text-ink">Team {{ team.name }}</h3>
+      <span class="text-[12px]" style="color: var(--ccg-subtle);">{{ fmt(team.createdAtMs) }}</span>
     </div>
     <ul class="mt-3 space-y-2">
       <li
         v-for="m in team.members"
         :key="m.agentId"
-        class="flex items-center justify-between gap-4 text-sm"
+        class="flex items-center justify-between gap-4 text-[13px]"
       >
         <span class="truncate">
-          <span class="font-medium text-neutral-900 dark:text-neutral-100">
-            {{ m.name ?? m.agentId }}
-          </span>
-          <span v-if="m.agentType" class="ml-2 text-xs text-neutral-500 dark:text-neutral-400">
-            {{ m.agentType }}
-          </span>
+          <span class="font-mono font-medium text-ink">{{ m.name ?? m.agentId }}</span>
+          <span v-if="m.agentType" class="ccg-badge ml-2">{{ m.agentType }}</span>
         </span>
-        <span class="shrink-0 font-mono text-xs text-neutral-500 dark:text-neutral-400">
+        <span class="shrink-0 font-mono text-[11.5px]" style="color: var(--ccg-muted);">
           {{ m.backendType ?? '—' }}<template v-if="m.tmuxPaneId"> · {{ m.tmuxPaneId }}</template>
         </span>
       </li>
     </ul>
-    <p
-      v-if="!team.members.length"
-      class="mt-2 text-xs text-neutral-500 dark:text-neutral-400"
-    >
+    <p v-if="!team.members.length" class="mt-2 text-[12px]" style="color: var(--ccg-subtle);">
       No members recorded.
     </p>
   </div>

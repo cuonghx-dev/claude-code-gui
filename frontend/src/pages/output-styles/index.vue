@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryStateBoundary from '@/components/QueryStateBoundary.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -20,6 +20,19 @@ const remove = useOutputStyleDelete()
 const showForm = ref(false)
 const errorMessage = ref('')
 const confirmingDelete = ref<{ id: string; scope: OutputStyleScope } | null>(null)
+const search = ref('')
+
+const filtered = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  const items = data.value ?? []
+  if (!q) return items
+  return items.filter(
+    (s) =>
+      s.id.toLowerCase().includes(q) ||
+      (s.frontmatter.name?.toLowerCase().includes(q) ?? false) ||
+      (s.frontmatter.description?.toLowerCase().includes(q) ?? false),
+  )
+})
 
 async function onSubmit(input: OutputStyleInput) {
   errorMessage.value = ''
@@ -44,74 +57,98 @@ async function onConfirmDelete() {
 </script>
 
 <template>
-  <PageHeader title="Output styles" subtitle="Global styles in ~/.claude/output-styles/">
-    <template #actions>
-      <button type="button" class="ccg-btn-primary" @click="showForm = !showForm">
-        {{ showForm ? 'Close' : '+ New style' }}
-      </button>
-    </template>
-  </PageHeader>
+  <div class="flex h-full flex-col">
+    <PageHeader title="Output styles" subtitle="~/.claude/output-styles/*.md">
+      <template #actions>
+        <input v-model="search" placeholder="Filter…" class="ccg-input w-[220px]" />
+        <button
+          type="button"
+          :class="showForm ? 'ccg-btn-ghost' : 'ccg-btn-primary'"
+          @click="showForm = !showForm"
+        >
+          {{ showForm ? 'Close' : '+ New' }}
+        </button>
+      </template>
+    </PageHeader>
 
-  <section v-if="showForm" class="border-b border-neutral-200 p-6 dark:border-neutral-800">
+    <section v-if="showForm" class="border-b px-7 py-5" style="border-color: var(--ccg-hairline-soft);">
+      <p v-if="errorMessage" class="ccg-alert-error mb-4 px-3 py-2 text-[12.5px]" role="alert">
+        {{ errorMessage }}
+      </p>
+      <OutputStyleForm
+        draft-key="output-style:new"
+        default-scope="global"
+        :submitting="create.isPending.value"
+        submit-label="Create"
+        @submit="onSubmit"
+        @cancel="showForm = false"
+      />
+    </section>
     <p
-      v-if="errorMessage"
-      class="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+      v-else-if="errorMessage"
+      class="ccg-alert-error mx-7 mt-4 px-3 py-2 text-[12.5px]"
+      role="alert"
     >
       {{ errorMessage }}
     </p>
-    <OutputStyleForm
-      draft-key="output-style:new"
-      default-scope="global"
-      :submitting="create.isPending.value"
-      submit-label="Create"
-      @submit="onSubmit"
-      @cancel="showForm = false"
-    />
-  </section>
 
-  <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
-    <template #default="{ data: items }">
-      <section class="p-6">
-        <EmptyState v-if="!items?.length" title="No output styles" />
-        <ul v-else class="space-y-3">
+    <QueryStateBoundary
+      :is-pending="isPending"
+      :is-error="isError"
+      :error="error"
+      :data="filtered"
+      skeleton="cards"
+    >
+      <template #default="{ data: items }">
+        <EmptyState
+          v-if="!items?.length"
+          :title="search.trim() ? `No output styles match “${search.trim()}”.` : 'No output styles yet.'"
+        >
+          <button v-if="!search.trim() && !showForm" type="button" class="ccg-btn-primary" @click="showForm = true">
+            + New
+          </button>
+        </EmptyState>
+        <ul v-else class="grid grid-cols-3 content-start gap-3 px-7 py-5">
           <li
             v-for="s in items"
             :key="`${s.scope}:${s.id}`"
-            class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
+            class="ccg-card flex min-w-0 flex-col gap-2.5 px-4 py-3.5"
           >
-            <div class="flex items-baseline justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-semibold">{{ s.frontmatter.name ?? s.id }}</span>
-                <span
-                  class="rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                  :class="s.scope === 'builtin'
-                    ? 'border-amber-500/60 text-amber-500'
-                    : 'border-neutral-300 text-neutral-500 dark:border-neutral-700 dark:text-neutral-400'"
-                >
-                  {{ s.scope === 'builtin' ? 'Built-in' : s.scope }}
-                </span>
-              </div>
+            <div class="flex items-center gap-2">
+              <span class="min-w-0 flex-1 truncate font-mono text-[13.5px] font-medium text-ink">
+                {{ s.frontmatter.name ?? s.id }}
+              </span>
+              <span
+                class="ccg-badge"
+                :style="s.scope === 'builtin' ? 'background: var(--ccg-warning-bg); color: var(--ccg-warning);' : undefined"
+              >
+                {{ s.scope === 'builtin' ? 'built-in' : s.scope }}
+              </span>
+            </div>
+            <p
+              class="line-clamp-3 min-h-[38px] text-[13px] leading-[1.45]"
+              style="color: var(--ccg-body); text-wrap: pretty;"
+            >
+              {{ describe(s.frontmatter.description, s.body) }}
+            </p>
+            <pre v-if="s.body" class="ccg-code-block max-h-32 text-[11px]">{{ s.body }}</pre>
+            <div class="mt-auto flex items-center gap-1">
+              <span v-if="s.frontmatter.keepCodingInstructions" class="ccg-chip">keep-coding-instructions</span>
+              <span class="flex-1" />
               <button
                 v-if="s.scope !== 'builtin'"
                 type="button"
-                class="text-xs text-red-600 hover:underline dark:text-red-400"
+                class="ccg-btn-danger ccg-btn-sm"
                 @click="confirmingDelete = { id: s.id, scope: s.scope }"
               >
                 Delete
               </button>
             </div>
-            <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              {{ describe(s.frontmatter.description, s.body) }}
-            </p>
-            <pre
-              v-if="s.body"
-              class="mt-3 max-h-48 overflow-auto rounded border border-neutral-100 bg-neutral-50 p-3 text-xs dark:border-neutral-800 dark:bg-neutral-950"
-            >{{ s.body }}</pre>
           </li>
         </ul>
-      </section>
-    </template>
-  </QueryStateBoundary>
+      </template>
+    </QueryStateBoundary>
+  </div>
 
   <ConfirmDialog
     :open="!!confirmingDelete"

@@ -1,44 +1,107 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+
+export interface BarPart {
+  name: string
+  value: number
+  color: string
+}
+export interface Bar {
+  key: string
+  label: string
+  /** Stacked bottom-up in this order. */
+  parts: BarPart[]
+}
 
 const props = withDefaults(
   defineProps<{
-    /** Bars, in display order. */
-    data: { key: string; label: string; value: number }[]
+    data: Bar[]
     height?: number
-    /** Formats the tooltip value. */
+    /** Formats tooltip values. */
     format?: (v: number) => string
   }>(),
-  { height: 140 },
+  { height: 170, format: undefined },
 )
 
-// Hand-rolled rather than pulling in a chart library: three chart shapes over a
-// few hundred points does not justify 60-500 kB plus a second theming system
+// Hand-rolled rather than pulling in a chart library: stacked bars over a few
+// hundred points does not justify 60-500 kB plus a second theming system
 // fighting the app's CSS tokens.
-const max = computed(() => Math.max(1, ...props.data.map((d) => d.value)))
-const barWidth = computed(() => 100 / Math.max(1, props.data.length))
+const totals = computed(() => props.data.map((d) => d.parts.reduce((a, p) => a + p.value, 0)))
+const max = computed(() => Math.max(1e-9, ...totals.value))
+// The design's 5px gap only fits month-scale ranges; thin it for long ones.
+const gap = computed(() => (props.data.length > 120 ? 0 : props.data.length > 60 ? 2 : 5))
 
+const hovered = ref<number | null>(null)
 const fmt = (v: number) => (props.format ? props.format(v) : v.toLocaleString())
+const pct = (v: number) => `${(v / max.value) * 100}%`
+
+const tip = computed(() => {
+  const i = hovered.value
+  if (i === null || !props.data[i]) return null
+  const d = props.data[i]
+  const center = ((i + 0.5) / props.data.length) * 100
+  return {
+    d,
+    total: totals.value[i],
+    parts: d.parts.filter((p) => p.value > 0).slice().reverse(),
+    left: `${Math.min(88, Math.max(12, center))}%`,
+  }
+})
 </script>
 
 <template>
-  <svg
-    :viewBox="`0 0 100 ${height}`"
-    preserveAspectRatio="none"
-    class="w-full"
-    :style="{ height: `${height}px` }"
-    role="img"
-  >
-    <g v-for="(d, i) in data" :key="d.key">
-      <rect
-        :x="i * barWidth + barWidth * 0.15"
-        :width="barWidth * 0.7"
-        :y="height - (d.value / max) * height"
-        :height="Math.max(1, (d.value / max) * height)"
-        class="fill-blue-500/70 hover:fill-blue-500"
+  <div class="relative" @mouseleave="hovered = null">
+    <div
+      class="flex items-end border-b border-hairline-soft"
+      :style="{ height: `${height}px`, gap: `${gap}px` }"
+      role="img"
+    >
+      <div
+        v-for="(d, i) in data"
+        :key="d.key"
+        class="bar flex h-full min-w-0 flex-1 flex-col-reverse"
+        :class="hovered !== null && hovered !== i ? 'opacity-60' : ''"
+        @mouseenter="hovered = i"
       >
-        <title>{{ d.label }}: {{ fmt(d.value) }}</title>
-      </rect>
-    </g>
-  </svg>
+        <div
+          v-for="(p, j) in d.parts"
+          :key="p.name"
+          :style="{
+            height: pct(p.value),
+            background: p.color,
+            borderRadius: j === d.parts.length - 1 ? '2px 2px 0 0' : undefined,
+          }"
+        />
+        <span class="sr-only">{{ d.label }}: {{ fmt(totals[i]) }}</span>
+      </div>
+    </div>
+    <div
+      v-if="tip"
+      class="chart-tip pointer-events-none absolute bottom-full z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap"
+      :style="{ left: tip.left }"
+    >
+      <div class="font-medium text-ink">{{ tip.d.label }} · {{ fmt(tip.total) }}</div>
+      <div v-for="p in tip.parts" :key="p.name" class="flex items-center gap-1.5">
+        <span class="inline-block size-2 rounded-[2px]" :style="{ background: p.color }" />
+        <span class="flex-1">{{ p.name }}</span>
+        <span class="ml-3 font-mono tabular-nums">{{ fmt(p.value) }}</span>
+      </div>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.bar {
+  transition: opacity 120ms ease-out;
+}
+.chart-tip {
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: var(--ccg-surface-card);
+  border: 1px solid var(--ccg-hairline);
+  box-shadow: 0 4px 14px rgba(40, 30, 20, .1);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ccg-muted);
+}
+</style>

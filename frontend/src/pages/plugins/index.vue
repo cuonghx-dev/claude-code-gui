@@ -17,7 +17,7 @@ import {
 } from '@/composables/useMarketplace'
 import { useAsyncRequest } from '@/composables/useAsyncRequest'
 import { describePlugin } from '@/utils/description'
-import { ChevronRight, Plus, RefreshCw, Store, Trash2 } from 'lucide-vue-next'
+import { RefreshCw, Trash2 } from 'lucide-vue-next'
 import type { Plugin } from '@/types/ipc'
 
 const route = useRoute()
@@ -168,258 +168,268 @@ watch(
 </script>
 
 <template>
-  <PageHeader title="Plugins" subtitle="Installed plugins + marketplace discovery">
-    <template #actions>
-      <button
-        type="button"
-        class="rounded-md px-3 py-1.5 text-sm"
-        :class="tab === 'installed' ? 'bg-violet-600 text-white' : 'border border-neutral-300 dark:border-neutral-700'"
-        @click="tab = 'installed'"
-      >
-        Installed
-      </button>
-      <button
-        type="button"
-        class="rounded-md px-3 py-1.5 text-sm"
-        :class="tab === 'discover' ? 'bg-violet-600 text-white' : 'border border-neutral-300 dark:border-neutral-700'"
-        @click="tab = 'discover'"
-      >
-        Discover
-      </button>
-    </template>
-  </PageHeader>
-
-  <p
-    v-if="errorMessage"
-    class="mx-6 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-  >
-    {{ errorMessage }}
-  </p>
-
-  <!-- Installed tab -->
-  <section v-if="tab === 'installed'" class="p-6">
-    <QueryStateBoundary
-      :is-pending="installed.isPending.value"
-      :is-error="installed.isError.value"
-      :error="installed.error.value"
-      :data="installed.data.value"
-    >
-      <template #default="{ data: items }">
-        <EmptyState v-if="!items?.length" title="No plugins installed" hint="Switch to Discover to browse." />
-        <div v-else class="space-y-6">
-          <div v-for="group in groupByMarketplace(items)" :key="group.name">
-            <header class="mb-2 flex items-center gap-2 text-xs">
-              <Store class="h-4 w-4 text-neutral-500" />
-              <code class="font-mono text-sm">{{ group.name }}</code>
-              <span class="text-neutral-500">{{ group.plugins.length }}</span>
-            </header>
-            <ul class="divide-y divide-neutral-200 overflow-hidden rounded-lg border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
-              <li
-                v-for="p in group.plugins"
-                :key="p.id"
-                class="flex items-center gap-4 px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
-              >
-                <button
-                  type="button"
-                  role="switch"
-                  :aria-checked="p.enabled"
-                  :aria-label="`Toggle ${p.name}`"
-                  :disabled="setEnabled.isPending.value"
-                  class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition disabled:opacity-50"
-                  :class="p.enabled ? 'bg-amber-500' : 'bg-neutral-300 dark:bg-neutral-700'"
-                  @click="togglePlugin(p)"
-                >
-                  <span
-                    class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition"
-                    :class="p.enabled ? 'translate-x-[1.125rem]' : 'translate-x-0.5'"
-                  />
-                </button>
-                <RouterLink
-                  :to="`/plugins/${encodeURIComponent(p.id)}`"
-                  class="flex min-w-0 flex-1 items-center gap-4"
-                >
-                  <span class="w-44 shrink-0 truncate text-sm font-semibold">{{ p.name }}</span>
-                  <span
-                    v-if="p.version"
-                    class="shrink-0 rounded bg-neutral-100 px-2 py-0.5 font-mono text-[11px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
-                  >v{{ p.version }}</span>
-                  <span class="line-clamp-1 flex-1 text-xs text-neutral-500 dark:text-neutral-400">
-                    {{ describePlugin(p.description, p.skills) }}
-                  </span>
-                  <span class="shrink-0 text-[11px] text-neutral-500">
-                    {{ p.skills.length }} skill{{ p.skills.length === 1 ? '' : 's' }}
-                  </span>
-                  <span class="w-24 shrink-0 text-right text-[11px] text-neutral-500">
-                    {{ formatDate(p.installedAt) }}
-                  </span>
-                  <ChevronRight class="h-4 w-4 shrink-0 text-neutral-400" />
-                </RouterLink>
-              </li>
-            </ul>
-          </div>
+  <div class="flex h-full flex-col">
+    <PageHeader title="Plugins" subtitle="~/.claude/plugins/">
+      <template #actions>
+        <div class="ccg-seg" role="group" aria-label="Plugins view">
+          <button type="button" :aria-pressed="tab === 'installed'" @click="tab = 'installed'">Installed</button>
+          <button type="button" :aria-pressed="tab === 'discover'" @click="tab = 'discover'">Discover</button>
         </div>
-      </template>
-    </QueryStateBoundary>
-  </section>
-
-  <!-- Discover tab -->
-  <section v-else class="p-6 space-y-6">
-    <div>
-      <p class="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
-        Marketplaces are catalogs of plugins. Add a source to discover new plugins.
-      </p>
-
-      <ul v-if="sources.data.value?.length" class="space-y-2">
-        <li
-          v-for="s in sources.data.value"
-          :key="s.name"
-          class="flex items-center gap-3 rounded-lg px-2 py-3 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
+        <button
+          v-if="tab === 'discover' && !showSourceForm"
+          type="button"
+          class="ccg-btn-primary"
+          @click="showSourceForm = true"
         >
-          <Store class="h-4 w-4 shrink-0 text-neutral-500" />
-          <code class="w-48 shrink-0 truncate font-mono text-sm">{{ s.name }}</code>
-          <span class="shrink-0 rounded bg-neutral-100 px-2 py-0.5 font-mono text-[11px] text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
-            {{ s.sourceType }}
-          </span>
-          <span class="flex-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
-            {{ sourceRepo(s) }}
-          </span>
-          <span class="w-24 shrink-0 text-right text-[11px] text-neutral-500">
-            {{ formatDate(s.lastUpdated) }}
-          </span>
-          <button
-            type="button"
-            class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
-            :disabled="sourceUpdate.isPending.value"
-            @click="refreshSource(s.name)"
-          >
-            <RefreshCw class="h-3.5 w-3.5" :class="sourceUpdate.isPending.value ? 'animate-spin' : ''" />
-            Update
-          </button>
-          <button
-            type="button"
-            class="shrink-0 rounded-md p-1.5 text-neutral-500 hover:bg-red-500/10 hover:text-red-500"
-            :aria-label="`Remove ${s.name}`"
-            @click="confirmingSourceRemove = s.name"
-          >
-            <Trash2 class="h-4 w-4" />
-          </button>
-        </li>
-      </ul>
-      <p v-else class="text-xs text-neutral-500 dark:text-neutral-400">
-        No marketplaces configured.
-      </p>
+          + Add marketplace
+        </button>
+      </template>
+    </PageHeader>
 
-      <div v-if="showSourceForm" class="mt-4 grid grid-cols-1 gap-3 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800 md:grid-cols-3">
-        <FormField label="Name">
-          <input v-model="sourceForm.name" class="ccg-input" />
-        </FormField>
-        <FormField label="Type">
-          <select v-model="sourceForm.sourceType" class="ccg-input">
-            <option value="github">github (git URL)</option>
-            <option value="http">http (JSON manifest)</option>
-          </select>
-        </FormField>
-        <FormField label="URL">
-          <input v-model="sourceForm.url" class="ccg-input" />
-        </FormField>
-        <div class="flex gap-2 md:col-span-3">
-          <button
-            type="button"
-            class="ccg-btn-primary"
-            :disabled="sourceAdd.isPending.value || !sourceForm.name || !sourceForm.url"
-            @click="addSource"
+    <p v-if="errorMessage" class="ccg-alert-error mx-7 mt-4 px-3 py-2 text-[12.5px]" role="alert">
+      {{ errorMessage }}
+    </p>
+
+    <!-- Installed tab -->
+    <section v-if="tab === 'installed'">
+      <QueryStateBoundary
+        :is-pending="installed.isPending.value"
+        :is-error="installed.isError.value"
+        :error="installed.error.value"
+        :data="installed.data.value"
+        skeleton="cards"
+      >
+        <template #default="{ data: items }">
+          <EmptyState v-if="!items?.length" title="No plugins installed.">
+            <button type="button" class="ccg-btn-primary" @click="tab = 'discover'">Browse marketplace</button>
+          </EmptyState>
+          <div v-else class="flex flex-col gap-6 px-7 py-5">
+            <div v-for="group in groupByMarketplace(items)" :key="group.name" class="flex flex-col gap-2">
+              <div class="flex items-baseline gap-2">
+                <span class="ccg-section-label">{{ group.name }}</span>
+                <span class="font-mono text-[11px]" style="color: var(--ccg-muted-soft);">{{ group.plugins.length }}</span>
+              </div>
+              <ul class="grid grid-cols-3 content-start gap-3">
+                <li
+                  v-for="p in group.plugins"
+                  :key="p.id"
+                  class="ccg-card ccg-card-hover relative flex min-w-0 flex-col gap-2.5 px-4 py-3.5"
+                >
+                  <!-- Stretched link: the whole card opens the detail, the switch sits above it. -->
+                  <RouterLink
+                    :to="`/plugins/${encodeURIComponent(p.id)}`"
+                    class="absolute inset-0 rounded-[9px]"
+                    :aria-label="`Open ${p.name}`"
+                  />
+                  <div class="flex items-center gap-2">
+                    <span class="min-w-0 flex-1 truncate font-mono text-[13.5px] font-medium text-ink">{{ p.name }}</span>
+                    <span v-if="p.version" class="ccg-badge">v{{ p.version }}</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      class="ccg-switch relative z-10 disabled:opacity-50"
+                      :aria-checked="p.enabled"
+                      :aria-label="`Toggle ${p.name}`"
+                      :disabled="setEnabled.isPending.value"
+                      @click="togglePlugin(p)"
+                    />
+                  </div>
+                  <p
+                    class="line-clamp-2 min-h-[38px] text-[13px] leading-[1.45]"
+                    style="color: var(--ccg-body); text-wrap: pretty;"
+                  >
+                    {{ describePlugin(p.description, p.skills) }}
+                  </p>
+                  <div class="flex items-center gap-1">
+                    <span class="ccg-chip">{{ p.skills.length }} skill{{ p.skills.length === 1 ? '' : 's' }}</span>
+                    <span v-if="!p.enabled" class="ccg-chip">disabled</span>
+                    <span class="flex-1" />
+                    <span class="text-[11.5px]" style="color: var(--ccg-muted-soft);">{{ formatDate(p.installedAt) }}</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </template>
+      </QueryStateBoundary>
+    </section>
+
+    <!-- Discover tab -->
+    <section v-else class="flex flex-col gap-6 px-7 py-5">
+      <div class="flex flex-col gap-2">
+        <div class="flex items-baseline gap-2">
+          <span class="text-[13px] font-semibold text-ink">Marketplaces</span>
+          <span class="text-[12px]" style="color: var(--ccg-muted-soft);">catalogs of plugins to discover</span>
+        </div>
+
+        <div class="ccg-card overflow-hidden" style="border-radius: 8px;">
+          <div
+            v-for="s in sources.data.value ?? []"
+            :key="s.name"
+            class="flex items-center gap-3 border-b px-3 py-2"
+            style="border-color: var(--ccg-hairline-faint);"
           >
-            {{ sourceAdd.isPending.value ? 'Adding…' : 'Add' }}
-          </button>
-          <button type="button" class="ccg-btn-ghost" @click="showSourceForm = false">
-            Cancel
-          </button>
+            <span class="w-48 flex-none truncate font-mono text-[12.5px] font-medium text-ink">{{ s.name }}</span>
+            <span class="ccg-badge">{{ s.sourceType }}</span>
+            <span class="min-w-0 flex-1 truncate font-mono text-[11.5px]" style="color: var(--ccg-subtle);">
+              {{ sourceRepo(s) }}
+            </span>
+            <span class="text-[11.5px]" style="color: var(--ccg-muted-soft);">{{ formatDate(s.lastUpdated) }}</span>
+            <button
+              type="button"
+              class="ccg-btn-ghost ccg-btn-sm"
+              :disabled="sourceUpdate.isPending.value"
+              @click="refreshSource(s.name)"
+            >
+              <RefreshCw :size="14" :stroke-width="1.5" :class="sourceUpdate.isPending.value ? 'animate-spin' : ''" />
+              Update
+            </button>
+            <button
+              type="button"
+              class="ccg-btn-danger ccg-btn-sm px-2"
+              :aria-label="`Remove ${s.name}`"
+              @click="confirmingSourceRemove = s.name"
+            >
+              <Trash2 :size="14" :stroke-width="1.5" />
+            </button>
+          </div>
+          <p
+            v-if="!sources.data.value?.length && !showSourceForm"
+            class="px-3 py-2 text-[12.5px]"
+            style="color: var(--ccg-subtle);"
+          >
+            No marketplaces configured.
+          </p>
+
+          <div
+            v-if="showSourceForm"
+            class="grid grid-cols-[1fr_200px_2fr] items-end gap-3 px-3 py-3"
+            style="background: var(--ccg-canvas-soft);"
+          >
+            <FormField label="Name">
+              <input v-model="sourceForm.name" class="ccg-input w-full font-mono" />
+            </FormField>
+            <FormField label="Type">
+              <select v-model="sourceForm.sourceType" class="ccg-input w-full">
+                <option value="github">github (git URL)</option>
+                <option value="http">http (JSON manifest)</option>
+              </select>
+            </FormField>
+            <FormField label="URL">
+              <input v-model="sourceForm.url" class="ccg-input w-full font-mono" />
+            </FormField>
+            <div class="col-span-3 flex justify-end gap-2">
+              <button type="button" class="ccg-btn-ghost" @click="showSourceForm = false">Cancel</button>
+              <button
+                type="button"
+                class="ccg-btn-primary"
+                :disabled="sourceAdd.isPending.value || !sourceForm.name || !sourceForm.url"
+                @click="addSource"
+              >
+                {{ sourceAdd.isPending.value ? 'Adding…' : 'Add' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <button
-        v-if="!showSourceForm"
-        type="button"
-        class="mt-4 inline-flex items-center gap-2 rounded-md bg-emerald-600/20 px-3 py-1.5 text-sm font-medium text-emerald-400 hover:bg-emerald-600/30"
-        @click="showSourceForm = true"
-      >
-        <Plus class="h-4 w-4" />
-        Add Marketplace
-      </button>
-    </div>
-
-    <div>
-      <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Available plugins</h3>
-      <QueryStateBoundary
-        :is-pending="available.isPending.value"
-        :is-error="available.isError.value"
-        :error="available.error.value"
-        :data="available.data.value"
-      >
-        <template #default="{ data: items }">
-          <EmptyState
-            v-if="!items?.length"
-            title="No plugins to install"
-            hint="Refresh a source to fetch its manifest."
-          />
-          <ul v-else class="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <li
-              v-for="p in items"
-              :key="`${p.source}:${p.id}`"
-              class="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
-            >
-              <div class="flex items-baseline justify-between gap-3">
-                <span class="text-sm font-semibold">{{ p.name }}</span>
-                <span v-if="p.version" class="text-xs text-neutral-400">v{{ p.version }}</span>
-              </div>
-              <p class="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">{{ p.description ?? '—' }}</p>
-              <p class="mt-2 text-[11px] text-neutral-400">From source: {{ p.source }}</p>
-              <button
-                v-if="isInstallable(p.installUrl)"
-                type="button"
-                class="mt-3 ccg-btn-primary text-xs"
-                :disabled="installedIds.has(p.id) || install.isPending.value || installFlow.inFlight.value"
-                @click="startInstall(p.id, p.source)"
+      <div class="flex flex-col gap-2">
+        <span class="ccg-section-label">Available plugins</span>
+        <QueryStateBoundary
+          :is-pending="available.isPending.value"
+          :is-error="available.isError.value"
+          :error="available.error.value"
+          :data="available.data.value"
+        >
+          <template #loading>
+            <div class="grid grid-cols-3 gap-3">
+              <div v-for="i in 6" :key="i" class="ccg-skeleton h-[124px]" />
+            </div>
+          </template>
+          <template #default="{ data: items }">
+            <EmptyState
+              v-if="!items?.length"
+              title="No plugins to install. Update a marketplace to fetch its manifest."
+            />
+            <ul v-else class="grid grid-cols-3 content-start gap-3">
+              <li
+                v-for="p in items"
+                :key="`${p.source}:${p.id}`"
+                class="ccg-card flex min-w-0 flex-col gap-2.5 px-4 py-3.5"
               >
-                {{ installedIds.has(p.id) ? 'Installed' : 'Install' }}
-              </button>
-              <p v-else class="mt-3 text-[11px] text-neutral-500 dark:text-neutral-400">
-                Install via CLI:
-                <code class="rounded bg-neutral-100 px-1 dark:bg-neutral-800">claude plugins install {{ p.id }}</code>
-              </p>
-            </li>
-          </ul>
-        </template>
-      </QueryStateBoundary>
-    </div>
-  </section>
+                <div class="flex items-center gap-2">
+                  <span class="min-w-0 flex-1 truncate font-mono text-[13.5px] font-medium text-ink">{{ p.name }}</span>
+                  <span v-if="p.version" class="ccg-badge">v{{ p.version }}</span>
+                </div>
+                <p
+                  class="line-clamp-2 min-h-[38px] text-[13px] leading-[1.45]"
+                  style="color: var(--ccg-body); text-wrap: pretty;"
+                >
+                  {{ p.description ?? '—' }}
+                </p>
+                <div class="flex items-center gap-2">
+                  <span class="ccg-chip">{{ p.source }}</span>
+                  <span class="flex-1" />
+                  <button
+                    v-if="isInstallable(p.installUrl)"
+                    type="button"
+                    class="ccg-btn-primary ccg-btn-sm"
+                    :disabled="installedIds.has(p.id) || install.isPending.value || installFlow.inFlight.value"
+                    @click="startInstall(p.id, p.source)"
+                  >
+                    {{ installedIds.has(p.id) ? 'Installed' : 'Install' }}
+                  </button>
+                </div>
+                <p
+                  v-if="!isInstallable(p.installUrl)"
+                  class="truncate font-mono text-[11.5px]"
+                  style="color: var(--ccg-subtle);"
+                  :title="`claude plugins install ${p.id}`"
+                >
+                  $ claude plugins install {{ p.id }}
+                </p>
+              </li>
+            </ul>
+          </template>
+        </QueryStateBoundary>
+      </div>
+    </section>
+  </div>
 
   <!-- Install progress modal -->
   <Teleport to="body">
     <div
       v-if="installingPlugin"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      class="fixed inset-0 z-50 flex items-start justify-center pt-[128px]"
+      style="background: rgba(31, 30, 27, .18);"
     >
-      <div class="w-[420px] rounded-lg border border-neutral-200 bg-white p-5 shadow-xl dark:border-neutral-800 dark:bg-neutral-900">
-        <h3 class="text-sm font-semibold">Installing {{ installingPlugin.name }}</h3>
-        <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          From source <code>{{ installingPlugin.source }}</code>
-        </p>
-        <div class="mt-4">
-          <p class="text-xs font-mono">{{ installFlow.step.value || 'starting…' }}</p>
-          <div class="mt-2 h-2 overflow-hidden rounded bg-neutral-100 dark:bg-neutral-800">
+      <div
+        class="w-[440px] overflow-hidden bg-white"
+        style="border-radius: 12px; box-shadow: 0 24px 60px rgba(40,30,20,.3), 0 0 0 1px rgba(0,0,0,.08);"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div class="flex flex-col gap-1 border-b px-4 py-3.5" style="border-color: var(--ccg-hairline-soft);">
+          <h3 class="text-[14px] font-semibold text-ink">
+            Installing <span class="font-mono">{{ installingPlugin.name }}</span>
+          </h3>
+          <p class="text-[12px]" style="color: var(--ccg-subtle);">
+            from <span class="font-mono">{{ installingPlugin.source }}</span>
+          </p>
+        </div>
+        <div class="flex flex-col gap-2 px-4 py-4">
+          <p class="font-mono text-[12px]" style="color: var(--ccg-body);">{{ installFlow.step.value || 'starting…' }}</p>
+          <div class="h-1.5 overflow-hidden rounded-full" style="background: var(--ccg-surface-strong);">
             <div
-              class="h-full bg-violet-600 transition-all"
+              class="h-full rounded-full transition-all"
+              style="background: var(--ccg-accent-fill);"
               :style="{ width: `${installFlow.percent.value ?? 0}%` }"
             />
           </div>
+          <p v-if="installFlow.errorMessage.value" class="ccg-alert-error mt-1 px-3 py-2 text-[12.5px]">
+            {{ installFlow.errorMessage.value }}
+          </p>
         </div>
-        <p
-          v-if="installFlow.errorMessage.value"
-          class="mt-3 text-xs text-red-600 dark:text-red-400"
-        >
-          {{ installFlow.errorMessage.value }}
-        </p>
       </div>
     </div>
   </Teleport>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bot, Map, Search, Slash, Sparkles } from 'lucide-vue-next'
 import { useAgentsList } from '@/composables/useAgents'
 import { useCommandsList } from '@/composables/useCommands'
 import { useSkillsList } from '@/composables/useSkills'
@@ -41,8 +40,6 @@ const query = ref('')
 const active = ref(0)
 const input = ref<HTMLInputElement | null>(null)
 let lastFocused: HTMLElement | null = null
-
-const icons = { agent: Bot, command: Slash, skill: Sparkles, plan: Map } as const
 
 const entries = computed<Entry[]>(() => [
   ...(agents.data.value ?? []).map((a) => ({
@@ -165,30 +162,30 @@ const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform
 <template>
   <button
     type="button"
-    class="mx-1 mb-3 flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
-    style="border-color: var(--ccg-hairline);"
+    class="flex h-8 flex-none items-center gap-2 rounded-[7px] border bg-white px-2.5 text-left text-[13px] transition-colors hover:border-[#C9C3B7]"
+    style="border-color: var(--ccg-hairline-strong); color: var(--ccg-subtle);"
     aria-haspopup="dialog"
     @click="show"
   >
-    <Search class="h-3.5 w-3.5" aria-hidden="true" />
-    <span class="flex-1 text-left">Search</span>
-    <kbd class="font-mono text-[10px]">{{ isMac ? '⌘K' : 'Ctrl K' }}</kbd>
+    <span class="flex-1">Search…</span>
+    <kbd class="font-mono text-[11px]" style="color: var(--ccg-muted-soft);">{{ isMac ? '⌘K' : 'Ctrl K' }}</kbd>
   </button>
 
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-50 flex items-start justify-center bg-black/40 px-4 pt-[12vh]"
+      class="fixed inset-x-0 bottom-0 top-[38px] z-50 flex justify-center px-4 pt-[90px]"
+      style="background: rgba(31, 30, 27, .18);"
       @mousedown.self="close"
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Search agents, commands, skills and plans"
-        class="w-full max-w-xl overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900"
+        class="w-full max-w-[600px] self-start overflow-hidden rounded-[12px] bg-white"
+        style="box-shadow: 0 24px 60px rgba(40, 30, 20, .3), 0 0 0 1px rgba(0, 0, 0, .08);"
       >
-        <div class="flex items-center gap-2 border-b border-neutral-200 px-3 dark:border-neutral-800">
-          <Search class="h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
+        <div class="flex items-center gap-2.5 border-b px-4 py-3.5" style="border-color: var(--ccg-hairline-soft);">
           <input
             ref="input"
             v-model="query"
@@ -197,13 +194,25 @@ const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform
             aria-expanded="true"
             aria-controls="gs-results"
             :aria-activedescendant="hits.length ? `gs-hit-${active}` : undefined"
-            class="w-full bg-transparent py-3 text-sm outline-none placeholder:text-neutral-400"
+            class="w-full bg-transparent text-[16px] text-ink outline-none placeholder:text-[#A29E94]"
             placeholder="Search agents, commands, skills, plans…"
             @keydown="onInputKey"
           />
+          <span class="font-mono text-[11px]" style="color: var(--ccg-muted-soft);">esc</span>
         </div>
-        <ul id="gs-results" role="listbox" class="max-h-[50vh] overflow-y-auto py-1">
-          <li v-if="query.trim() && !hits.length" class="px-4 py-6 text-center text-sm text-neutral-500">
+        <ul id="gs-results" role="listbox" class="max-h-[50vh] overflow-y-auto p-1.5">
+          <li
+            v-if="!query.trim()"
+            class="px-2.5 py-5 text-center text-[13px]"
+            style="color: var(--ccg-subtle);"
+          >
+            Type to search by name, description or body.
+          </li>
+          <li
+            v-else-if="!hits.length"
+            class="px-2.5 py-5 text-center text-[13px]"
+            style="color: var(--ccg-subtle);"
+          >
             No matches for “{{ query.trim() }}”
           </li>
           <li
@@ -212,21 +221,29 @@ const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform
             :key="`${h.kind}:${h.slug}`"
             role="option"
             :aria-selected="i === active"
-            class="flex cursor-pointer items-start gap-3 px-3 py-2"
-            :class="i === active ? 'bg-neutral-100 dark:bg-neutral-800' : ''"
+            class="flex cursor-pointer items-center gap-2.5 rounded-[7px] px-2.5 py-[9px]"
+            :style="i === active ? 'background: var(--ccg-sidebar);' : ''"
             @mousemove="active = i"
             @click="go(h)"
           >
-            <component :is="icons[h.kind]" class="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
-            <div class="min-w-0 flex-1">
-              <div class="truncate text-sm font-medium">{{ h.label }}</div>
-              <div v-if="h.description" class="truncate text-xs text-neutral-500 dark:text-neutral-400">
-                {{ h.description }}
-              </div>
-            </div>
-            <span class="shrink-0 text-[10px] uppercase tracking-wide text-neutral-400">{{ h.kind }}</span>
+            <span
+              class="w-16 flex-none font-mono text-[10.5px] uppercase tracking-[.04em]"
+              style="color: var(--ccg-subtle);"
+            >{{ h.kind }}</span>
+            <span class="flex-none font-mono text-[13px] font-medium text-ink">{{ h.label }}</span>
+            <span
+              v-if="h.description"
+              class="min-w-0 flex-1 truncate text-[12.5px]"
+              style="color: var(--ccg-subtle);"
+            >{{ h.description }}</span>
           </li>
         </ul>
+        <div
+          class="flex gap-3.5 border-t px-4 py-2 text-[11.5px]"
+          style="border-color: var(--ccg-hairline-soft); background: var(--ccg-canvas-soft); color: var(--ccg-subtle);"
+        >
+          <span>↑↓ move</span><span>↵ open</span><span class="flex-1" /><span>Agents · Commands · Skills · Plans</span>
+        </div>
       </div>
     </div>
   </Teleport>

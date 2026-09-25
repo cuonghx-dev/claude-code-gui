@@ -24,32 +24,31 @@ const fmt = (iso: string | null) =>
 </script>
 
 <template>
-  <PageHeader
-    :title="data?.entry.workingDir ?? `Session ${id.slice(0, 8)}…`"
-    :subtitle="`${data?.entry.lineCount.toLocaleString() ?? 0} lines · ended ${fmt(data?.entry.endedAt ?? null)}`"
-  >
-    <template #actions>
-      <button type="button" class="ccg-btn-ghost" @click="plainText = !plainText">
-        {{ plainText ? 'Show colors' : 'Plain text' }}
-      </button>
-      <button type="button" class="ccg-btn-ghost" @click="router.back()">Back</button>
-    </template>
-  </PageHeader>
-  <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data">
-    <template #default="{ data: d }">
-      <section v-if="d" class="flex h-[calc(100vh-65px)] min-h-0 flex-col p-6">
-        <pre
-          v-if="plainText"
-          class="min-h-0 flex-1 overflow-auto rounded-lg bg-neutral-100 p-3 font-mono text-xs dark:bg-neutral-900"
-        >{{ stripped }}</pre>
-        <TerminalReplay
-          v-else
-          :lines="d.lines"
-          :cols="d.entry.cols"
-          :rows="d.entry.rows"
-          class="min-h-0 flex-1"
-        />
-      </section>
-    </template>
-  </QueryStateBoundary>
+  <div class="flex h-full min-h-0 flex-col">
+    <PageHeader
+      :title="data?.entry.workingDir ?? `Session ${id.slice(0, 8)}…`"
+      :subtitle="`${data?.entry.lineCount.toLocaleString() ?? 0} lines · ended ${fmt(data?.entry.endedAt ?? null)}`"
+    >
+      <template #actions>
+        <button type="button" class="ccg-btn-ghost" :aria-pressed="plainText" @click="plainText = !plainText">
+          Plain text
+        </button>
+        <button type="button" class="ccg-btn-ghost" @click="router.back()">Back</button>
+      </template>
+    </PageHeader>
+    <QueryStateBoundary :is-pending="isPending" :is-error="isError" :error="error" :data="data" skeleton="rows">
+      <template #default="{ data: d }">
+        <section v-if="d" class="flex min-h-0 flex-1 flex-col px-7 py-5">
+          <pre v-if="plainText" class="ccg-code-block min-h-0 flex-1">{{ stripped }}</pre>
+          <TerminalReplay
+            v-else
+            :lines="d.lines"
+            :cols="d.entry.cols"
+            :rows="d.entry.rows"
+            class="min-h-0 flex-1"
+          />
+        </section>
+      </template>
+    </QueryStateBoundary>
+  </div>
 </template>

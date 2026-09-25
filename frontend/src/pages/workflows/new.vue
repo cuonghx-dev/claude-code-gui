@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import PageHeader from '@/components/PageHeader.vue'
-import MarkdownEditor from '@/components/MarkdownEditor.vue'
+import EditorPage from '@/components/EditorPage.vue'
 import { useWorkflowCreate } from '@/composables/useWorkflows'
 import { useDraftRecovery } from '@/composables/useDraftRecovery'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
@@ -89,31 +88,30 @@ function onCancel() {
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col">
-    <PageHeader
-      title="New workflow"
-      subtitle="JavaScript orchestration script. Filename is derived from `meta.name`."
-    >
-      <template #actions>
-        <button type="button" class="ccg-btn-ghost" @click="onCancel">Cancel</button>
-        <button
-          type="button"
-          class="ccg-btn-primary"
-          :disabled="create.isPending.value"
-          @click="onSubmit"
-        >
-          {{ create.isPending.value ? 'Creating…' : 'Create' }}
-        </button>
-      </template>
-    </PageHeader>
-    <section class="flex min-h-0 flex-1 flex-col p-6">
-      <p
-        v-if="errorMessage"
-        class="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+  <EditorPage
+    v-model="content"
+    section="Workflows"
+    section-to="/workflows"
+    name="new"
+    :dirty="dirty"
+    file-path="~/.claude/workflows/<meta.name>.js"
+    :error="errorMessage"
+    language="javascript"
+    :frontmatter="false"
+  >
+    <template #actions>
+      <button type="button" class="ccg-btn-ghost ccg-btn-sm" @click="onCancel">Cancel</button>
+      <button
+        type="button"
+        class="ccg-btn-primary ccg-btn-sm"
+        :disabled="create.isPending.value"
+        @click="onSubmit"
       >
-        {{ errorMessage }}
-      </p>
-      <MarkdownEditor v-model="content" language="javascript" fill class="min-h-0 flex-1" />
-    </section>
-  </div>
+        {{ create.isPending.value ? 'Creating…' : 'Create' }}
+      </button>
+    </template>
+    <template #status>
+      <span class="truncate font-sans">Filename is derived from <span class="font-mono">meta.name</span></span>
+    </template>
+  </EditorPage>
 </template>

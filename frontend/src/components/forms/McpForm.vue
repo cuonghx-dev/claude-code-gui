@@ -131,36 +131,38 @@ function onSubmit() {
 <template>
   <form class="space-y-4" @submit.prevent="onSubmit">
     <FormField label="Name" required :error="errors.name">
-      <input v-model="state.name" :readonly="lockName" type="text" class="ccg-input max-w-md" />
+      <input v-model="state.name" :readonly="lockName" type="text" class="ccg-input max-w-md font-mono" />
     </FormField>
-    <FormField label="Transport">
-      <select v-model="state.kind" class="ccg-input max-w-xs">
-        <option value="stdio">stdio</option>
-        <option value="httpSse">HTTP/SSE</option>
-      </select>
-    </FormField>
+    <!-- Not a FormField: its <label> would forward clicks to the first button. -->
+    <div class="flex flex-col gap-1">
+      <span class="text-xs font-medium text-neutral-700">Transport</span>
+      <div class="ccg-seg self-start" role="group" aria-label="Transport">
+        <button type="button" :aria-pressed="state.kind === 'stdio'" @click="state.kind = 'stdio'">stdio</button>
+        <button type="button" :aria-pressed="state.kind === 'httpSse'" @click="state.kind = 'httpSse'">HTTP/SSE</button>
+      </div>
+    </div>
     <template v-if="state.kind === 'stdio'">
       <FormField label="Command" required :error="errors['transport.command']">
-        <input v-model="state.command" type="text" class="ccg-input" />
+        <input v-model="state.command" type="text" class="ccg-input font-mono text-[12.5px]" />
       </FormField>
       <FormField label="Args" hint="Space-separated">
-        <input v-model="state.args" type="text" class="ccg-input" />
+        <input v-model="state.args" type="text" class="ccg-input font-mono text-[12.5px]" />
       </FormField>
       <FormField label="Env" hint="One KEY=VALUE per line">
-        <textarea v-model="state.envText" rows="3" class="ccg-input font-mono" />
+        <textarea v-model="state.envText" rows="3" class="ccg-input font-mono text-[12.5px]" />
       </FormField>
     </template>
     <template v-else>
       <FormField label="URL" required :error="errors['transport.url']">
-        <input v-model="state.url" type="text" class="ccg-input" />
+        <input v-model="state.url" type="text" class="ccg-input font-mono text-[12.5px]" />
       </FormField>
       <FormField label="Headers" hint="One KEY=VALUE per line">
-        <textarea v-model="state.headersText" rows="3" class="ccg-input font-mono" />
+        <textarea v-model="state.headersText" rows="3" class="ccg-input font-mono text-[12.5px]" />
       </FormField>
     </template>
-    <div class="flex items-center justify-end gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+    <div class="flex items-center justify-end gap-2 border-t border-hairline-soft pt-4">
       <button type="button" class="ccg-btn-ghost" @click="emit('cancel')">Cancel</button>
-      <button type="submit" :disabled="submitting" class="ccg-btn-primary">
+      <button type="submit" :disabled="submitting || !dirty" class="ccg-btn-primary">
         {{ submitting ? 'Saving…' : (submitLabel ?? 'Save') }}
       </button>
     </div>
