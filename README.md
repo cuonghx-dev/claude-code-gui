@@ -11,6 +11,8 @@ Visual manager for Claude Code agents, commands, skills, plans, plugins, MCP ser
 - MCP server manager that reads and writes the same `~/.claude.json` (user) and `<project>/.mcp.json` (project) files the CLI uses.
 - Live filesystem watcher: external edits to `~/.claude/` show up without a restart.
 
+Full walkthrough of every screen: [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (Vietnamese).
+
 ## Requirements
 
 - The `claude` CLI on `PATH`. On macOS, the app inherits your login-shell `PATH` at startup, so Homebrew / npm-global / nvm installs work without extra config.
@@ -51,6 +53,7 @@ Output lands under `target/release/bundle/`.
 claude-code-gui/
 ├── docs/
 │   ├── SPEC.md                # full specification
+│   ├── USER_GUIDE.md          # end-user guide to every screen
 │   ├── decisions/             # ADRs (D1–D16)
 │   └── media/                 # screenshots, demo GIFs
 ├── frontend/                  # Vue 3 + Vite SPA
