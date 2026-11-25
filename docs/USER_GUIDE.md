@@ -284,13 +284,9 @@ Cột trái:
 - **Restore**: ghi đè file hiện tại bằng bản đã lưu (hỏi xác nhận; nội dung hiện tại **không** được giữ lại). Restore từng file một.
 - "(blob missing)" nghĩa là bản sao đã mất, không khôi phục được.
 
-**Resume in terminal**:
-1. Chọn **Permission mode** (mặc định lấy từ `defaultPermissionMode`, hoặc "CLI default").
-2. Bấm **Resume in terminal** → app chạy `claude --resume <sessionId>` trong working dir của project, trong terminal nhúng (xterm, link bấm được).
-3. Bên cạnh là **Context panel**: model, tokens input/output/cached, chi phí, danh sách tool call gần nhất.
-4. **Close terminal** hoặc rời trang sẽ kết thúc process.
-
-Khi terminal kết thúc, 10.000 dòng output cuối được lưu vào `~/.claude/cli-history/<id>.json`, xem lại qua **Terminal replay**.
+**Resume session**: app không chạy terminal nhúng nữa — resume trong terminal của bạn.
+- Bấm vào **session id** (mono, 8 ký tự đầu) để copy id đầy đủ.
+- Bấm **Copy resume command** để copy `cd '<working dir>' && claude --resume <sessionId>`, rồi dán vào terminal.
 
 **Terminal replay** (nút xuất hiện nếu session từng chạy trong app): phát lại output có màu, chỉ đọc. **Plain text** để chuyển sang text thuần có thể copy.
 
@@ -479,7 +475,7 @@ Mọi phím gõ trong terminal nhúng được gửi thẳng tới Claude. Phím
 
 ## 11. Hạn chế hiện tại
 
-- **New Chat** trên trang project chưa hoạt động — terminal nhúng hiện chỉ mở qua **Resume in terminal**, và chỉ chọn được permission mode.
+- **New Chat** trên trang project chưa hoạt động — app không còn terminal nhúng; resume session bằng lệnh copy từ trang session.
 - **MCP**: chưa có trang sửa server, chưa bật/tắt từng server, chưa có scope `local`. Muốn sửa: xoá và thêm lại, hoặc dùng Raw editor / CLI.
 - **Output styles**: không sửa được; style scope `project` tạo được nhưng chưa hiển thị/xoá được trên trang.
 - **Memory**: chưa có nút xoá file.

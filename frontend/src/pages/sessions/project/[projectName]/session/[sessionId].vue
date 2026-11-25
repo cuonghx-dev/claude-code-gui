@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import ChatTerminal from '@/components/ChatTerminal.vue'
-import ContextPanel from '@/components/ContextPanel.vue'
 import TeamPanel from '@/components/TeamPanel.vue'
 import MessageList from '@/components/transcript/MessageList.vue'
 import CheckpointsPanel from '@/components/CheckpointsPanel.vue'
@@ -13,17 +11,13 @@ import {
   useSessionsForProject,
   useSessionThreads,
 } from '@/composables/useSessions'
-import { useSettings } from '@/composables/useSettings'
 import { useTerminalReplaysForSession } from '@/composables/useCliHistory'
-import { asPermissionMode, PERMISSION_MODES } from '@/lib/permissionModes'
-import type { PermissionMode, TerminalOpts } from '@/types/ipc'
 
 const route = useRoute()
 const projectName = computed(() => (route.params as { projectName: string }).projectName)
 const sessionId = computed(() => (route.params as { sessionId: string }).sessionId)
 
 const project = useProject(projectName)
-const settings = useSettings()
 
 const sessions = useSessionsForProject(projectName)
 const title = computed(
@@ -62,7 +56,6 @@ const showSidechains = ref(false)
 // than on a route of their own.
 const showCheckpoints = ref(false)
 
-const resuming = ref(false)
 const showReplays = ref(false)
 watch(sessionId, () => {
   showReplays.value = false
@@ -72,39 +65,26 @@ const fmtReplay = (iso: string | null) =>
   iso
     ? new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso))
     : '—'
-// PTY session id, set once the terminal spawns; keys the live context events.
-const ptyId = ref('')
 
-// '' = let the CLI apply its own settings. Seeded from the user's default so
-// the picker shows what will actually happen.
-const permissionMode = ref<PermissionMode | ''>('')
-watch(
-  () => settings.data.value?.defaultPermissionMode,
-  (v) => {
-    if (!resuming.value) permissionMode.value = asPermissionMode(v) ?? ''
-  },
-  { immediate: true },
-)
-watch(resuming, (on) => {
-  if (!on) ptyId.value = ''
+// The session is resumed in the user's own terminal; `claude --resume` only
+// finds the session from the project's working directory, so cd there first.
+const shellQuote = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`
+const resumeCommand = computed(() => {
+  const resume = `claude --resume ${sessionId.value}`
+  const dir = project.data.value?.workingDir
+  return dir ? `cd ${shellQuote(dir)} && ${resume}` : resume
 })
+
+const copied = ref<'id' | 'command' | null>(null)
+let copiedTimer: ReturnType<typeof setTimeout> | undefined
+async function copy(kind: 'id' | 'command') {
+  await navigator.clipboard.writeText(kind === 'id' ? sessionId.value : resumeCommand.value)
+  copied.value = kind
+  clearTimeout(copiedTimer)
+  copiedTimer = setTimeout(() => (copied.value = null), 1500)
+}
 watch(sessionId, () => {
-  resuming.value = false
-})
-
-const terminalOpts = computed<TerminalOpts | null>(() => {
-  if (!resuming.value || !project.data.value) return null
-  return {
-    agentSlug: null,
-    cols: 100,
-    rows: 32,
-    workingDir: project.data.value.workingDir,
-    model: null,
-    permissionMode: permissionMode.value || null,
-    outputStyleId: null,
-    resumeSessionId: sessionId.value,
-    commandTemplate: null,
-  } as TerminalOpts
+  copied.value = null
 })
 </script>
 
@@ -129,7 +109,6 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
       </div>
       <div class="flex shrink-0 items-center gap-2.5">
         <label
-          v-if="!resuming"
           class="flex cursor-pointer select-none items-center gap-[7px] text-[12.5px]"
           style="color: var(--ccg-body);"
         >
@@ -143,7 +122,6 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
           Subagent messages
         </label>
         <button
-          v-if="!resuming"
           type="button"
           class="ccg-btn-ghost ccg-btn-sm"
           :aria-pressed="showCheckpoints"
@@ -190,87 +168,61 @@ const terminalOpts = computed<TerminalOpts | null>(() => {
           </div>
         </template>
         <div
-          v-if="!resuming"
           class="flex overflow-hidden rounded-[7px] border"
           style="border-color: var(--ccg-ink);"
         >
-          <div class="relative flex h-7 items-center bg-white">
-            <select
-              v-model="permissionMode"
-              class="h-full cursor-pointer appearance-none bg-transparent pl-2.5 pr-6 font-mono text-[11.5px] text-ink outline-none"
-              aria-label="Permission mode for the resumed session"
-              title="Permission mode"
-            >
-              <option value="">CLI default</option>
-              <option v-for="m in PERMISSION_MODES" :key="m" :value="m">{{ m }}</option>
-            </select>
-            <span
-              class="pointer-events-none absolute right-2.5 font-mono text-[11.5px]"
-              style="color: var(--ccg-muted);"
-            >▾</span>
-          </div>
           <button
             type="button"
-            class="h-7 px-3 text-[12.5px] font-medium text-white transition-colors duration-[120ms] ease-out hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            style="background: var(--ccg-ink);"
-            :disabled="!project.data.value"
-            @click="resuming = true"
+            class="flex h-7 items-center bg-white px-2.5 font-mono text-[11.5px] text-ink transition-colors duration-[120ms] ease-out hover:bg-canvas-soft"
+            :title="`Copy session id ${sessionId}`"
+            @click="copy('id')"
           >
-            Resume in terminal
+            {{ copied === 'id' ? 'Copied id' : `${sessionId.slice(0, 8)}…` }}
+          </button>
+          <button
+            type="button"
+            class="h-7 px-3 text-[12.5px] font-medium text-white transition-colors duration-[120ms] ease-out hover:opacity-90"
+            style="background: var(--ccg-ink);"
+            :title="resumeCommand"
+            @click="copy('command')"
+          >
+            {{ copied === 'command' ? 'Copied' : 'Copy resume command' }}
           </button>
         </div>
-        <button v-else type="button" class="ccg-btn-ghost ccg-btn-sm" @click="resuming = false">
-          Close terminal
-        </button>
       </div>
     </header>
 
-    <div v-if="resuming && terminalOpts" class="flex min-h-0 flex-1">
-      <ChatTerminal
-        :opts="terminalOpts"
-        class="min-h-0 min-w-0 flex-1"
-        @ready="(id) => (ptyId = id)"
-      />
-      <ContextPanel
-        :session-id="ptyId || undefined"
-        class="w-72 shrink-0 overflow-y-auto border-l p-3"
-        style="border-color: var(--ccg-hairline-soft); background: var(--ccg-canvas-soft);"
-      />
+    <div v-if="transcript.isPending.value" class="flex max-w-[860px] flex-col gap-3 px-[22px] py-5">
+      <div v-for="i in 4" :key="i" class="ccg-skeleton h-14 rounded-lg" />
     </div>
-
-    <template v-else>
-      <div v-if="transcript.isPending.value" class="flex max-w-[860px] flex-col gap-3 px-[22px] py-5">
-        <div v-for="i in 4" :key="i" class="ccg-skeleton h-14 rounded-lg" />
-      </div>
-      <p v-else-if="transcript.isError.value" class="ccg-alert-error mx-[22px] mt-5 px-3 py-2 text-[12.5px]" role="alert">
-        {{ (transcript.error.value as Error)?.message ?? 'Failed to read the transcript' }}
-      </p>
-      <EmptyState
-        v-else-if="!messages.length"
-        title="This session's transcript holds no renderable turns."
+    <p v-else-if="transcript.isError.value" class="ccg-alert-error mx-[22px] mt-5 px-3 py-2 text-[12.5px]" role="alert">
+      {{ (transcript.error.value as Error)?.message ?? 'Failed to read the transcript' }}
+    </p>
+    <EmptyState
+      v-else-if="!messages.length"
+      title="This session's transcript holds no renderable turns."
+    />
+    <div v-else class="flex min-h-0 flex-1">
+      <MessageList
+        class="min-w-0 flex-1"
+        :messages="messages"
+        :threads="threads.data.value ?? []"
+        :has-next-page="!!transcript.hasNextPage.value"
+        :is-fetching-next-page="transcript.isFetchingNextPage.value"
+        :hide-sidechains="!showSidechains"
+        :project-name="projectName"
+        :session-id="sessionId"
+        @load-more="transcript.fetchNextPage()"
       />
-      <div v-else class="flex min-h-0 flex-1">
-        <MessageList
-          class="min-w-0 flex-1"
-          :messages="messages"
-          :threads="threads.data.value ?? []"
-          :has-next-page="!!transcript.hasNextPage.value"
-          :is-fetching-next-page="transcript.isFetchingNextPage.value"
-          :hide-sidechains="!showSidechains"
-          :project-name="projectName"
-          :session-id="sessionId"
-          @load-more="transcript.fetchNextPage()"
-        />
-        <aside
-          v-if="showCheckpoints"
-          class="flex w-[28rem] shrink-0 flex-col gap-3 overflow-y-auto border-l px-4 py-4"
-          style="border-color: var(--ccg-hairline-soft); background: var(--ccg-canvas-soft);"
-        >
-          <h3 class="ccg-section-label">Checkpoints</h3>
-          <CheckpointsPanel :project-name="projectName" :session-id="sessionId" />
-        </aside>
-      </div>
-      <TeamPanel :session-id="sessionId" class="mx-[22px] mb-4 max-w-[816px] shrink-0" />
-    </template>
+      <aside
+        v-if="showCheckpoints"
+        class="flex w-[28rem] shrink-0 flex-col gap-3 overflow-y-auto border-l px-4 py-4"
+        style="border-color: var(--ccg-hairline-soft); background: var(--ccg-canvas-soft);"
+      >
+        <h3 class="ccg-section-label">Checkpoints</h3>
+        <CheckpointsPanel :project-name="projectName" :session-id="sessionId" />
+      </aside>
+    </div>
+    <TeamPanel :session-id="sessionId" class="mx-[22px] mb-4 max-w-[816px] shrink-0" />
   </section>
 </template>

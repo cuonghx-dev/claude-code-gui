@@ -826,7 +826,7 @@ Above the terminal: a `claude --resume` tip showing the latest session id derive
 
 #### Session viewer
 
-Read-only history pane backed by `sessions_messages`. A "Resume in terminal" button opens a `ChatTerminal` with `resumeSessionId` set, spawning `claude --resume <id>` in the same project's working directory.
+Read-only history pane backed by `sessions_messages`. The header shows the session id (click to copy) and a "Copy resume command" button that copies `cd '<workingDir>' && claude --resume <id>`, so the session is resumed in the user's own terminal. The app no longer embeds a terminal for resuming.
 
 #### Plugins
 
